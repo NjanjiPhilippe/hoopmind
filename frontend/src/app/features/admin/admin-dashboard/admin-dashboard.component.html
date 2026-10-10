@@ -1,0 +1,56 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">Administration</h1>
+          <p class="text-gray-600 mt-2">Gestion de l'application NBA Prediction</p>
+        </div>
+
+        <a routerLink="/admin/users" class="card mb-8 flex items-center justify-between hover:ring-2 hover:ring-primary-500">
+          <div>
+            <h2 class="text-lg font-bold">Gestion des utilisateurs</h2>
+            <p class="text-gray-600">Rechercher, activer ou désactiver des comptes, gérer les rôles</p>
+          </div>
+          <span class="text-2xl" aria-hidden="true">👥</span>
+        </a>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <app-stat-card label="Utilisateurs" [value]="0" icon="👥" color="blue"></app-stat-card>
+          <app-stat-card label="Équipes" [value]="30" icon="🏀" color="green"></app-stat-card>
+          <app-stat-card label="Joueurs" [value]="450" icon="⭐" color="orange"></app-stat-card>
+          <app-stat-card label="Prédictions" [value]="1250" icon="🎯" color="red"></app-stat-card>
+        </div>
+
+        <!-- Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="card">
+            <h3 class="font-bold text-lg mb-4">Gestion des Données</h3>
+            <div class="space-y-3">
+              <button class="btn-primary w-full">Importer Données NBA</button>
+              <button class="btn-secondary w-full">Mettre à Jour Statistiques</button>
+              <button class="btn-outline w-full">Exporter Données</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="font-bold text-lg mb-4">Modèle ML</h3>
+            <div class="space-y-3">
+              <button class="btn-primary w-full">Entraîner Modèle</button>
+              <button class="btn-secondary w-full">Tester Modèle</button>
+              <button class="btn-outline w-full">Voir Performances</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="font-bold text-lg mb-4">Système</h3>
+            <div class="space-y-3">
+              <button class="btn-secondary w-full">Vider Cache</button>
+              <button class="btn-secondary w-full">Logs Système</button>
+              <button class="btn-outline w-full">Maintenance</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>

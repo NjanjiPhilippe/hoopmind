@@ -1,0 +1,63 @@
+<app-auth-layout heading="Inscription" subheading="Créez votre compte HoopMind">
+  @if (error(); as message) {
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600" role="alert">{{ message }}</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4" novalidate>
+    <div>
+      <label for="username" class="mb-2 block text-sm font-medium text-gray-700">Nom d'utilisateur</label>
+      <input id="username" type="text" formControlName="username" class="input-field" autocomplete="username" />
+      @let username = form.controls.username;
+      @if (username.touched && username.errors; as errors) {
+        <p class="mt-1 text-sm text-red-600">
+          @if (errors['taken']) { Ce nom d'utilisateur est déjà pris }
+          @else if (errors['pattern']) { Lettres, chiffres, point, tiret et tiret bas uniquement }
+          @else { Entre 3 et 50 caractères }
+        </p>
+      }
+    </div>
+
+    <div>
+      <label for="email" class="mb-2 block text-sm font-medium text-gray-700">E-mail</label>
+      <input id="email" type="email" formControlName="email" class="input-field" autocomplete="email" />
+      @let email = form.controls.email;
+      @if (email.touched && email.errors; as errors) {
+        <p class="mt-1 text-sm text-red-600">
+          @if (errors['taken']) { Un compte existe déjà avec cet e-mail } @else { Adresse e-mail invalide }
+        </p>
+      }
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label for="firstName" class="mb-2 block text-sm font-medium text-gray-700">Prénom</label>
+        <input id="firstName" type="text" formControlName="firstName" class="input-field" autocomplete="given-name" />
+      </div>
+      <div>
+        <label for="lastName" class="mb-2 block text-sm font-medium text-gray-700">Nom</label>
+        <input id="lastName" type="text" formControlName="lastName" class="input-field" autocomplete="family-name" />
+      </div>
+    </div>
+
+    <div>
+      <label for="password" class="mb-2 block text-sm font-medium text-gray-700">Mot de passe</label>
+      <input id="password" type="password" formControlName="password" class="input-field" autocomplete="new-password" />
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <p class="mt-1 text-sm text-red-600">Au moins 8 caractères</p>
+      }
+    </div>
+
+    <button type="submit" [disabled]="submitting()" class="btn-primary w-full py-3 text-lg">
+      @if (submitting()) {
+        <span class="spinner h-5 w-5 border-2"></span>
+      } @else {
+        Créer mon compte
+      }
+    </button>
+  </form>
+
+  <p class="mt-6 text-center text-sm text-gray-600">
+    Déjà un compte ?
+    <a routerLink="/auth/login" class="font-medium text-primary-600 hover:text-primary-700">Se connecter</a>
+  </p>
+</app-auth-layout>

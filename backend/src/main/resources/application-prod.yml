@@ -1,0 +1,10 @@
+# Profil production : documentation désactivée, journaux sobres.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    com.np3tech.hoopmind: INFO

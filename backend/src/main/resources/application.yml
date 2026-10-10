@@ -1,0 +1,100 @@
+# Configuration HoopMind. Aucun secret ici : tout ce qui est sensible vient de variables d'environnement
+# (voir .env.example). Le profil « prod » durcit les réglages.
+spring:
+  application:
+    name: hoopmind
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hoopmind}
+    username: ${DB_USERNAME:hoopmind}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    # Le schéma appartient à Liquibase ; Hibernate se contente de le vérifier.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  jackson:
+    default-property-inclusion: non_null
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+hoopmind:
+  version: '@project.version@'
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+      refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:7d}
+      refresh-cookie:
+        secure: ${REFRESH_COOKIE_SECURE:true}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  # Premier administrateur, créé au démarrage s'il n'en existe aucun (laisser vide pour ne rien créer).
+  bootstrap-admin:
+    username: ${HOOPMIND_ADMIN_USERNAME:admin}
+    email: ${HOOPMIND_ADMIN_EMAIL:admin@hoopmind.local}
+    password: ${HOOPMIND_ADMIN_PASSWORD:}
+  ml:
+    spark:
+      enabled: ${SPARK_ENABLED:true}
+
+# Apache Spark (module ml)
+spark:
+  master: ${SPARK_MASTER:local[*]}
+  app-name: hoopmind-analytics
+  executor:
+    memory: ${SPARK_EXECUTOR_MEMORY:1g}
+  driver:
+    memory: ${SPARK_DRIVER_MEMORY:1g}
+    host: ${SPARK_DRIVER_HOST:localhost}
+  sql:
+    shuffle:
+      partitions: 10
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    persist-authorization: true
+  default-produces-media-type: application/json
+
+server:
+  port: ${SERVER_PORT:8083}
+  error:
+    include-stacktrace: never
+  compression:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      roles: ROLE_ADMIN
+
+logging:
+  level:
+    root: INFO
+    com.np3tech.hoopmind: DEBUG
+    org.apache.spark: WARN
+    org.sparkproject: WARN

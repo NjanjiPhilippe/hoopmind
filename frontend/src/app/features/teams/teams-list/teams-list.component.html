@@ -1,0 +1,86 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">Équipes NBA</h1>
+          <p class="text-gray-600 mt-2">
+            Explorez les {{ filteredTeams.length }} équipes de la NBA
+          </p>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Search -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Rechercher
+              </label>
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="applyFilters()"
+                placeholder="Nom de l'équipe..."
+                class="input-field"
+              />
+            </div>
+
+            <!-- Conference Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Conférence
+              </label>
+              <select
+                [(ngModel)]="selectedConference"
+                (ngModelChange)="applyFilters()"
+                class="input-field"
+              >
+                <option value="">Toutes</option>
+                <option value="EASTERN">Est</option>
+                <option value="WESTERN">Ouest</option>
+              </select>
+            </div>
+
+            <!-- Division Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Division
+              </label>
+              <select
+                [(ngModel)]="selectedDivision"
+                (ngModelChange)="applyFilters()"
+                class="input-field"
+              >
+                <option value="">Toutes</option>
+                <option value="Atlantic">Atlantic</option>
+                <option value="Central">Central</option>
+                <option value="Southeast">Southeast</option>
+                <option value="Northwest">Northwest</option>
+                <option value="Pacific">Pacific</option>
+                <option value="Southwest">Southwest</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        @if (isLoading) {
+          <app-loading-spinner message="Chargement des équipes..."></app-loading-spinner>
+        } @else if (filteredTeams.length > 0) {
+          <!-- Teams Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (team of filteredTeams; track team.id) {
+              <app-team-card [team]="team"></app-team-card>
+            }
+          </div>
+        } @else {
+          <div class="card text-center py-12">
+            <p class="text-gray-500 text-lg">Aucune équipe trouvée</p>
+            <button (click)="resetFilters()" class="btn-primary mt-4">
+              Réinitialiser les filtres
+            </button>
+          </div>
+        }
+      </div>
+    </div>

@@ -1,0 +1,125 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      <!-- Hero Section -->
+      <section class="bg-gradient-to-br from-primary-600 to-primary-900 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center">
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
+              Prédictions NBA Intelligentes
+            </h1>
+            <p class="text-xl md:text-2xl text-primary-100 mb-8 max-w-3xl mx-auto">
+              Analyse avancée avec Intelligence Artificielle pour prédire les résultats des matchs NBA
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <a routerLink="/auth/register" class="btn-primary bg-white text-primary-600 hover:bg-gray-100 px-8 py-4 text-lg">
+                Commencer Gratuitement
+              </a>
+              <a routerLink="/predictions" class="btn-outline border-white text-white hover:bg-white hover:text-primary-600 px-8 py-4 text-lg">
+                Voir les Prédictions
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 class="text-3xl font-bold text-center mb-12">Fonctionnalités Clés</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="card text-center">
+              <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-xl mx-auto flex items-center justify-center mb-4">
+                <span class="text-3xl">🤖</span>
+              </div>
+              <h3 class="text-xl font-bold mb-2">IA Avancée</h3>
+              <p class="text-gray-600">
+                Algorithmes de Machine Learning avec Apache Spark pour des prédictions précises
+              </p>
+            </div>
+
+            <div class="card text-center">
+              <div class="w-16 h-16 bg-green-100 text-green-600 rounded-xl mx-auto flex items-center justify-center mb-4">
+                <span class="text-3xl">📊</span>
+              </div>
+              <h3 class="text-xl font-bold mb-2">Statistiques Détaillées</h3>
+              <p class="text-gray-600">
+                Analyse complète : PER, VORP, efficacité offensive/défensive et plus
+              </p>
+            </div>
+
+            <div class="card text-center">
+              <div class="w-16 h-16 bg-orange-100 text-orange-600 rounded-xl mx-auto flex items-center justify-center mb-4">
+                <span class="text-3xl">🎯</span>
+              </div>
+              <h3 class="text-xl font-bold mb-2">Prédictions Fiables</h3>
+              <p class="text-gray-600">
+                Score de confiance et analyse des facteurs clés pour chaque match
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Featured Predictions -->
+      @if (isLoading) {
+        <app-loading-spinner message="Chargement des prédictions..."></app-loading-spinner>
+      } @else if (dashboard) {
+        <section class="py-20 bg-gray-100">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-3xl font-bold">Prédictions en Vedette</h2>
+              <a routerLink="/predictions" class="text-primary-600 hover:text-primary-700 font-medium">
+                Voir tout →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              @for (prediction of dashboard.featuredPredictions; track prediction.id) {
+                <app-prediction-card [prediction]="prediction"></app-prediction-card>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- Top Teams -->
+        <section class="py-20">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between mb-8">
+              <h2 class="text-3xl font-bold">Meilleures Équipes</h2>
+              <a routerLink="/teams" class="text-primary-600 hover:text-primary-700 font-medium">
+                Voir tout →
+              </a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              @for (team of dashboard.topTeams; track team.id) {
+                <app-team-card [team]="team"></app-team-card>
+              }
+            </div>
+          </div>
+        </section>
+      }
+
+      <!-- CTA Section -->
+      <section class="bg-gradient-to-r from-primary-600 to-primary-800 py-16">
+        <div class="max-w-4xl mx-auto text-center px-4">
+          <h2 class="text-3xl font-bold text-white mb-4">
+            Prêt à découvrir l'avenir du basketball ?
+          </h2>
+          <p class="text-xl text-primary-100 mb-8">
+            Rejoignez des milliers d'utilisateurs qui font confiance à nos prédictions
+          </p>
+          <a routerLink="/auth/register" class="btn-primary bg-white text-primary-600 hover:bg-gray-100 px-8 py-4 text-lg">
+            Créer un Compte Gratuit
+          </a>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p class="text-gray-400">
+            © 2025 NBA Prediction App. Analyse et prédictions de matchs NBA.
+          </p>
+        </div>
+      </footer>
+    </div>

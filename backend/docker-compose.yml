@@ -1,0 +1,58 @@
+# Démarrage local : cp .env.example .env (puis remplir), puis
+#   docker compose up -d postgres          # base seule, l'API tourne depuis l'IDE ou ./mvnw spring-boot:run
+#   docker compose --profile app up -d     # base + API
+#   docker compose --profile app --profile spark-cluster up -d   # + cluster Spark (SPARK_MASTER=spark://spark-master:7077)
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hoopmind
+      POSTGRES_USER: ${DB_USERNAME:-hoopmind}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?définir DB_PASSWORD dans .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d hoopmind"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    profiles: [app]
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/hoopmind
+      SPARK_DRIVER_HOST: backend
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  spark-master:
+    profiles: [spark-cluster]
+    image: apache/spark:4.2.0-java21
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+
+  spark-worker:
+    profiles: [spark-cluster]
+    image: apache/spark:4.2.0-java21
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: 1g
+    depends_on:
+      - spark-master
+
+volumes:
+  postgres_data:

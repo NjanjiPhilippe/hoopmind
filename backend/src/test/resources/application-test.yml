@@ -1,0 +1,18 @@
+hoopmind:
+  security:
+    jwt:
+      # Clé de test uniquement (32 octets aléatoires), sans valeur hors des tests.
+      secret: dGVzdC1vbmx5LWtleS1ub3QtYS1zZWNyZXQtMTIzNDU2Nzg5MA==
+      refresh-cookie:
+        secure: false
+  bootstrap-admin:
+    username: admin
+    email: admin@hoopmind.test
+    password: AdminPass123
+  ml:
+    spark:
+      enabled: false
+
+logging:
+  level:
+    com.np3tech.hoopmind: INFO

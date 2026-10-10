@@ -1,0 +1,160 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      @if (isLoading) {
+        <app-loading-spinner [fullScreen]="true" message="Chargement des détails..."></app-loading-spinner>
+      } @else if (team) {
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <!-- Back Button -->
+          <a routerLink="/teams" class="inline-flex items-center text-primary-600 hover:text-primary-700 mb-6">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Retour aux équipes
+          </a>
+
+          <!-- Team Header -->
+          <div class="card mb-8">
+            <div class="flex items-center space-x-6">
+              <img [src]="teamLogo" [alt]="team.name" 
+                   class="w-24 h-24 object-contain"
+                   (error)="onImageError($event)">
+              <div class="flex-1">
+                <h1 class="text-3xl font-bold text-gray-900">{{ team.name }}</h1>
+                <p class="text-xl text-gray-600 mt-1">{{ team.city }}</p>
+                <div class="flex items-center space-x-3 mt-3">
+                  <span class="badge badge-info">{{ team.conference }}</span>
+                  <span class="badge bg-gray-100 text-gray-800">{{ team.division }}</span>
+                  <span class="badge bg-gray-100 text-gray-800">{{ team.abbreviation }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Grid -->
+          @if (statistics) {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div class="card">
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Bilan</h3>
+                <p class="text-3xl font-bold text-gray-900">{{ statistics.wins }}-{{ statistics.losses }}</p>
+                <p class="text-sm text-gray-600 mt-1">{{ statistics.winPercentage * 100 | number:'1.1-1' }}%</p>
+              </div>
+
+              <div class="card">
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Points/Match</h3>
+                <p class="text-3xl font-bold text-primary-600">{{ statistics.pointsPerGame | number:'1.1-1' }}</p>
+                <p class="text-sm text-gray-600 mt-1">{{ statistics.pointsAllowedPerGame | number:'1.1-1' }} encaissés</p>
+              </div>
+
+              <div class="card">
+                <h3 class="text-sm font-medium text-gray-600 mb-2">FG%</h3>
+                <p class="text-3xl font-bold text-green-600">{{ statistics.fieldGoalPercentage | number:'1.1-1' }}%</p>
+                <p class="text-sm text-gray-600 mt-1">Tirs réussis</p>
+              </div>
+
+              <div class="card">
+                <h3 class="text-sm font-medium text-gray-600 mb-2">Domicile</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ statistics.homeRecord }}</p>
+                <p class="text-sm text-gray-600 mt-1">{{ statistics.awayRecord }} extérieur</p>
+              </div>
+            </div>
+          }
+
+          <!-- Recent Form -->
+          @if (teamForm) {
+            <div class="card mb-8">
+              <h2 class="text-2xl font-bold text-gray-900 mb-4">Forme Récente</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div class="flex items-center space-x-2 mb-4">
+                    @for (result of teamForm.form; track $index) {
+                      <span [class]="result === 'W' ? 'badge badge-success' : 'badge badge-danger'">
+                        {{ result }}
+                      </span>
+                    }
+                  </div>
+                  <div class="space-y-2">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Victoires:</span>
+                      <span class="font-bold">{{ teamForm.wins }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Défaites:</span>
+                      <span class="font-bold">{{ teamForm.losses }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Taux de victoire:</span>
+                      <span class="font-bold text-primary-600">{{ teamForm.winRate | number:'1.1-1' }}%</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="space-y-2">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Points marqués (moy):</span>
+                      <span class="font-bold">{{ teamForm.averagePointsScored | number:'1.1-1' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Points encaissés (moy):</span>
+                      <span class="font-bold">{{ teamForm.averagePointsAllowed | number:'1.1-1' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Différentiel:</span>
+                      <span [class]="teamForm.pointDifferential > 0 ? 'font-bold text-green-600' : 'font-bold text-red-600'">
+                        {{ teamForm.pointDifferential > 0 ? '+' : '' }}{{ teamForm.pointDifferential | number:'1.1-1' }}
+                      </span>
+                    </div>
+                  </div>
+                  @if (teamForm.isOnWinStreak) {
+                    <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p class="text-sm text-green-800 font-medium">🔥 Série de victoires en cours!</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Players -->
+          @if (players.length > 0) {
+            <div class="card mb-8">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">Effectif</h2>
+                <span class="text-sm text-gray-600">{{ players.length }} joueurs</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (player of players; track player.id) {
+                  <a [routerLink]="['/players', player.id]" 
+                     class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span class="text-xl">👤</span>
+                    </div>
+                    <div class="flex-1">
+                      <p class="font-medium text-gray-900">{{ player.firstName }} {{ player.lastName }}</p>
+                      <div class="flex items-center space-x-2 mt-1">
+                        <span class="text-xs text-gray-600">{{ player.position }}</span>
+                        @if (player.jerseyNumber) {
+                          <span class="text-xs badge bg-gray-100 text-gray-800">#{{ player.jerseyNumber }}</span>
+                        }
+                      </div>
+                    </div>
+                  </a>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Recent Matches -->
+          @if (recentMatches.length > 0) {
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900 mb-4">Matchs Récents</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @for (match of recentMatches; track match.id) {
+                  <app-match-card [match]="match"></app-match-card>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>

@@ -1,0 +1,22 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      @if (isLoading) {
+        <app-loading-spinner [fullScreen]="true" message="Chargement..."></app-loading-spinner>
+      } @else if (prediction) {
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <a routerLink="/predictions" class="inline-flex items-center text-primary-600 hover:text-primary-700 mb-6">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Retour aux prédictions
+          </a>
+
+          <!-- Same content as match detail prediction section -->
+          <div class="card">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">Détails de la Prédiction</h1>
+            <!-- Add similar content to match-detail prediction display -->
+          </div>
+        </div>
+      }
+    </div>

@@ -1,0 +1,82 @@
+<div class="min-h-screen bg-gray-50">
+      <app-navbar></app-navbar>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">Matchs NBA</h1>
+          <p class="text-gray-600 mt-2">Calendrier et résultats des matchs</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6">
+          <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+              <button
+                (click)="activeTab = 'upcoming'"
+                [class]="activeTab === 'upcoming' 
+                  ? 'border-primary-600 text-primary-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                À venir
+              </button>
+              <button
+                (click)="activeTab = 'completed'"
+                [class]="activeTab === 'completed' 
+                  ? 'border-primary-600 text-primary-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                Terminés
+              </button>
+              <button
+                (click)="activeTab = 'all'"
+                [class]="activeTab === 'all' 
+                  ? 'border-primary-600 text-primary-600' 
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                Tous
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Saison
+              </label>
+              <select [(ngModel)]="selectedSeason" (ngModelChange)="loadMatches()" class="input-field">
+                <option value="2024-2025">2024-2025</option>
+                <option value="2023-2024">2023-2024</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Nombre de résultats
+              </label>
+              <select [(ngModel)]="limit" (ngModelChange)="loadMatches()" class="input-field">
+                <option [value]="10">10</option>
+                <option [value]="20">20</option>
+                <option [value]="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        @if (isLoading) {
+          <app-loading-spinner message="Chargement des matchs..."></app-loading-spinner>
+        } @else if (displayedMatches.length > 0) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (match of displayedMatches; track match.id) {
+              <app-match-card [match]="match"></app-match-card>
+            }
+          </div>
+        } @else {
+          <div class="card text-center py-12">
+            <p class="text-gray-500 text-lg">Aucun match trouvé</p>
+          </div>
+        }
+      </div>
+    </div>

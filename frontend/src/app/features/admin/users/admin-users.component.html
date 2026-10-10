@@ -1,0 +1,84 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Utilisateurs</h1>
+        @if (pageInfo(); as info) {
+          <p class="mt-1 text-gray-600">{{ info.totalElements }} compte(s)</p>
+        }
+      </div>
+      <input type="search" class="input-field max-w-xs" placeholder="Rechercher (nom, e-mail)"
+             aria-label="Rechercher un utilisateur" (input)="onSearch($any($event.target).value)" />
+    </header>
+
+    @if (error(); as message) {
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600" role="alert">{{ message }}</div>
+    }
+
+    <div class="overflow-x-auto rounded-xl bg-white shadow">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <tr>
+            <th scope="col" class="px-4 py-3">Utilisateur</th>
+            <th scope="col" class="px-4 py-3">Rôle</th>
+            <th scope="col" class="px-4 py-3">Statut</th>
+            <th scope="col" class="px-4 py-3">Dernière connexion</th>
+            <th scope="col" class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (user of rows(); track user.id) {
+            <tr [class.opacity-50]="busyUserId() === user.id">
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900">{{ user.username }}</div>
+                <div class="text-gray-500">{{ user.email }}</div>
+              </td>
+              <td class="px-4 py-3">
+                <span class="badge" [class.badge-info]="isAdmin(user)">{{ isAdmin(user) ? 'Administrateur' : 'Utilisateur' }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <span class="badge" [class.badge-success]="user.enabled" [class.badge-danger]="!user.enabled">
+                  {{ user.enabled ? 'Actif' : 'Désactivé' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-gray-600">{{ user.lastLogin ? (user.lastLogin | date: 'short') : 'Jamais' }}</td>
+              <td class="space-x-2 whitespace-nowrap px-4 py-3 text-right">
+                @if (!isSelf(user)) {
+                  <button type="button" class="btn-secondary text-xs" [disabled]="busyUserId() !== null" (click)="toggleEnabled(user)">
+                    {{ user.enabled ? 'Désactiver' : 'Réactiver' }}
+                  </button>
+                  <button type="button" class="btn-secondary text-xs" [disabled]="busyUserId() !== null" (click)="toggleAdmin(user)">
+                    {{ isAdmin(user) ? 'Retirer admin' : 'Promouvoir admin' }}
+                  </button>
+                  <button type="button" class="btn-secondary text-xs text-red-700" [disabled]="busyUserId() !== null" (click)="remove(user)">
+                    Supprimer
+                  </button>
+                } @else {
+                  <span class="text-xs text-gray-400">Votre compte</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="px-4 py-10 text-center text-gray-500">
+                {{ users.isLoading() ? 'Chargement…' : 'Aucun utilisateur trouvé' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (pageInfo(); as info) {
+      @if (info.totalPages! > 1) {
+        <nav class="mt-4 flex items-center justify-end gap-3 text-sm" aria-label="Pagination">
+          <button type="button" class="btn-secondary" [disabled]="page() === 0" (click)="page.set(page() - 1)">Précédent</button>
+          <span>Page {{ page() + 1 }} / {{ info.totalPages }}</span>
+          <button type="button" class="btn-secondary" [disabled]="page() + 1 >= info.totalPages!" (click)="page.set(page() + 1)">Suivant</button>
+        </nav>
+      }
+    }
+  </main>
+</div>

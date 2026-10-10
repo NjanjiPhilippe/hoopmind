@@ -1,0 +1,273 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-seasons-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: seasons
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: year
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: playoffs_start_date
+                  type: DATE
+              - column:
+                  name: finals_start_date
+                  type: DATE
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: seasons
+            indexName: idx_season_year
+            columns:
+              - column:
+                  name: year
+        - createIndex:
+            tableName: seasons
+            indexName: idx_season_status
+            columns:
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 001-create-teams-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: teams
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: city
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: abbreviation
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: conference
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: division
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: logo_url
+                  type: VARCHAR(500)
+              - column:
+                  name: founded_year
+                  type: INT
+              - column:
+                  name: arena
+                  type: VARCHAR(200)
+              - column:
+                  name: head_coach
+                  type: VARCHAR(200)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValue: "0"
+        - createIndex:
+            tableName: teams
+            indexName: idx_team_abbreviation
+            columns:
+              - column:
+                  name: abbreviation
+        - createIndex:
+            tableName: teams
+            indexName: idx_team_conference
+            columns:
+              - column:
+                  name: conference
+
+  - changeSet:
+      id: 001-create-players-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: players
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: first_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: jersey_number
+                  type: INT
+              - column:
+                  name: team_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_player_team
+                    references: teams(id)
+              - column:
+                  name: birth_date
+                  type: DATE
+              - column:
+                  name: birth_place
+                  type: VARCHAR(200)
+              - column:
+                  name: nationality
+                  type: VARCHAR(100)
+              - column:
+                  name: height
+                  type: DOUBLE PRECISION
+              - column:
+                  name: weight
+                  type: DOUBLE PRECISION
+              - column:
+                  name: experience
+                  type: INT
+              - column:
+                  name: college
+                  type: VARCHAR(200)
+              - column:
+                  name: draft_year
+                  type: INT
+              - column:
+                  name: draft_round
+                  type: INT
+              - column:
+                  name: draft_number
+                  type: INT
+              - column:
+                  name: photo_url
+                  type: VARCHAR(500)
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: ACTIVE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValue: "0"
+        - createIndex:
+            tableName: players
+            indexName: idx_player_team
+            columns:
+              - column:
+                  name: team_id
+        - createIndex:
+            tableName: players
+            indexName: idx_player_position
+            columns:
+              - column:
+                  name: position
+        - createIndex:
+            tableName: players
+            indexName: idx_player_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: players
+            indexName: idx_player_name
+            columns:
+              - column:
+                  name: last_name
+              - column:
+                  name: first_name

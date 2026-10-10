@@ -1,0 +1,37 @@
+<div class="card hover:scale-105 transition-transform cursor-pointer" 
+         [routerLink]="['/matches', match.id]">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm text-gray-500">
+          {{ match.matchDate | date:'short' }}
+        </span>
+        <span class="badge" [class]="statusBadgeClass">
+          {{ statusLabel }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 items-center">
+        <div class="text-center">
+          <h3 class="font-bold text-gray-900">{{ match.homeTeamName }}</h3>
+          @if (match.homeScore !== null && match.homeScore !== undefined) {
+            <p class="text-2xl font-bold text-primary-600 mt-2">{{ match.homeScore }}</p>
+          }
+        </div>
+
+        <div class="text-center">
+          <span class="text-xl font-bold text-gray-400">VS</span>
+        </div>
+
+        <div class="text-center">
+          <h3 class="font-bold text-gray-900">{{ match.awayTeamName }}</h3>
+          @if (match.awayScore !== null && match.awayScore !== undefined) {
+            <p class="text-2xl font-bold text-gray-600 mt-2">{{ match.awayScore }}</p>
+          }
+        </div>
+      </div>
+
+      @if (match.venue) {
+        <div class="mt-3 pt-3 border-t border-gray-200 text-sm text-gray-500 text-center">
+          📍 {{ match.venue }}
+        </div>
+      }
+    </div>

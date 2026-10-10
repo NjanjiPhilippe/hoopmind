@@ -1,0 +1,78 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+    @if (auth.user(); as user) {
+      <header>
+        <h1 class="text-3xl font-bold text-gray-900">Mon compte</h1>
+        <p class="mt-2 text-gray-600">
+          {{ user.username }} · {{ user.email }}
+          @for (role of user.roles; track role) {
+            <span class="badge badge-info ml-2">{{ role === 'ROLE_ADMIN' ? 'Administrateur' : 'Utilisateur' }}</span>
+          }
+        </p>
+      </header>
+    }
+
+    <section class="card">
+      <h2 class="mb-4 text-lg font-bold">Profil</h2>
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" class="space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="firstName" class="mb-2 block text-sm font-medium text-gray-700">Prénom</label>
+            <input id="firstName" type="text" formControlName="firstName" class="input-field" />
+          </div>
+          <div>
+            <label for="lastName" class="mb-2 block text-sm font-medium text-gray-700">Nom</label>
+            <input id="lastName" type="text" formControlName="lastName" class="input-field" />
+          </div>
+        </div>
+
+        <div>
+          <label for="favoriteTeam" class="mb-2 block text-sm font-medium text-gray-700">Équipe favorite</label>
+          <select id="favoriteTeam" formControlName="favoriteTeamId" class="input-field">
+            <option [ngValue]="null">Aucune</option>
+            @for (team of teams.value() ?? []; track team.id) {
+              <option [ngValue]="team.id">{{ team.city }} {{ team.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="bio" class="mb-2 block text-sm font-medium text-gray-700">Bio</label>
+          <textarea id="bio" rows="3" formControlName="bio" class="input-field"></textarea>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button type="submit" class="btn-primary" [disabled]="savingProfile() || profileForm.pristine">Enregistrer</button>
+          @if (profileMessage(); as message) {
+            <p class="text-sm" [class.text-green-700]="message.ok" [class.text-red-600]="!message.ok" role="status">{{ message.text }}</p>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="mb-4 text-lg font-bold">Mot de passe</h2>
+      <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="space-y-4" novalidate>
+        <div>
+          <label for="currentPassword" class="mb-2 block text-sm font-medium text-gray-700">Mot de passe actuel</label>
+          <input id="currentPassword" type="password" formControlName="currentPassword" class="input-field" autocomplete="current-password" />
+        </div>
+        <div>
+          <label for="newPassword" class="mb-2 block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
+          <input id="newPassword" type="password" formControlName="newPassword" class="input-field" autocomplete="new-password" />
+          @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
+            <p class="mt-1 text-sm text-red-600">Au moins 8 caractères</p>
+          }
+        </div>
+        <div class="flex items-center gap-4">
+          <button type="submit" class="btn-primary" [disabled]="savingPassword()">Changer le mot de passe</button>
+          @if (passwordMessage(); as message) {
+            <p class="text-sm" [class.text-green-700]="message.ok" [class.text-red-600]="!message.ok" role="status">{{ message.text }}</p>
+          }
+        </div>
+      </form>
+    </section>
+  </main>
+</div>

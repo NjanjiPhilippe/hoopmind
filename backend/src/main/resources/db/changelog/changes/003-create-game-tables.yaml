@@ -1,0 +1,306 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-games-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: games
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: home_team_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_game_home_team
+                    references: teams(id)
+              - column:
+                  name: away_team_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_game_away_team
+                    references: teams(id)
+              - column:
+                  name: season_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_game_season
+                    references: seasons(id)
+              - column:
+                  name: game_type
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_date
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actual_start_time
+                  type: TIMESTAMP
+              - column:
+                  name: actual_end_time
+                  type: TIMESTAMP
+              - column:
+                  name: venue
+                  type: VARCHAR(200)
+              - column:
+                  name: attendance
+                  type: INT
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: SCHEDULED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: referees_json
+                  type: TEXT
+              - column:
+                  name: is_national_tv
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: broadcast_network
+                  type: VARCHAR(100)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValue: "0"
+        - createIndex:
+            tableName: games
+            indexName: idx_game_home_team
+            columns:
+              - column:
+                  name: home_team_id
+        - createIndex:
+            tableName: games
+            indexName: idx_game_away_team
+            columns:
+              - column:
+                  name: away_team_id
+        - createIndex:
+            tableName: games
+            indexName: idx_game_date
+            columns:
+              - column:
+                  name: scheduled_date
+        - createIndex:
+            tableName: games
+            indexName: idx_game_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: games
+            indexName: idx_game_season
+            columns:
+              - column:
+                  name: season_id
+
+  - changeSet:
+      id: 003-create-game-results-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: game_results
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    unique: true
+                    foreignKeyName: fk_game_result_game
+                    references: games(id)
+              - column:
+                  name: home_team_score
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: away_team_score
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: score_difference
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: winner_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_game_result_winner
+                    references: teams(id)
+              - column:
+                  name: loser_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_game_result_loser
+                    references: teams(id)
+              - column:
+                  name: home_team_quarter_scores_json
+                  type: TEXT
+              - column:
+                  name: away_team_quarter_scores_json
+                  type: TEXT
+              - column:
+                  name: overtime
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: overtime_periods
+                  type: INT
+              - column:
+                  name: recorded_at
+                  type: TIMESTAMP
+        - createIndex:
+            tableName: game_results
+            indexName: idx_game_result_game
+            columns:
+              - column:
+                  name: game_id
+        - createIndex:
+            tableName: game_results
+            indexName: idx_game_result_winner
+            columns:
+              - column:
+                  name: winner_id
+
+  - changeSet:
+      id: 003-create-player-game-stats-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: player_game_stats
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: player_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_player_game_stats_player
+                    references: players(id)
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_player_game_stats_game
+                    references: games(id)
+              - column:
+                  name: game_result_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_player_game_stats_result
+                    references: game_results(id)
+              - column:
+                  name: started
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: minutes_played
+                  type: INT
+              - column:
+                  name: points
+                  type: INT
+              - column:
+                  name: field_goals_made
+                  type: INT
+              - column:
+                  name: field_goals_attempted
+                  type: INT
+              - column:
+                  name: three_points_made
+                  type: INT
+              - column:
+                  name: three_points_attempted
+                  type: INT
+              - column:
+                  name: free_throws_made
+                  type: INT
+              - column:
+                  name: free_throws_attempted
+                  type: INT
+              - column:
+                  name: offensive_rebounds
+                  type: INT
+              - column:
+                  name: defensive_rebounds
+                  type: INT
+              - column:
+                  name: total_rebounds
+                  type: INT
+              - column:
+                  name: assists
+                  type: INT
+              - column:
+                  name: steals
+                  type: INT
+              - column:
+                  name: blocks
+                  type: INT
+              - column:
+                  name: turnovers
+                  type: INT
+              - column:
+                  name: personal_fouls
+                  type: INT
+              - column:
+                  name: plus_minus
+                  type: INT
+        - addUniqueConstraint:
+            tableName: player_game_stats
+            columnNames: player_id, game_id
+            constraintName: uk_player_game
+        - createIndex:
+            tableName: player_game_stats
+            indexName: idx_player_game_stats_player
+            columns:
+              - column:
+                  name: player_id
+        - createIndex:
+            tableName: player_game_stats
+            indexName: idx_player_game_stats_game
+            columns:
+              - column:
+                  name: game_id

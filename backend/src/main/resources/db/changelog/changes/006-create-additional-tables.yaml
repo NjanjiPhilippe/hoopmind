@@ -1,0 +1,593 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-create-team-game-stats-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: team_game_stats
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: team_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_team_game_stats_team
+                    references: teams(id)
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_team_game_stats_game
+                    references: games(id)
+              - column:
+                  name: game_result_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_team_game_stats_result
+                    references: game_results(id)
+              - column:
+                  name: points
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: field_goals_made
+                  type: INT
+              - column:
+                  name: field_goals_attempted
+                  type: INT
+              - column:
+                  name: field_goal_percentage
+                  type: DECIMAL(5,3)
+              - column:
+                  name: three_points_made
+                  type: INT
+              - column:
+                  name: three_points_attempted
+                  type: INT
+              - column:
+                  name: three_point_percentage
+                  type: DECIMAL(5,3)
+              - column:
+                  name: free_throws_made
+                  type: INT
+              - column:
+                  name: free_throws_attempted
+                  type: INT
+              - column:
+                  name: free_throw_percentage
+                  type: DECIMAL(5,3)
+              - column:
+                  name: offensive_rebounds
+                  type: INT
+              - column:
+                  name: defensive_rebounds
+                  type: INT
+              - column:
+                  name: total_rebounds
+                  type: INT
+              - column:
+                  name: assists
+                  type: INT
+              - column:
+                  name: steals
+                  type: INT
+              - column:
+                  name: blocks
+                  type: INT
+              - column:
+                  name: turnovers
+                  type: INT
+              - column:
+                  name: personal_fouls
+                  type: INT
+              - column:
+                  name: fast_break_points
+                  type: INT
+              - column:
+                  name: points_in_paint
+                  type: INT
+              - column:
+                  name: second_chance_points
+                  type: INT
+              - column:
+                  name: bench_points
+                  type: INT
+              - column:
+                  name: biggest_lead
+                  type: INT
+              - column:
+                  name: time_of_possession
+                  type: DECIMAL(5,2)
+        - createIndex:
+            tableName: team_game_stats
+            indexName: idx_team_game_stats_team
+            columns:
+              - column:
+                  name: team_id
+        - createIndex:
+            tableName: team_game_stats
+            indexName: idx_team_game_stats_game
+            columns:
+              - column:
+                  name: game_id
+
+  - changeSet:
+      id: 006-create-injury-reports-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: injury_reports
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: player_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_injury_player
+                    references: players(id)
+              - column:
+                  name: team_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_injury_team
+                    references: teams(id)
+              - column:
+                  name: injury_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: report_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expected_return_date
+                  type: DATE
+              - column:
+                  name: actual_return_date
+                  type: DATE
+              - column:
+                  name: games_expected_to_miss
+                  type: INT
+              - column:
+                  name: games_actually_missed
+                  type: INT
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: injury_reports
+            indexName: idx_injury_player
+            columns:
+              - column:
+                  name: player_id
+        - createIndex:
+            tableName: injury_reports
+            indexName: idx_injury_team
+            columns:
+              - column:
+                  name: team_id
+        - createIndex:
+            tableName: injury_reports
+            indexName: idx_injury_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: injury_reports
+            indexName: idx_injury_date
+            columns:
+              - column:
+                  name: report_date
+
+  - changeSet:
+      id: 006-create-game-odds-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: game_odds
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_odds_game
+                    references: games(id)
+              - column:
+                  name: bookmaker
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: home_team_moneyline
+                  type: DECIMAL(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: away_team_moneyline
+                  type: DECIMAL(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: spread
+                  type: DECIMAL(5,2)
+              - column:
+                  name: home_spread_odds
+                  type: DECIMAL(5,2)
+              - column:
+                  name: away_spread_odds
+                  type: DECIMAL(5,2)
+              - column:
+                  name: over_under
+                  type: DECIMAL(6,2)
+              - column:
+                  name: over_odds
+                  type: DECIMAL(5,2)
+              - column:
+                  name: under_odds
+                  type: DECIMAL(5,2)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: game_odds
+            indexName: idx_odds_game
+            columns:
+              - column:
+                  name: game_id
+        - createIndex:
+            tableName: game_odds
+            indexName: idx_odds_bookmaker
+            columns:
+              - column:
+                  name: bookmaker
+        - createIndex:
+            tableName: game_odds
+            indexName: idx_odds_created
+            columns:
+              - column:
+                  name: created_at
+
+  - changeSet:
+      id: 006-create-user-predictions-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: user_predictions
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_pred_user
+                    references: users(id)
+                    deleteCascade: true
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_pred_game
+                    references: games(id)
+              - column:
+                  name: predicted_winner_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_pred_winner
+                    references: teams(id)
+              - column:
+                  name: predicted_home_score
+                  type: INT
+              - column:
+                  name: predicted_away_score
+                  type: INT
+              - column:
+                  name: reasoning
+                  type: VARCHAR(1000)
+              - column:
+                  name: is_correct
+                  type: BOOLEAN
+              - column:
+                  name: points
+                  type: INT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: user_predictions
+            columnNames: user_id, game_id
+            constraintName: uk_user_game
+        - createIndex:
+            tableName: user_predictions
+            indexName: idx_user_pred_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: user_predictions
+            indexName: idx_user_pred_game
+            columns:
+              - column:
+                  name: game_id
+        - createIndex:
+            tableName: user_predictions
+            indexName: idx_user_pred_correct
+            columns:
+              - column:
+                  name: is_correct
+
+  - changeSet:
+      id: 006-create-leaderboards-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: leaderboards
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_leaderboard_user
+                    references: users(id)
+                    deleteCascade: true
+              - column:
+                  name: season_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_leaderboard_season
+                    references: seasons(id)
+              - column:
+                  name: total_predictions
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: correct_predictions
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accuracy
+                  type: DECIMAL(5,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_points
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rank
+                  type: INT
+              - column:
+                  name: current_streak
+                  type: INT
+              - column:
+                  name: longest_streak
+                  type: INT
+              - column:
+                  name: last_updated
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: leaderboards
+            columnNames: user_id, season_id
+            constraintName: uk_user_season_leaderboard
+        - createIndex:
+            tableName: leaderboards
+            indexName: idx_leaderboard_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: leaderboards
+            indexName: idx_leaderboard_season
+            columns:
+              - column:
+                  name: season_id
+        - createIndex:
+            tableName: leaderboards
+            indexName: idx_leaderboard_points
+            columns:
+              - column:
+                  name: total_points
+
+  - changeSet:
+      id: 006-create-prediction-model-metrics-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: prediction_model_metrics
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: model
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: model_version
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: evaluation_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_predictions
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: correct_predictions
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accuracy
+                  type: DECIMAL(5,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: precision
+                  type: DECIMAL(5,4)
+              - column:
+                  name: recall
+                  type: DECIMAL(5,4)
+              - column:
+                  name: f1_score
+                  type: DECIMAL(5,4)
+              - column:
+                  name: mean_absolute_error
+                  type: DECIMAL(6,2)
+              - column:
+                  name: root_mean_squared_error
+                  type: DECIMAL(6,2)
+              - column:
+                  name: confidence_score
+                  type: DECIMAL(5,4)
+              - column:
+                  name: confusion_matrix_json
+                  type: TEXT
+              - column:
+                  name: feature_importance_json
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: prediction_model_metrics
+            indexName: idx_model_metrics_model
+            columns:
+              - column:
+                  name: model
+        - createIndex:
+            tableName: prediction_model_metrics
+            indexName: idx_model_metrics_date
+            columns:
+              - column:
+                  name: evaluation_date
+
+  - changeSet:
+      id: 006-add-created-by-to-predictions
+      author: nba-prediction
+      changes:
+        - addColumn:
+            tableName: match_predictions
+            columns:
+              - column:
+                  name: created_by_user_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_prediction_created_by
+                    references: users(id)
+              - column:
+                  name: evaluated_at
+                  type: TIMESTAMP
+        - createIndex:
+            tableName: match_predictions
+            indexName: idx_prediction_created_by
+            columns:
+              - column:
+                  name: created_by_user_id

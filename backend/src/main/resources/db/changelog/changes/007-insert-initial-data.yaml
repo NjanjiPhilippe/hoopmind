@@ -1,0 +1,443 @@
+databaseChangeLog:
+    # Insérer les rôles par défaut
+    - changeSet:
+          id: 007-insert-roles
+          author: nba-prediction
+          changes:
+              - insert:
+                    tableName: roles
+                    columns:
+                        - column:
+                              name: name
+                              value: ROLE_USER
+                        - column:
+                              name: description
+                              value: Utilisateur standard
+              - insert:
+                    tableName: roles
+                    columns:
+                        - column:
+                              name: name
+                              value: ROLE_ADMIN
+                        - column:
+                              name: description
+                              value: Administrateur du système
+              - insert:
+                    tableName: roles
+                    columns:
+                        - column:
+                              name: name
+                              value: ROLE_ANALYST
+                        - column:
+                              name: description
+                              value: Analyste de données
+              - insert:
+                    tableName: roles
+                    columns:
+                        - column:
+                              name: name
+                              value: ROLE_MODERATOR
+                        - column:
+                              name: description
+                              value: Modérateur
+
+    # Insérer la saison actuelle
+    - changeSet:
+          id: 007-insert-current-season
+          author: nba-prediction
+          changes:
+              - insert:
+                    tableName: seasons
+                    columns:
+                        - column:
+                              name: year
+                              valueNumeric: 2024
+                        - column:
+                              name: name
+                              value: "2024-2025"
+                        - column:
+                              name: start_date
+                              value: "2024-10-22"
+                        - column:
+                              name: end_date
+                              value: "2025-04-13"
+                        - column:
+                              name: playoffs_start_date
+                              value: "2025-04-19"
+                        - column:
+                              name: finals_start_date
+                              value: "2025-06-05"
+                        - column:
+                              name: status
+                              value: IN_PROGRESS
+
+    # Insérer toutes les équipes NBA - EASTERN CONFERENCE
+    - changeSet:
+          id: 007-insert-nba-teams-eastern
+          author: nba-prediction
+          changes:
+              # Atlantic Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Celtics" }
+                        - column: { name: city, value: "Boston" }
+                        - column: { name: abbreviation, value: "BOS" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "ATLANTIC" }
+                        - column: { name: founded_year, valueNumeric: 1946 }
+                        - column: { name: arena, value: "TD Garden" }
+                        - column: { name: head_coach, value: "Joe Mazzulla" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Nets" }
+                        - column: { name: city, value: "Brooklyn" }
+                        - column: { name: abbreviation, value: "BKN" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "ATLANTIC" }
+                        - column: { name: founded_year, valueNumeric: 1976 }
+                        - column: { name: arena, value: "Barclays Center" }
+                        - column: { name: head_coach, value: "Jacque Vaughn" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Knicks" }
+                        - column: { name: city, value: "New York" }
+                        - column: { name: abbreviation, value: "NYK" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "ATLANTIC" }
+                        - column: { name: founded_year, valueNumeric: 1946 }
+                        - column: { name: arena, value: "Madison Square Garden" }
+                        - column: { name: head_coach, value: "Tom Thibodeau" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "76ers" }
+                        - column: { name: city, value: "Philadelphia" }
+                        - column: { name: abbreviation, value: "PHI" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "ATLANTIC" }
+                        - column: { name: founded_year, valueNumeric: 1946 }
+                        - column: { name: arena, value: "Wells Fargo Center" }
+                        - column: { name: head_coach, value: "Nick Nurse" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Raptors" }
+                        - column: { name: city, value: "Toronto" }
+                        - column: { name: abbreviation, value: "TOR" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "ATLANTIC" }
+                        - column: { name: founded_year, valueNumeric: 1995 }
+                        - column: { name: arena, value: "Scotiabank Arena" }
+                        - column: { name: head_coach, value: "Darko Rajaković" }
+              # Central Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Bulls" }
+                        - column: { name: city, value: "Chicago" }
+                        - column: { name: abbreviation, value: "CHI" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "CENTRAL" }
+                        - column: { name: founded_year, valueNumeric: 1966 }
+                        - column: { name: arena, value: "United Center" }
+                        - column: { name: head_coach, value: "Billy Donovan" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Cavaliers" }
+                        - column: { name: city, value: "Cleveland" }
+                        - column: { name: abbreviation, value: "CLE" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "CENTRAL" }
+                        - column: { name: founded_year, valueNumeric: 1970 }
+                        - column: { name: arena, value: "Rocket Mortgage FieldHouse" }
+                        - column: { name: head_coach, value: "J.B. Bickerstaff" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Pistons" }
+                        - column: { name: city, value: "Detroit" }
+                        - column: { name: abbreviation, value: "DET" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "CENTRAL" }
+                        - column: { name: founded_year, valueNumeric: 1948 }
+                        - column: { name: arena, value: "Little Caesars Arena" }
+                        - column: { name: head_coach, value: "Monty Williams" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Pacers" }
+                        - column: { name: city, value: "Indiana" }
+                        - column: { name: abbreviation, value: "IND" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "CENTRAL" }
+                        - column: { name: founded_year, valueNumeric: 1976 }
+                        - column: { name: arena, value: "Gainbridge Fieldhouse" }
+                        - column: { name: head_coach, value: "Rick Carlisle" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Bucks" }
+                        - column: { name: city, value: "Milwaukee" }
+                        - column: { name: abbreviation, value: "MIL" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "CENTRAL" }
+                        - column: { name: founded_year, valueNumeric: 1968 }
+                        - column: { name: arena, value: "Fiserv Forum" }
+                        - column: { name: head_coach, value: "Adrian Griffin" }
+              # Southeast Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Hawks" }
+                        - column: { name: city, value: "Atlanta" }
+                        - column: { name: abbreviation, value: "ATL" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "SOUTHEAST" }
+                        - column: { name: founded_year, valueNumeric: 1949 }
+                        - column: { name: arena, value: "State Farm Arena" }
+                        - column: { name: head_coach, value: "Quin Snyder" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Hornets" }
+                        - column: { name: city, value: "Charlotte" }
+                        - column: { name: abbreviation, value: "CHA" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "SOUTHEAST" }
+                        - column: { name: founded_year, valueNumeric: 1988 }
+                        - column: { name: arena, value: "Spectrum Center" }
+                        - column: { name: head_coach, value: "Steve Clifford" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Heat" }
+                        - column: { name: city, value: "Miami" }
+                        - column: { name: abbreviation, value: "MIA" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "SOUTHEAST" }
+                        - column: { name: founded_year, valueNumeric: 1988 }
+                        - column: { name: arena, value: "FTX Arena" }
+                        - column: { name: head_coach, value: "Erik Spoelstra" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Magic" }
+                        - column: { name: city, value: "Orlando" }
+                        - column: { name: abbreviation, value: "ORL" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "SOUTHEAST" }
+                        - column: { name: founded_year, valueNumeric: 1989 }
+                        - column: { name: arena, value: "Amway Center" }
+                        - column: { name: head_coach, value: "Jamahl Mosley" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Wizards" }
+                        - column: { name: city, value: "Washington" }
+                        - column: { name: abbreviation, value: "WAS" }
+                        - column: { name: conference, value: "EASTERN" }
+                        - column: { name: division, value: "SOUTHEAST" }
+                        - column: { name: founded_year, valueNumeric: 1961 }
+                        - column: { name: arena, value: "Capital One Arena" }
+                        - column: { name: head_coach, value: "Wes Unseld Jr." }
+
+    # Insérer toutes les équipes NBA - WESTERN CONFERENCE
+    - changeSet:
+          id: 007-insert-nba-teams-western
+          author: nba-prediction
+          changes:
+              # Northwest Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Nuggets" }
+                        - column: { name: city, value: "Denver" }
+                        - column: { name: abbreviation, value: "DEN" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "NORTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1976 }
+                        - column: { name: arena, value: "Ball Arena" }
+                        - column: { name: head_coach, value: "Michael Malone" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Timberwolves" }
+                        - column: { name: city, value: "Minnesota" }
+                        - column: { name: abbreviation, value: "MIN" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "NORTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1989 }
+                        - column: { name: arena, value: "Target Center" }
+                        - column: { name: head_coach, value: "Chris Finch" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Thunder" }
+                        - column: { name: city, value: "Oklahoma City" }
+                        - column: { name: abbreviation, value: "OKC" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "NORTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1967 }
+                        - column: { name: arena, value: "Paycom Center" }
+                        - column: { name: head_coach, value: "Mark Daigneault" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Trail Blazers" }
+                        - column: { name: city, value: "Portland" }
+                        - column: { name: abbreviation, value: "POR" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "NORTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1970 }
+                        - column: { name: arena, value: "Moda Center" }
+                        - column: { name: head_coach, value: "Chauncey Billups" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Jazz" }
+                        - column: { name: city, value: "Utah" }
+                        - column: { name: abbreviation, value: "UTA" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "NORTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1974 }
+                        - column: { name: arena, value: "Delta Center" }
+                        - column: { name: head_coach, value: "Will Hardy" }
+              # Pacific Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Warriors" }
+                        - column: { name: city, value: "Golden State" }
+                        - column: { name: abbreviation, value: "GSW" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "PACIFIC" }
+                        - column: { name: founded_year, valueNumeric: 1946 }
+                        - column: { name: arena, value: "Chase Center" }
+                        - column: { name: head_coach, value: "Steve Kerr" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Clippers" }
+                        - column: { name: city, value: "Los Angeles" }
+                        - column: { name: abbreviation, value: "LAC" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "PACIFIC" }
+                        - column: { name: founded_year, valueNumeric: 1970 }
+                        - column: { name: arena, value: "Crypto.com Arena" }
+                        - column: { name: head_coach, value: "Tyronn Lue" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Lakers" }
+                        - column: { name: city, value: "Los Angeles" }
+                        - column: { name: abbreviation, value: "LAL" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "PACIFIC" }
+                        - column: { name: founded_year, valueNumeric: 1947 }
+                        - column: { name: arena, value: "Crypto.com Arena" }
+                        - column: { name: head_coach, value: "Darvin Ham" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Suns" }
+                        - column: { name: city, value: "Phoenix" }
+                        - column: { name: abbreviation, value: "PHX" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "PACIFIC" }
+                        - column: { name: founded_year, valueNumeric: 1968 }
+                        - column: { name: arena, value: "Footprint Center" }
+                        - column: { name: head_coach, value: "Frank Vogel" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Kings" }
+                        - column: { name: city, value: "Sacramento" }
+                        - column: { name: abbreviation, value: "SAC" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "PACIFIC" }
+                        - column: { name: founded_year, valueNumeric: 1948 }
+                        - column: { name: arena, value: "Golden 1 Center" }
+                        - column: { name: head_coach, value: "Mike Brown" }
+              # Southwest Division
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Mavericks" }
+                        - column: { name: city, value: "Dallas" }
+                        - column: { name: abbreviation, value: "DAL" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "SOUTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1980 }
+                        - column: { name: arena, value: "American Airlines Center" }
+                        - column: { name: head_coach, value: "Jason Kidd" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Rockets" }
+                        - column: { name: city, value: "Houston" }
+                        - column: { name: abbreviation, value: "HOU" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "SOUTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1967 }
+                        - column: { name: arena, value: "Toyota Center" }
+                        - column: { name: head_coach, value: "Ime Udoka" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Grizzlies" }
+                        - column: { name: city, value: "Memphis" }
+                        - column: { name: abbreviation, value: "MEM" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "SOUTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1995 }
+                        - column: { name: arena, value: "FedExForum" }
+                        - column: { name: head_coach, value: "Taylor Jenkins" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Pelicans" }
+                        - column: { name: city, value: "New Orleans" }
+                        - column: { name: abbreviation, value: "NOP" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "SOUTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 2002 }
+                        - column: { name: arena, value: "Smoothie King Center" }
+                        - column: { name: head_coach, value: "Willie Green" }
+              - insert:
+                    tableName: teams
+                    columns:
+                        - column: { name: name, value: "Spurs" }
+                        - column: { name: city, value: "San Antonio" }
+                        - column: { name: abbreviation, value: "SAS" }
+                        - column: { name: conference, value: "WESTERN" }
+                        - column: { name: division, value: "SOUTHWEST" }
+                        - column: { name: founded_year, valueNumeric: 1976 }
+                        - column: { name: arena, value: "AT&T Center" }
+                        - column: { name: head_coach, value: "Gregg Popovich" }
+
+
+    # Les comptes ne sont plus créés par migration : l'administrateur initial vient des variables
+    # d'environnement HOOPMIND_ADMIN_* (voir AdminBootstrap).
+
+    # Insérer quelques joueurs exemple (via SQL pour plus de flexibilité)
+    - changeSet:
+          id: 007-insert-sample-players
+          author: nba-prediction
+          changes:
+              - sql:
+                    sql: |
+                        INSERT INTO players (first_name, last_name, position, jersey_number, team_id, birth_date, height, weight, nationality, status)
+                        SELECT 'LeBron', 'James', 'SMALL_FORWARD', 23, t.id, '1984-12-30', 206, 113, 'USA', 'ACTIVE'
+                        FROM teams t WHERE t.abbreviation = 'LAL';
+                        
+                        INSERT INTO players (first_name, last_name, position, jersey_number, team_id, birth_date, height, weight, nationality, status)
+                        SELECT 'Stephen', 'Curry', 'POINT_GUARD', 30, t.id, '1988-03-14', 191, 84, 'USA', 'ACTIVE'
+                        FROM teams t WHERE t.abbreviation = 'GSW';
+                        
+                        INSERT INTO players (first_name, last_name, position, jersey_number, team_id, birth_date, height, weight, nationality, status)
+                        SELECT 'Jayson', 'Tatum', 'SMALL_FORWARD', 0, t.id, '1998-03-03', 203, 95, 'USA', 'ACTIVE'
+                        FROM teams t WHERE t.abbreviation = 'BOS';

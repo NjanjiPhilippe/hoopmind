@@ -1,0 +1,33 @@
+<nav class="sticky top-0 z-50 bg-white shadow-lg">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex h-16 justify-between">
+      <a routerLink="/" class="flex items-center gap-3">
+        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 text-xl">🏀</span>
+        <span class="text-xl font-bold text-gray-900">HoopMind</span>
+      </a>
+
+      @if (auth.isAuthenticated()) {
+        <div class="hidden items-center gap-8 md:flex">
+          <a routerLink="/dashboard" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Dashboard</a>
+          <a routerLink="/teams" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Équipes</a>
+          <a routerLink="/matches" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Matchs</a>
+          <a routerLink="/predictions" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Prédictions</a>
+          <a routerLink="/statistics" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Statistiques</a>
+          @if (auth.isAdmin()) {
+            <a routerLink="/admin" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Admin</a>
+          }
+        </div>
+      }
+
+      <div class="flex items-center gap-3">
+        @if (auth.user(); as user) {
+          <a routerLink="/account" class="text-sm font-medium text-gray-700 hover:text-primary-600">{{ user.username }}</a>
+          <button type="button" (click)="logout()" class="btn-secondary text-sm">Déconnexion</button>
+        } @else {
+          <a routerLink="/auth/login" class="btn-outline text-sm">Connexion</a>
+          <a routerLink="/auth/register" class="btn-primary text-sm">Inscription</a>
+        }
+      </div>
+    </div>
+  </div>
+</nav>

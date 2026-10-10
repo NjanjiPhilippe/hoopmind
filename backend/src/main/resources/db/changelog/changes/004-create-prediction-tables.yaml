@@ -1,0 +1,95 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-game-predictions-table
+      author: nba-prediction
+      changes:
+        - createTable:
+            tableName: match_predictions
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: game_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_prediction_game
+                    references: games(id)
+              - column:
+                  name: predicted_winner_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_prediction_winner
+                    references: teams(id)
+              - column:
+                  name: win_probability
+                  type: DECIMAL(5,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: predicted_home_score
+                  type: INT
+              - column:
+                  name: predicted_away_score
+                  type: INT
+              - column:
+                  name: predicted_score_difference
+                  type: INT
+              - column:
+                  name: model
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: model_version
+                  type: VARCHAR(20)
+              - column:
+                  name: prediction_factors_json
+                  type: TEXT
+              - column:
+                  name: confidence
+                  type: DECIMAL(5,4)
+              - column:
+                  name: prediction_date
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_updated
+                  type: TIMESTAMP
+              - column:
+                  name: is_accurate
+                  type: BOOLEAN
+              - column:
+                  name: predicted_winner_correct
+                  type: BOOLEAN
+              - column:
+                  name: actual_score_difference
+                  type: INT
+              - column:
+                  name: prediction_error
+                  type: DECIMAL(6,2)
+        - createIndex:
+            tableName: match_predictions
+            indexName: idx_prediction_game
+            columns:
+              - column:
+                  name: game_id
+        - createIndex:
+            tableName: match_predictions
+            indexName: idx_prediction_date
+            columns:
+              - column:
+                  name: prediction_date
+        - createIndex:
+            tableName: match_predictions
+            indexName: idx_prediction_accuracy
+            columns:
+              - column:
+                  name: is_accurate

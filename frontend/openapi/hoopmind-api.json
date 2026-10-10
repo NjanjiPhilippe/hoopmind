@@ -1,0 +1,5172 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HoopMind API",
+    "description": "Statistiques et prédictions NBA. Obtenez un jeton avec POST /api/v1/auth/login, puis utilisez le bouton Authorize.",
+    "license": {
+      "name": "Tous droits réservés"
+    },
+    "version": "0.1.0-SNAPSHOT"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8083",
+      "description": "Generated server url"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Games",
+      "description": "Game management APIs"
+    },
+    {
+      "name": "Spark Analytics",
+      "description": "Advanced analytics and ML predictions with Apache Spark"
+    },
+    {
+      "name": "Reports",
+      "description": "Reporting and analytics APIs"
+    },
+    {
+      "name": "Seasons",
+      "description": "Season management APIs"
+    },
+    {
+      "name": "Predictions",
+      "description": "Prediction APIs"
+    },
+    {
+      "name": "Mon compte",
+      "description": "Profil de l'utilisateur connecté"
+    },
+    {
+      "name": "Injury Reports",
+      "description": "Injury report management APIs"
+    },
+    {
+      "name": "Players",
+      "description": "Player management APIs"
+    },
+    {
+      "name": "Teams",
+      "description": "Team management APIs"
+    },
+    {
+      "name": "Statistics",
+      "description": "Statistics APIs"
+    }
+  ],
+  "paths": {
+    "/api/v1/users/me/password": {
+      "put": {
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Changer mon mot de passe",
+        "description": "Déconnecte toutes les autres sessions.",
+        "operationId": "changeMyPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams/{id}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get team by ID",
+        "operationId": "getTeamById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Update team",
+        "operationId": "updateTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Delete team",
+        "operationId": "deleteTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/seasons/{id}": {
+      "get": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Get season by ID",
+        "operationId": "getSeasonById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Update season",
+        "operationId": "updateSeason",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Delete season",
+        "operationId": "deleteSeason",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Get player by ID",
+        "operationId": "getPlayerById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Update player",
+        "operationId": "updatePlayer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayerUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Delete player",
+        "operationId": "deletePlayer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/{id}": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get injury report by ID",
+        "operationId": "getInjuryReportById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InjuryReportResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Update injury report",
+        "operationId": "updateInjuryReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InjuryReportUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InjuryReportResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Delete injury report",
+        "operationId": "deleteInjuryReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/games/{id}": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get game by ID",
+        "description": "Retrieves a game by its ID",
+        "operationId": "getGameById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Game found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Game not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Update game",
+        "description": "Updates an existing game",
+        "operationId": "updateGame",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Game updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Game not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Delete game",
+        "description": "Deletes a game by ID",
+        "operationId": "deleteGame",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Game deleted successfully"
+          },
+          "404": {
+            "description": "Game not found"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/status": {
+      "put": {
+        "tags": [
+          "Administration des utilisateurs"
+        ],
+        "summary": "Activer ou désactiver un compte",
+        "operationId": "setUserStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/roles": {
+      "put": {
+        "tags": [
+          "Administration des utilisateurs"
+        ],
+        "summary": "Remplacer les rôles d'un utilisateur",
+        "description": "ROLE_USER est toujours conservé.",
+        "operationId": "setUserRoles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRolesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get all teams",
+        "operationId": "getAllTeams",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Create a new team",
+        "operationId": "createTeam",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spark/ml/train/score-prediction": {
+      "post": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Train Score Prediction model",
+        "description": "Entraîne un modèle de régression pour prédire les scores des matchs. Utile pour les paris over/under et prédictions de scores exacts.",
+        "operationId": "trainScorePredictionModel",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/ml/train/random-forest": {
+      "post": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Train Random Forest model",
+        "description": "Entraîne un modèle Random Forest pour prédire les résultats des matchs. Utilise 80% des données pour l'entraînement et 20% pour la validation. Retourne les métriques de performance (accuracy, precision, recall, F1, AUC).",
+        "operationId": "trainRandomForestModel",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison pour l'entraînement",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/ml/train/logistic-regression": {
+      "post": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Train Logistic Regression model",
+        "description": "Entraîne un modèle de régression logistique plus simple et rapide. Bon pour comprendre l'importance de chaque statistique.",
+        "operationId": "trainLogisticRegressionModel",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/seasons": {
+      "get": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Get all seasons",
+        "operationId": "getAllSeasons",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SeasonResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Create a new season",
+        "operationId": "createSeason",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeasonCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions": {
+      "post": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Create a prediction",
+        "operationId": "createPrediction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchPredictionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchPredictionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/{id}/evaluate": {
+      "post": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Evaluate prediction (Admin only)",
+        "operationId": "evaluatePrediction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchPredictionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Get all players",
+        "operationId": "getAllPlayers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Create a new player",
+        "operationId": "createPlayer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayerCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries": {
+      "post": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Create a new injury report",
+        "operationId": "createInjuryReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InjuryReportCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InjuryReportResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get all games",
+        "description": "Retrieves all games",
+        "operationId": "getAllGames",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Create a new game",
+        "description": "Creates a new game in the system",
+        "operationId": "createGame",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Game created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Game already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Créer un compte et ouvrir une session",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Renouveler le jeton d'accès",
+        "description": "Lit le cookie de rafraîchissement et le remplace.",
+        "operationId": "refreshSession",
+        "parameters": [
+          {
+            "name": "hoopmind_refresh",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Se déconnecter",
+        "description": "Révoque la session courante et efface le cookie.",
+        "operationId": "logout",
+        "parameters": [
+          {
+            "name": "hoopmind_refresh",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Se connecter avec son nom d'utilisateur ou son e-mail",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Lire mon profil",
+        "operationId": "getMyProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Mon compte"
+        ],
+        "summary": "Modifier mon profil",
+        "operationId": "updateMyProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/seasons/{id}/status": {
+      "patch": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Update season status",
+        "operationId": "updateSeasonStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "UPCOMING",
+                "IN_PROGRESS",
+                "COMPLETED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/{id}/status": {
+      "patch": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Update player status",
+        "operationId": "updatePlayerStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "INJURED",
+                "SUSPENDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/{id}/deactivate": {
+      "patch": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Deactivate injury report",
+        "operationId": "deactivateInjuryReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/games/{id}/status": {
+      "patch": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Update game status",
+        "description": "Updates the status of a game",
+        "operationId": "updateGameStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "New status",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SCHEDULED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "POSTPONED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teams/division/{division}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get teams by division",
+        "operationId": "getTeamsByDivision",
+        "parameters": [
+          {
+            "name": "division",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ATLANTIC",
+                "CENTRAL",
+                "SOUTHEAST",
+                "NORTHWEST",
+                "PACIFIC",
+                "SOUTHWEST"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teams/conference/{conference}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get teams by conference",
+        "operationId": "getTeamsByConference",
+        "parameters": [
+          {
+            "name": "conference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EASTERN",
+                "WESTERN"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/teams/abbreviation/{abbreviation}": {
+      "get": {
+        "tags": [
+          "Teams"
+        ],
+        "summary": "Get team by abbreviation",
+        "operationId": "getTeamByAbbreviation",
+        "parameters": [
+          {
+            "name": "abbreviation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/teams/{teamId}/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get team stats for specific team and season",
+        "operationId": "getTeamStats",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/teams/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get team stats by season",
+        "operationId": "getTeamStatsBySeason",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/standings/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get standings for season",
+        "operationId": "getStandingsBySeason",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/players/{playerId}/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get player stats for specific player and season",
+        "operationId": "getPlayerStats",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/players/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get player stats by season",
+        "operationId": "getPlayerStatsBySeason",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/leaders/scorers/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get top scorers",
+        "operationId": "getTopScorers",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/leaders/rebounders/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get top rebounders",
+        "operationId": "getTopRebounders",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/leaders/assists/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get top assists",
+        "operationId": "getTopAssists",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/team/{teamId}": {
+      "get": {
+        "tags": [
+          "statistics-controller"
+        ],
+        "operationId": "getTeamStatisticsOverview",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStatisticsOverviewDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/season/top-teams": {
+      "get": {
+        "tags": [
+          "statistics-controller"
+        ],
+        "operationId": "getTopTeams",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListTeamStatisticDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/season/top-scorers": {
+      "get": {
+        "tags": [
+          "statistics-controller"
+        ],
+        "operationId": "getTopScorers_1",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListPlayerStatisticDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/season/top-assistants": {
+      "get": {
+        "tags": [
+          "statistics-controller"
+        ],
+        "operationId": "getTopAssistants",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListPlayerStatisticDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/statistics/conference": {
+      "get": {
+        "tags": [
+          "statistics-controller"
+        ],
+        "operationId": "getConferenceStandings",
+        "parameters": [
+          {
+            "name": "conference",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListTeamStatisticDTO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/spark/ml/predict/game": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Predict game outcome",
+        "description": "Utilise le modèle entraîné pour prédire le résultat d'un match. Retourne la prédiction (équipe gagnante) et les probabilités.",
+        "operationId": "predictGameOutcome",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "homeTeamId",
+            "in": "query",
+            "description": "ID de l'équipe domicile",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "awayTeamId",
+            "in": "query",
+            "description": "ID de l'équipe extérieure",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/ml/model-metrics": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Get model metrics",
+        "description": "Récupère les métriques de performance d'un modèle entraîné. Utile pour comparer différents modèles.",
+        "operationId": "getModelMetrics",
+        "parameters": [
+          {
+            "name": "modelType",
+            "in": "query",
+            "description": "Type de modèle",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/team-trends": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze team trends",
+        "description": "Analyse les tendances des équipes sur la saison: performances moyennes, avantage du terrain, stats domicile vs extérieur. Utilise l'agrégation Spark pour traiter rapidement des milliers de matchs.",
+        "operationId": "analyzeTeamTrends",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/team-momentum": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze team momentum",
+        "description": "Analyse la dynamique actuelle d'une équipe. Forme récente, séries de victoires/défaites, tendances.",
+        "operationId": "analyzeTeamMomentum",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "query",
+            "description": "ID de l'équipe",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/performance-by-period": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze performance by period",
+        "description": "Compare les performances en début, milieu et fin de saison. Identifie les équipes qui progressent ou déclinent. Utile pour ajuster les prédictions selon la forme actuelle.",
+        "operationId": "analyzePerformanceByPeriod",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/insights": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Generate insights",
+        "description": "Génère des insights automatiques basés sur les données: facteurs clés de victoire, équipes en forme, prédictibilité de la saison.",
+        "operationId": "generateInsights",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/injury-impact": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze injury impact",
+        "description": "Mesure l'impact des blessures sur les performances des équipes. Compare les taux de victoires avec et sans joueurs clés blessés.",
+        "operationId": "analyzeInjuryImpact",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/head-to-head": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze head-to-head",
+        "description": "Analyse l'historique des confrontations entre deux équipes. Statistiques des matchups, tendances, avantages spécifiques.",
+        "operationId": "analyzeHeadToHead",
+        "parameters": [
+          {
+            "name": "team1Id",
+            "in": "query",
+            "description": "ID de l'équipe 1",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "team2Id",
+            "in": "query",
+            "description": "ID de l'équipe 2",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/analytics/correlations": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Analyze correlations",
+        "description": "Calcule les corrélations entre différentes statistiques et les victoires. Identifie quelles stats sont les plus importantes pour gagner. Corrélation: -1 (négative) à 1 (positive), 0 = pas de relation.",
+        "operationId": "analyzeCorrelations",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number",
+                    "format": "double"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/seasons/active": {
+      "get": {
+        "tags": [
+          "Seasons"
+        ],
+        "summary": "Get active season",
+        "operationId": "getActiveSeason",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/season/{seasonId}/summary": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get season summary",
+        "operationId": "getSeasonSummary",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/season/{seasonId}/leaderboard": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get player leaderboard",
+        "operationId": "getPlayerLeaderboard",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/injuries": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get injury report",
+        "operationId": "getInjuryReport",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/head-to-head": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Get head-to-head statistics",
+        "operationId": "getHeadToHeadStats",
+        "parameters": [
+          {
+            "name": "team1Id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "team2Id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predictions/{id}": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get prediction by ID",
+        "operationId": "getPredictionById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchPredictionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/model/{model}": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get predictions by model",
+        "operationId": "getPredictionsByModel",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchPredictionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/game/{gameId}": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get prediction by game",
+        "operationId": "getPredictionByGame",
+        "parameters": [
+          {
+            "name": "gameId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchPredictionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/evaluated": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get evaluated predictions",
+        "operationId": "getEvaluatedPredictions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatchPredictionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/accuracy/model/{model}": {
+      "get": {
+        "tags": [
+          "Predictions"
+        ],
+        "summary": "Get prediction accuracy report",
+        "operationId": "getPredictionAccuracyReport",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/team/{teamId}": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Get players by team",
+        "operationId": "getPlayersByTeam",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/status/{status}": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Get players by status",
+        "operationId": "getPlayersByStatus",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "INJURED",
+                "SUSPENDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/search": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Search players by name",
+        "operationId": "searchPlayersByName",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/players/position/{position}": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Get players by position",
+        "operationId": "getPlayersByPosition",
+        "parameters": [
+          {
+            "name": "position",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "POINT_GUARD",
+                "SHOOTING_GUARD",
+                "SMALL_FORWARD",
+                "POWER_FORWARD",
+                "CENTER"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/team/{teamId}": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get injury reports by team",
+        "operationId": "getInjuryReportsByTeam",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryReportResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/team/{teamId}/current": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get current team injuries",
+        "operationId": "getCurrentTeamInjuries",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryReportResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/status/{status}": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get injury reports by status",
+        "operationId": "getInjuryReportsByStatus",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HEALTHY",
+                "MINOR_INJURY",
+                "MAJOR_INJURY",
+                "OUT_FOR_SEASON"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryReportResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/player/{playerId}": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get injury reports by player",
+        "operationId": "getInjuryReportsByPlayer",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryReportResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/injuries/player/{playerId}/active": {
+      "get": {
+        "tags": [
+          "Injury Reports"
+        ],
+        "summary": "Get active injury reports by player",
+        "operationId": "getActiveInjuryReportsByPlayer",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InjuryReportResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/today": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get today's games",
+        "description": "Retrieves games scheduled for today",
+        "operationId": "getTodaysGames",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/team/{teamId}": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get games by team",
+        "description": "Retrieves games for a specific team",
+        "operationId": "getGamesByTeam",
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "description": "Team ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/status/{status}": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get games by status",
+        "description": "Retrieves games filtered by status",
+        "operationId": "getGamesByStatus",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "description": "Game status",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SCHEDULED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "POSTPONED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/season/{seasonId}": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get games by season",
+        "description": "Retrieves games for a specific season",
+        "operationId": "getGamesBySeason",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "path",
+            "description": "Season ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/live": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get live games",
+        "description": "Retrieves games currently in progress",
+        "operationId": "getLiveGames",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/date-range": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Get games by date range",
+        "description": "Retrieves games within a date range",
+        "operationId": "getGamesByDateRange",
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Start date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "End date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GameResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "Administration des utilisateurs"
+        ],
+        "summary": "Lister et rechercher les utilisateurs",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "createdAt,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedModelUserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "get": {
+        "tags": [
+          "Administration des utilisateurs"
+        ],
+        "summary": "Lire un utilisateur",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Administration des utilisateurs"
+        ],
+        "summary": "Supprimer un utilisateur",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChangePasswordRequest": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "TeamUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "conference": {
+            "type": "string",
+            "enum": [
+              "EASTERN",
+              "WESTERN"
+            ]
+          },
+          "division": {
+            "type": "string",
+            "enum": [
+              "ATLANTIC",
+              "CENTRAL",
+              "SOUTHEAST",
+              "NORTHWEST",
+              "PACIFIC",
+              "SOUTHWEST"
+            ]
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "arena": {
+            "type": "string"
+          },
+          "headCoach": {
+            "type": "string"
+          }
+        }
+      },
+      "TeamResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "conference": {
+            "type": "string",
+            "enum": [
+              "EASTERN",
+              "WESTERN"
+            ]
+          },
+          "division": {
+            "type": "string",
+            "enum": [
+              "ATLANTIC",
+              "CENTRAL",
+              "SOUTHEAST",
+              "NORTHWEST",
+              "PACIFIC",
+              "SOUTHWEST"
+            ]
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "foundedYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "arena": {
+            "type": "string"
+          },
+          "headCoach": {
+            "type": "string"
+          }
+        }
+      },
+      "SeasonUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "playoffsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "finalsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPCOMING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ]
+          }
+        }
+      },
+      "SeasonResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "playoffsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "finalsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPCOMING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ]
+          }
+        }
+      },
+      "PlayerUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "POINT_GUARD",
+              "SHOOTING_GUARD",
+              "SMALL_FORWARD",
+              "POWER_FORWARD",
+              "CENTER"
+            ]
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "height": {
+            "type": "number",
+            "format": "double"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "photoUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "POINT_GUARD",
+              "SHOOTING_GUARD",
+              "SMALL_FORWARD",
+              "POWER_FORWARD",
+              "CENTER"
+            ]
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "birthPlace": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "height": {
+            "type": "number",
+            "format": "double"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "experience": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "college": {
+            "type": "string"
+          },
+          "draftYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draftRound": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draftNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "photoUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "INJURED",
+              "SUSPENDED"
+            ]
+          }
+        }
+      },
+      "TeamSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "abbreviation": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "InjuryReportUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "HEALTHY",
+              "MINOR_INJURY",
+              "MAJOR_INJURY",
+              "OUT_FOR_SEASON"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "expectedReturnDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "actualReturnDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gamesExpectedToMiss": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesActuallyMissed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InjuryReportResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerSummaryResponse"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "injuryType": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "HEALTHY",
+              "MINOR_INJURY",
+              "MAJOR_INJURY",
+              "OUT_FOR_SEASON"
+            ]
+          },
+          "reportDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedReturnDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "actualReturnDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gamesExpectedToMiss": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesActuallyMissed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlayerSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "POINT_GUARD",
+              "SHOOTING_GUARD",
+              "SMALL_FORWARD",
+              "POWER_FORWARD",
+              "CENTER"
+            ]
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "photoUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "GameUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "scheduledDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualStartTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualEndTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "type": "string"
+          },
+          "attendance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isNationalTv": {
+            "type": "boolean"
+          },
+          "broadcastNetwork": {
+            "type": "string"
+          }
+        }
+      },
+      "GameResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "homeTeam": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "awayTeam": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonSummaryResponse"
+          },
+          "gameType": {
+            "type": "string",
+            "enum": [
+              "PRESEASON",
+              "REGULAR_SEASON",
+              "PLAYOFFS",
+              "FINALS",
+              "ALL_STAR"
+            ]
+          },
+          "scheduledDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualStartTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualEndTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "type": "string"
+          },
+          "attendance": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SCHEDULED",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "POSTPONED",
+              "CANCELLED"
+            ]
+          },
+          "isNationalTv": {
+            "type": "boolean"
+          },
+          "broadcastNetwork": {
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/GameResultSummaryResponse"
+          }
+        }
+      },
+      "GameResultSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "homeTeamScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awayTeamScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winner": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "overtime": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SeasonSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateStatusRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "favoriteTeamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ROLE_USER",
+                "ROLE_ADMIN"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "lastLogin": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "createdAt",
+          "email",
+          "enabled",
+          "id",
+          "roles",
+          "username"
+        ]
+      },
+      "UpdateRolesRequest": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ROLE_USER",
+                "ROLE_ADMIN"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "TeamCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1
+          },
+          "abbreviation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "conference": {
+            "type": "string",
+            "enum": [
+              "EASTERN",
+              "WESTERN"
+            ]
+          },
+          "division": {
+            "type": "string",
+            "enum": [
+              "ATLANTIC",
+              "CENTRAL",
+              "SOUTHEAST",
+              "NORTHWEST",
+              "PACIFIC",
+              "SOUTHWEST"
+            ]
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "foundedYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "arena": {
+            "type": "string"
+          },
+          "headCoach": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "abbreviation",
+          "city",
+          "conference",
+          "division",
+          "name"
+        ]
+      },
+      "SeasonCreateRequest": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "playoffsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "finalsStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPCOMING",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ]
+          }
+        },
+        "required": [
+          "endDate",
+          "name",
+          "startDate",
+          "status",
+          "year"
+        ]
+      },
+      "MatchPredictionCreateRequest": {
+        "type": "object",
+        "properties": {
+          "gameId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "predictedWinnerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "winProbability": {
+            "type": "number"
+          },
+          "predictedHomeScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictedAwayScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictedScoreDifference": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modelVersion": {
+            "type": "string"
+          },
+          "predictionFactorsJson": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "gameId",
+          "model",
+          "predictedWinnerId",
+          "winProbability"
+        ]
+      },
+      "GameSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "homeTeam": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "awayTeam": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "scheduledDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MatchPredictionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "game": {
+            "$ref": "#/components/schemas/GameSummaryResponse"
+          },
+          "predictedWinner": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "winProbability": {
+            "type": "number"
+          },
+          "predictedHomeScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictedAwayScore": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictedScoreDifference": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelVersion": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "predictionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isAccurate": {
+            "type": "boolean"
+          },
+          "predictedWinnerCorrect": {
+            "type": "boolean"
+          },
+          "actualScoreDifference": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictionError": {
+            "type": "number"
+          }
+        }
+      },
+      "PlayerCreateRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "position": {
+            "type": "string",
+            "enum": [
+              "POINT_GUARD",
+              "SHOOTING_GUARD",
+              "SMALL_FORWARD",
+              "POWER_FORWARD",
+              "CENTER"
+            ]
+          },
+          "jerseyNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "birthPlace": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "height": {
+            "type": "number",
+            "format": "double"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "experience": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "college": {
+            "type": "string"
+          },
+          "draftYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draftRound": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "draftNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "photoUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "position",
+          "teamId"
+        ]
+      },
+      "InjuryReportCreateRequest": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "injuryType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "HEALTHY",
+              "MINOR_INJURY",
+              "MAJOR_INJURY",
+              "OUT_FOR_SEASON"
+            ]
+          },
+          "reportDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedReturnDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "gamesExpectedToMiss": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "injuryType",
+          "playerId",
+          "reportDate",
+          "status",
+          "teamId"
+        ]
+      },
+      "GameCreateRequest": {
+        "type": "object",
+        "properties": {
+          "homeTeamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awayTeamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seasonId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "gameType": {
+            "type": "string",
+            "enum": [
+              "PRESEASON",
+              "REGULAR_SEASON",
+              "PLAYOFFS",
+              "FINALS",
+              "ALL_STAR"
+            ]
+          },
+          "scheduledDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue": {
+            "type": "string"
+          },
+          "isNationalTv": {
+            "type": "boolean"
+          },
+          "broadcastNetwork": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "awayTeamId",
+          "gameType",
+          "homeTeamId",
+          "scheduledDate",
+          "seasonId"
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "username"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "tokenType",
+          "user"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "login",
+          "password"
+        ]
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          },
+          "favoriteTeamId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TeamStatsResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TeamSummaryResponse"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonSummaryResponse"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winPercentage": {
+            "type": "number"
+          },
+          "conferenceRank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "divisionRank": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeWins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "homeLosses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awayWins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "awayLosses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pointsPerGame": {
+            "type": "number"
+          },
+          "pointsAllowedPerGame": {
+            "type": "number"
+          },
+          "pointsDifferential": {
+            "type": "number"
+          },
+          "offensiveRating": {
+            "type": "number"
+          },
+          "defensiveRating": {
+            "type": "number"
+          },
+          "netRating": {
+            "type": "number"
+          },
+          "currentStreak": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PlayerStatsResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerSummaryResponse"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonSummaryResponse"
+          },
+          "gamesPlayed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesStarted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minutesPerGame": {
+            "type": "number"
+          },
+          "pointsPerGame": {
+            "type": "number"
+          },
+          "totalReboundsPerGame": {
+            "type": "number"
+          },
+          "assistsPerGame": {
+            "type": "number"
+          },
+          "stealsPerGame": {
+            "type": "number"
+          },
+          "blocksPerGame": {
+            "type": "number"
+          },
+          "turnoversPerGame": {
+            "type": "number"
+          },
+          "fieldGoalPercentage": {
+            "type": "number"
+          },
+          "threePointPercentage": {
+            "type": "number"
+          },
+          "freeThrowPercentage": {
+            "type": "number"
+          },
+          "trueShootingPercentage": {
+            "type": "number"
+          },
+          "effectiveFieldGoalPercentage": {
+            "type": "number"
+          }
+        }
+      },
+      "ApiResponseStatisticsOverviewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/StatisticsOverviewDTO"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PlayerStatisticDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "playerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "playerName": {
+            "type": "string"
+          },
+          "season": {
+            "type": "string"
+          },
+          "gamesPlayed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minutesPerGame": {
+            "type": "number"
+          },
+          "pointsPerGame": {
+            "type": "number"
+          },
+          "reboundsPerGame": {
+            "type": "number"
+          },
+          "assistsPerGame": {
+            "type": "number"
+          },
+          "stealsPerGame": {
+            "type": "number"
+          },
+          "blocksPerGame": {
+            "type": "number"
+          },
+          "fieldGoalPercentage": {
+            "type": "number"
+          },
+          "threePointPercentage": {
+            "type": "number"
+          },
+          "freeThrowPercentage": {
+            "type": "number"
+          },
+          "turnoversPerGame": {
+            "type": "number"
+          },
+          "statDate": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "StatisticsOverviewDTO": {
+        "type": "object",
+        "properties": {
+          "season": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamStats": {
+            "$ref": "#/components/schemas/TeamStatisticDTO"
+          },
+          "topScorers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerStatisticDTO"
+            }
+          },
+          "topRebounders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerStatisticDTO"
+            }
+          },
+          "topAssistants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerStatisticDTO"
+            }
+          },
+          "recentForm": {
+            "$ref": "#/components/schemas/TeamFormDTO"
+          }
+        }
+      },
+      "TeamFormDTO": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "matchesAnalyzed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winRate": {
+            "type": "number",
+            "format": "double"
+          },
+          "form": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "averagePointsScored": {
+            "type": "number",
+            "format": "double"
+          },
+          "averagePointsAllowed": {
+            "type": "number",
+            "format": "double"
+          },
+          "pointDifferential": {
+            "type": "number",
+            "format": "double"
+          },
+          "onWinStreak": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TeamStatisticDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "teamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "teamName": {
+            "type": "string"
+          },
+          "season": {
+            "type": "string"
+          },
+          "wins": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "losses": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "winPercentage": {
+            "type": "number"
+          },
+          "pointsPerGame": {
+            "type": "number"
+          },
+          "pointsAllowedPerGame": {
+            "type": "number"
+          },
+          "fieldGoalPercentage": {
+            "type": "number"
+          },
+          "threePointPercentage": {
+            "type": "number"
+          },
+          "freeThrowPercentage": {
+            "type": "number"
+          },
+          "reboundsPerGame": {
+            "type": "number"
+          },
+          "assistsPerGame": {
+            "type": "number"
+          },
+          "homeRecord": {
+            "type": "string"
+          },
+          "awayRecord": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiResponseListTeamStatisticDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamStatisticDTO"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiResponseListPlayerStatisticDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerStatisticDTO"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageMetadata": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PagedModelUserProfile": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserProfile"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
