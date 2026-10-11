@@ -31,7 +31,7 @@ src/app/
 └── features/            une fonctionnalité par dossier, chargée à la demande
     ├── auth/            connexion, inscription
     ├── account/         profil et mot de passe
-    ├── admin/           tableau de bord et gestion des utilisateurs
+    ├── admin/           tableau de bord, gestion des utilisateurs, journal d'audit
     └── ...              pages NBA (équipes, joueurs, matchs, prédictions, statistiques)
 ```
 

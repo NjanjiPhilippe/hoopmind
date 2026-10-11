@@ -15,6 +15,7 @@ set -a && . ./.env && set +a
 
 - `JWT_SECRET` : `openssl rand -base64 48`
 - Au premier démarrage, un administrateur est créé à partir de `HOOPMIND_ADMIN_*` s'il n'en existe aucun.
+- Les tâches planifiées sur les matchs (statuts, rappels, statistiques) sont désactivées par défaut : `NBA_SCHEDULER_ENABLED=true` les active.
 - Spark démarre en mode `local[*]` dans la JVM. `SPARK_ENABLED=false` démarre l'API sans Spark ;
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
 - Tout en conteneurs : `docker compose --profile app up -d --build`.
@@ -69,8 +70,9 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 | `user` | Comptes, profils, rôles, administration des utilisateurs. API publique : `UserAccountService` et l'événement `UserCredentialsRevoked`. |
 | `auth` | Connexion, jetons, configuration Spring Security (API et Swagger). Dépend de `user`, jamais l'inverse. |
 | `nba` | Équipes, joueurs, saisons, matchs, statistiques, blessures. |
+| `audit` | Journal d'audit : qui a fait quoi, sur quel compte, avec quel résultat. Les autres modules publient un `AuditEvent`. |
 | `ml` | Prédictions et analyses. Le reste de l'application passe par le port `GameOutcomePredictor` ; l'implémentation Spark vit dans `ml.spark`. |
-| `shared` | Configuration commune, erreurs, e-mail, audit. |
+| `shared` | Configuration commune, erreurs, e-mail. |
 
 **Choix assumés**
 
@@ -87,7 +89,23 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 - Rotation à chaque usage, avec détection de réutilisation : rejouer un ancien jeton révoque toute la session.
 - Changer de mot de passe, être désactivé, changer de rôles ou être supprimé révoque immédiatement toutes les sessions de l'utilisateur.
 - Mots de passe hachés en bcrypt (`DelegatingPasswordEncoder`, migration d'algorithme possible).
+- Journal d'audit des actions sensibles (voir ci-dessous).
 - Aucun secret dans le dépôt : tout passe par des variables d'environnement (`.env.example`).
+
+### Journal d'audit
+
+Sont tracés : inscriptions, connexions et échecs de connexion, déconnexions, réutilisation d'un jeton de rafraîchissement,
+modifications de profil, changements (et échecs de changement) de mot de passe, création de l'administrateur initial,
+et toutes les actions des administrateurs sur les comptes (activation, désactivation, rôles, suppression), y compris celles refusées.
+
+- Chaque événement garde l'auteur, le compte concerné, la date, le résultat et un motif. Les noms sont copiés pour rester
+  lisibles après la suppression d'un compte.
+- Pas d'adresse IP, pas de mot de passe, pas de valeur saisie : un profil modifié ne garde que le nom des champs, et une
+  connexion avec un identifiant inconnu n'enregistre pas cet identifiant (il peut contenir un mot de passe tapé dans le mauvais champ).
+- Une réussite n'est enregistrée que si l'action est validée ; un échec l'est toujours. L'écriture se fait dans une transaction
+  séparée et ne peut pas faire échouer l'action.
+- Les événements sont aussi écrits dans le journal applicatif `hoopmind.audit`, et supprimés après `AUDIT_RETENTION` (365 jours par défaut).
+- Consultation : `GET /api/v1/admin/audit-events` (filtres `action`, `outcome`, `userId`, `user`, `from`, `to`) et la page *Administration → Journal d'audit*.
 
 ### Routes principales
 
@@ -99,6 +117,7 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 | GET | `/api/v1/admin/users?search=&page=&size=` | ADMIN |
 | GET, DELETE | `/api/v1/admin/users/{id}` | ADMIN |
 | PUT | `/api/v1/admin/users/{id}/status`, `/roles` | ADMIN |
+| GET | `/api/v1/admin/audit-events?action=&outcome=&userId=&user=&from=&to=` | ADMIN |
 | GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats`… | public |
 | POST | `/api/v1/admin/imports/nba-database?seasons=` (synchrone) | ADMIN |
 | GET | `/api/v1/admin/imports/nba-database/status` | ADMIN |

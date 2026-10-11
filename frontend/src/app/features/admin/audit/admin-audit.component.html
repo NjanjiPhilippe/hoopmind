@@ -1,0 +1,116 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900">Journal d'audit</h1>
+      <p class="mt-1 text-gray-600">
+        Qui a fait quoi dans l'application.
+        @if (pageInfo(); as info) {
+          {{ info.totalElements }} événement(s).
+        }
+      </p>
+      @if (userId() !== undefined) {
+        <p class="mt-3 inline-flex items-center gap-3 rounded-lg bg-primary-50 px-3 py-2 text-sm text-primary-800">
+          Historique de {{ userLabel() ?? 'l’utilisateur n°' + userId() }}
+          <a routerLink="/admin/audit" class="font-medium underline">Voir tout le journal</a>
+        </p>
+      }
+    </header>
+
+    <form class="mb-6 grid grid-cols-1 gap-3 rounded-xl bg-white p-4 shadow sm:grid-cols-2 lg:grid-cols-6" (submit)="$event.preventDefault()">
+      <label class="text-sm lg:col-span-2">
+        <span class="mb-1 block font-medium text-gray-700">Utilisateur</span>
+        <input type="search" class="input-field" placeholder="Auteur ou compte concerné"
+               [value]="filters().user" (input)="onUser($any($event.target).value)" />
+      </label>
+      <label class="text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Action</span>
+        <select class="input-field" [value]="filters().action" (change)="update({ action: $any($event.target).value })">
+          <option value="">Toutes</option>
+          @for (action of actions; track action) {
+            <option [value]="action">{{ actionLabels[action] }}</option>
+          }
+        </select>
+      </label>
+      <label class="text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Résultat</span>
+        <select class="input-field" [value]="filters().outcome" (change)="update({ outcome: $any($event.target).value })">
+          <option value="">Tous</option>
+          <option value="SUCCESS">Réussite</option>
+          <option value="FAILURE">Échec</option>
+        </select>
+      </label>
+      <label class="text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Du</span>
+        <input type="date" class="input-field" [value]="filters().from" (change)="update({ from: $any($event.target).value })" />
+      </label>
+      <label class="text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Au</span>
+        <input type="date" class="input-field" [value]="filters().to" (change)="update({ to: $any($event.target).value })" />
+      </label>
+      <div class="flex justify-end sm:col-span-2 lg:col-span-6">
+        <button type="button" class="btn-secondary text-sm" (click)="reset()">Réinitialiser les filtres</button>
+      </div>
+    </form>
+
+    @if (events.error()) {
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600" role="alert">
+        Impossible de charger le journal.
+      </div>
+    }
+
+    <div class="overflow-x-auto rounded-xl bg-white shadow">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <tr>
+            <th scope="col" class="px-4 py-3">Date</th>
+            <th scope="col" class="px-4 py-3">Auteur</th>
+            <th scope="col" class="px-4 py-3">Action</th>
+            <th scope="col" class="px-4 py-3">Compte concerné</th>
+            <th scope="col" class="px-4 py-3">Détails</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          @for (event of rows(); track event.id) {
+            <tr>
+              <td class="whitespace-nowrap px-4 py-3 text-gray-600">{{ event.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td class="px-4 py-3 font-medium text-gray-900">{{ event.actorLogin ?? 'Inconnu' }}</td>
+              <td class="px-4 py-3">
+                <span class="badge" [class.badge-success]="event.outcome === 'SUCCESS'" [class.badge-danger]="event.outcome === 'FAILURE'">
+                  {{ actionLabels[event.action] }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-gray-700">
+                @if (event.targetLabel && event.targetLabel !== event.actorLogin) {
+                  {{ event.targetLabel }}
+                } @else if (event.targetLabel) {
+                  <span class="text-gray-400">lui-même</span>
+                } @else {
+                  <span class="text-gray-400">—</span>
+                }
+              </td>
+              <td class="px-4 py-3 text-gray-600">{{ describe(event) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="px-4 py-10 text-center text-gray-500">
+                {{ events.isLoading() ? 'Chargement…' : 'Aucun événement pour ces critères' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (pageInfo(); as info) {
+      @if (info.totalPages! > 1) {
+        <nav class="mt-4 flex items-center justify-end gap-3 text-sm" aria-label="Pagination">
+          <button type="button" class="btn-secondary" [disabled]="page() === 0" (click)="page.set(page() - 1)">Plus récents</button>
+          <span>Page {{ page() + 1 }} / {{ info.totalPages }}</span>
+          <button type="button" class="btn-secondary" [disabled]="page() + 1 >= info.totalPages!" (click)="page.set(page() + 1)">Plus anciens</button>
+        </nav>
+      }
+    }
+  </main>
+</div>

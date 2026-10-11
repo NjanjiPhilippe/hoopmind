@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-create-audit-events
+      author: hoopmind
+      comment: Journal d'audit (qui fait quoi). Pas de clé étrangère vers users pour garder l'historique des comptes supprimés.
+      changes:
+        - createTable:
+            tableName: audit_events
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: occurred_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: action
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: outcome
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_id
+                  type: BIGINT
+              - column:
+                  name: actor_login
+                  type: VARCHAR(100)
+              - column:
+                  name: target_type
+                  type: VARCHAR(30)
+              - column:
+                  name: target_id
+                  type: VARCHAR(64)
+              - column:
+                  name: target_label
+                  type: VARCHAR(100)
+              - column:
+                  name: details
+                  type: JSONB
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: audit_events
+            indexName: idx_audit_events_occurred_at
+            columns:
+              - column:
+                  name: occurred_at
+        - createIndex:
+            tableName: audit_events
+            indexName: idx_audit_events_actor
+            columns:
+              - column:
+                  name: actor_id
+        - createIndex:
+            tableName: audit_events
+            indexName: idx_audit_events_target
+            columns:
+              - column:
+                  name: target_type
+              - column:
+                  name: target_id
+        - createIndex:
+            tableName: audit_events
+            indexName: idx_audit_events_action
+            columns:
+              - column:
+                  name: action

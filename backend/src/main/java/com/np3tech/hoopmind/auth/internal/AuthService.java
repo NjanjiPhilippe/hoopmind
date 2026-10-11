@@ -1,5 +1,9 @@
 package com.np3tech.hoopmind.auth.internal;
 
+import com.np3tech.hoopmind.audit.AuditAction;
+import com.np3tech.hoopmind.audit.AuditActor;
+import com.np3tech.hoopmind.audit.AuditEvent;
+import com.np3tech.hoopmind.audit.AuditTarget;
 import com.np3tech.hoopmind.auth.config.JwtProperties;
 import com.np3tech.hoopmind.user.Registration;
 import com.np3tech.hoopmind.user.UserAccount;
@@ -7,6 +11,7 @@ import com.np3tech.hoopmind.user.UserAccountService;
 import com.np3tech.hoopmind.user.UserCredentialsRevoked;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,6 +44,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokens;
     private final JwtProperties properties;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     /** Hash factice comparé quand le compte n'existe pas, pour ne pas révéler son existence par le temps de réponse. */
     private String dummyHash;
@@ -54,12 +60,18 @@ public class AuthService {
         UserAccount account = accounts.findAccountByLogin(login).orElse(null);
         if (account == null) {
             passwordEncoder.matches(password, dummyHash());
+            // L'identifiant saisi n'est pas conservé : il peut contenir un mot de passe tapé dans le mauvais champ.
+            events.publishEvent(AuditEvent.failure(AuditAction.LOGIN_FAILED, null, null, "UNKNOWN_ACCOUNT"));
             throw AuthenticationFailedException.badCredentials();
         }
-        if (!passwordEncoder.matches(password, account.passwordHash()) || !account.active()) {
-            throw AuthenticationFailedException.badCredentials();
+        if (!passwordEncoder.matches(password, account.passwordHash())) {
+            loginFailed(account, "BAD_PASSWORD");
+        }
+        if (!account.active()) {
+            loginFailed(account, "ACCOUNT_DISABLED");
         }
         accounts.recordSuccessfulLogin(account.id());
+        events.publishEvent(AuditEvent.success(AuditAction.LOGIN_SUCCEEDED, actor(account), target(account)));
         return openSession(account, UUID.randomUUID().toString(), client);
     }
 
@@ -77,6 +89,9 @@ public class AuthService {
             int revoked = refreshTokens.revokeFamily(current.getFamilyId(), now);
             log.warn("Réutilisation d'un jeton de rafraîchissement révoqué (utilisateur {}), {} jeton(s) révoqué(s)",
                     current.getUserId(), revoked);
+            accounts.findAccountById(current.getUserId()).ifPresent(account -> events.publishEvent(
+                    AuditEvent.failure(AuditAction.REFRESH_TOKEN_REUSED, actor(account), target(account), "TOKEN_ALREADY_USED")
+                            .withDetail("revokedTokens", String.valueOf(revoked))));
             throw AuthenticationFailedException.invalidRefreshToken();
         }
         if (current.isExpired(now)) {
@@ -92,8 +107,13 @@ public class AuthService {
 
     @Transactional
     public void logout(String rawRefreshToken) {
-        refreshTokens.findByTokenHash(hash(rawRefreshToken))
-                .ifPresent(token -> refreshTokens.revokeFamily(token.getFamilyId(), clock.instant()));
+        refreshTokens.findByTokenHash(hash(rawRefreshToken)).ifPresent(token -> {
+            refreshTokens.revokeFamily(token.getFamilyId(), clock.instant());
+            if (!token.isRevoked()) {
+                accounts.findAccountById(token.getUserId()).ifPresent(account -> events.publishEvent(
+                        AuditEvent.success(AuditAction.LOGOUT, actor(account), target(account))));
+            }
+        });
     }
 
     /**
@@ -127,6 +147,19 @@ public class AuthService {
                 truncate(client.ipAddress(), 100), truncate(client.userAgent(), 500)));
         return new Session(account.id(), accessTokens.issue(account), properties.accessTokenTtl().toSeconds(),
                 rawRefreshToken, properties.refreshTokenTtl().toSeconds());
+    }
+
+    private void loginFailed(UserAccount account, String reason) {
+        events.publishEvent(AuditEvent.failure(AuditAction.LOGIN_FAILED, actor(account), target(account), reason));
+        throw AuthenticationFailedException.badCredentials();
+    }
+
+    private static AuditActor actor(UserAccount account) {
+        return AuditActor.user(account.id(), account.username());
+    }
+
+    private static AuditTarget target(UserAccount account) {
+        return AuditTarget.user(account.id(), account.username());
     }
 
     private String dummyHash() {

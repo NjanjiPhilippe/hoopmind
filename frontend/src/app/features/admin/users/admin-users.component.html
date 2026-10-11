@@ -45,6 +45,7 @@
               </td>
               <td class="px-4 py-3 text-gray-600">{{ user.lastLogin ? (user.lastLogin | date: 'short') : 'Jamais' }}</td>
               <td class="space-x-2 whitespace-nowrap px-4 py-3 text-right">
+                <a class="btn-secondary text-xs" routerLink="/admin/audit" [queryParams]="{ userId: user.id, userLabel: user.username }">Historique</a>
                 @if (!isSelf(user)) {
                   <button type="button" class="btn-secondary text-xs" [disabled]="busyUserId() !== null" (click)="toggleEnabled(user)">
                     {{ user.enabled ? 'Désactiver' : 'Réactiver' }}

@@ -16,6 +16,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/008-auth-refresh-token-families.yaml
   - include:
+      file: db/changelog/changes/009-audit-events.yaml
+  - include:
       file: db/changelog/changes/010-nba-data-import.yaml
   - include:
       file: db/changelog/changes/011-reference-csv-data.yaml
