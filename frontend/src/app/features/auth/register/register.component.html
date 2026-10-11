@@ -41,10 +41,12 @@
 
     <div>
       <label for="password" class="mb-2 block text-sm font-medium text-gray-700">Mot de passe</label>
-      <input id="password" type="password" formControlName="password" class="input-field" autocomplete="new-password" />
-      @if (form.controls.password.touched && form.controls.password.invalid) {
-        <p class="mt-1 text-sm text-red-600">Au moins 8 caractères</p>
-      }
+      <app-password-input inputId="password" [control]="form.controls.password" autocomplete="new-password" describedBy="password-rules" />
+      <p id="password-rules" class="mt-1 text-sm"
+         [class.text-red-600]="form.controls.password.touched && form.controls.password.invalid"
+         [class.text-gray-500]="!(form.controls.password.touched && form.controls.password.invalid)">
+        Au moins 8 caractères.
+      </p>
     </div>
 
     <button type="submit" [disabled]="submitting()" class="btn-primary w-full py-3 text-lg">
