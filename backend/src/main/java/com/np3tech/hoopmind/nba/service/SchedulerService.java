@@ -5,6 +5,7 @@ import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
 import com.np3tech.hoopmind.nba.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import java.util.List;
  * Service for scheduled tasks and automated processes
  */
 @Service
+@ConditionalOnProperty(prefix = "hoopmind.nba.scheduler", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 @Transactional

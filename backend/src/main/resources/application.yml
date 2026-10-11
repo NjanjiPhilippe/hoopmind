@@ -75,6 +75,13 @@ hoopmind:
     training-seasons: ${ML_TRAINING_SEASONS:5}
     # Dossier où le modèle entraîné est enregistré (rechargé au redémarrage)
     model-dir: ${ML_MODEL_DIR:spark-models}
+  # Journal d'audit : durée de conservation (purge chaque nuit).
+  audit:
+    retention: ${AUDIT_RETENTION:365d}
+  # Tâches planifiées sur les matchs (statuts, rappels, statistiques), désactivées tant que les données ne sont pas importées.
+  nba:
+    scheduler:
+      enabled: ${NBA_SCHEDULER_ENABLED:false}
 
 # Apache Spark (module ml)
 spark:

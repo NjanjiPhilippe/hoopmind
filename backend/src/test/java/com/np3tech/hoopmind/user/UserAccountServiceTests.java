@@ -47,7 +47,7 @@ class UserAccountServiceTests {
 
         assertThatThrownBy(() -> service.setEnabled(1L, false)).isInstanceOf(UserException.class);
         assertThat(admin.isEnabled()).isTrue();
-        verify(events, never()).publishEvent(any(Object.class));
+        verify(events, never()).publishEvent(any(UserCredentialsRevoked.class));
     }
 
     @Test

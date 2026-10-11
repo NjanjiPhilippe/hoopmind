@@ -1,6 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 
+import { RouterLink } from '@angular/router';
+
 import { Api } from '../../../core/api/generated/api';
 import { deleteUser } from '../../../core/api/generated/fn/administration-des-utilisateurs/delete-user';
 import { listUsers } from '../../../core/api/generated/fn/administration-des-utilisateurs/list-users';
@@ -15,7 +17,7 @@ const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-admin-users',
-  imports: [DatePipe, NavbarComponent],
+  imports: [DatePipe, RouterLink, NavbarComponent],
   templateUrl: './admin-users.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

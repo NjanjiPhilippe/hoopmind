@@ -49,6 +49,10 @@
       "description": "Injury report management APIs"
     },
     {
+      "name": "Journal d'audit",
+      "description": "Qui a fait quoi dans l'application"
+    },
+    {
       "name": "Players",
       "description": "Player management APIs"
     },
@@ -3793,6 +3797,146 @@
           }
         ]
       }
+    },
+    "/api/v1/admin/audit-events": {
+      "get": {
+        "tags": [
+          "Journal d'audit"
+        ],
+        "summary": "Consulter le journal d'audit",
+        "description": "Du plus récent au plus ancien.",
+        "operationId": "listAuditEvents",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USER_REGISTERED",
+                "LOGIN_SUCCEEDED",
+                "LOGIN_FAILED",
+                "LOGOUT",
+                "REFRESH_TOKEN_REUSED",
+                "PROFILE_UPDATED",
+                "PASSWORD_CHANGED",
+                "PASSWORD_CHANGE_FAILED",
+                "ADMIN_BOOTSTRAPPED",
+                "USER_ENABLED",
+                "USER_DISABLED",
+                "USER_ROLES_CHANGED",
+                "USER_DELETED"
+              ]
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUCCESS",
+                "FAILURE"
+              ]
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "Utilisateur auteur ou cible de l'action",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "description": "Texte cherché dans le nom de l'auteur ou de la cible",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Borne incluse (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Borne exclue (ISO 8601)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "occurredAt,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedModelAuditEvent"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -5644,6 +5788,88 @@
           "importedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "AuditEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "USER_REGISTERED",
+              "LOGIN_SUCCEEDED",
+              "LOGIN_FAILED",
+              "LOGOUT",
+              "REFRESH_TOKEN_REUSED",
+              "PROFILE_UPDATED",
+              "PASSWORD_CHANGED",
+              "PASSWORD_CHANGE_FAILED",
+              "ADMIN_BOOTSTRAPPED",
+              "USER_ENABLED",
+              "USER_DISABLED",
+              "USER_ROLES_CHANGED",
+              "USER_DELETED"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "FAILURE"
+            ]
+          },
+          "actorId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Absent pour une action du système ou une connexion avec un identifiant inconnu"
+          },
+          "actorLogin": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "targetLabel": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "action",
+          "details",
+          "id",
+          "occurredAt",
+          "outcome"
+        ]
+      },
+      "PagedModelAuditEvent": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
           }
         }
       }

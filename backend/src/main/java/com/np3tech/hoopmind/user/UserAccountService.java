@@ -1,5 +1,9 @@
 package com.np3tech.hoopmind.user;
 
+import com.np3tech.hoopmind.audit.AuditAction;
+import com.np3tech.hoopmind.audit.AuditActor;
+import com.np3tech.hoopmind.audit.AuditEvent;
+import com.np3tech.hoopmind.audit.AuditTarget;
 import com.np3tech.hoopmind.user.domain.Role;
 import com.np3tech.hoopmind.user.domain.RoleName;
 import com.np3tech.hoopmind.user.domain.RoleRepository;
@@ -15,8 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -57,6 +64,8 @@ public class UserAccountService {
         User user = create(registration.username(), registration.email(), registration.password(), Set.of(RoleName.ROLE_USER));
         user.setFirstName(blankToNull(registration.firstName()));
         user.setLastName(blankToNull(registration.lastName()));
+        AuditActor self = AuditActor.user(user.getId(), user.getUsername());
+        events.publishEvent(AuditEvent.success(AuditAction.USER_REGISTERED, self, target(user)));
         return toAccount(user);
     }
 
@@ -69,10 +78,24 @@ public class UserAccountService {
     @Transactional
     public UserProfile updateProfile(Long userId, ProfileUpdate update) {
         User user = load(userId);
-        if (update.firstName() != null) user.setFirstName(blankToNull(update.firstName()));
-        if (update.lastName() != null) user.setLastName(blankToNull(update.lastName()));
-        if (update.bio() != null) user.setBio(blankToNull(update.bio()));
-        if (update.favoriteTeamId() != null) user.setFavoriteTeamId(update.favoriteTeamId());
+        // Seuls les noms des champs modifiés sont tracés, jamais leurs valeurs.
+        List<String> changed = new ArrayList<>();
+        if (update.firstName() != null && changed(user.getFirstName(), blankToNull(update.firstName()), "firstName", changed)) {
+            user.setFirstName(blankToNull(update.firstName()));
+        }
+        if (update.lastName() != null && changed(user.getLastName(), blankToNull(update.lastName()), "lastName", changed)) {
+            user.setLastName(blankToNull(update.lastName()));
+        }
+        if (update.bio() != null && changed(user.getBio(), blankToNull(update.bio()), "bio", changed)) {
+            user.setBio(blankToNull(update.bio()));
+        }
+        if (update.favoriteTeamId() != null && changed(user.getFavoriteTeamId(), update.favoriteTeamId(), "favoriteTeamId", changed)) {
+            user.setFavoriteTeamId(update.favoriteTeamId());
+        }
+        if (!changed.isEmpty()) {
+            events.publishEvent(AuditEvent.success(AuditAction.PROFILE_UPDATED, actorOr(user), target(user))
+                    .withDetail("fields", String.join(",", changed)));
+        }
         return UserProfile.of(user);
     }
 
@@ -80,9 +103,12 @@ public class UserAccountService {
     public void changePassword(Long userId, String currentPassword, String newPassword) {
         User user = load(userId);
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            events.publishEvent(AuditEvent.failure(AuditAction.PASSWORD_CHANGE_FAILED, actorOr(user), target(user),
+                    "WRONG_CURRENT_PASSWORD"));
             throw UserException.wrongPassword();
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        events.publishEvent(AuditEvent.success(AuditAction.PASSWORD_CHANGED, actorOr(user), target(user)));
         events.publishEvent(new UserCredentialsRevoked(userId, UserCredentialsRevoked.Reason.PASSWORD_CHANGED));
     }
 
@@ -95,10 +121,15 @@ public class UserAccountService {
     @Transactional
     public UserProfile setEnabled(Long userId, boolean enabled) {
         User user = load(userId);
+        AuditAction action = enabled ? AuditAction.USER_ENABLED : AuditAction.USER_DISABLED;
         if (!enabled && user.isEnabled() && user.hasRole(RoleName.ROLE_ADMIN)) {
-            ensureAnotherAdminRemains();
+            ensureAnotherAdminRemains(action, user);
         }
+        boolean wasEnabled = user.isEnabled();
         user.setEnabled(enabled);
+        if (wasEnabled != enabled) {
+            events.publishEvent(AuditEvent.success(action, actorOr(user), target(user)));
+        }
         if (!enabled) {
             events.publishEvent(new UserCredentialsRevoked(userId, UserCredentialsRevoked.Reason.ACCOUNT_DISABLED));
         }
@@ -111,10 +142,14 @@ public class UserAccountService {
         Set<RoleName> wanted = roleNames.isEmpty() ? EnumSet.of(RoleName.ROLE_USER) : EnumSet.copyOf(roleNames);
         wanted.add(RoleName.ROLE_USER);
         if (user.hasRole(RoleName.ROLE_ADMIN) && !wanted.contains(RoleName.ROLE_ADMIN) && user.isEnabled()) {
-            ensureAnotherAdminRemains();
+            ensureAnotherAdminRemains(AuditAction.USER_ROLES_CHANGED, user);
         }
+        String before = roleList(user.getRoles().stream().map(Role::getName).toList());
         user.getRoles().clear();
         user.getRoles().addAll(resolveRoles(wanted));
+        events.publishEvent(AuditEvent.success(AuditAction.USER_ROLES_CHANGED, actorOr(user), target(user))
+                .withDetail("before", before)
+                .withDetail("after", roleList(wanted)));
         events.publishEvent(new UserCredentialsRevoked(userId, UserCredentialsRevoked.Reason.ROLES_CHANGED));
         return UserProfile.of(user);
     }
@@ -123,8 +158,9 @@ public class UserAccountService {
     public void delete(Long userId) {
         User user = load(userId);
         if (user.isEnabled() && user.hasRole(RoleName.ROLE_ADMIN)) {
-            ensureAnotherAdminRemains();
+            ensureAnotherAdminRemains(AuditAction.USER_DELETED, user);
         }
+        events.publishEvent(AuditEvent.success(AuditAction.USER_DELETED, actorOr(user), target(user)));
         // Les jetons de rafraîchissement doivent disparaître avant l'utilisateur (clé étrangère) :
         // l'écouteur du module auth s'exécute de façon synchrone dans cette transaction.
         events.publishEvent(new UserCredentialsRevoked(userId, UserCredentialsRevoked.Reason.ACCOUNT_DELETED));
@@ -141,7 +177,8 @@ public class UserAccountService {
         if (users.countEnabledWithRole(RoleName.ROLE_ADMIN) > 0) {
             return false;
         }
-        create(username, email, password, EnumSet.of(RoleName.ROLE_USER, RoleName.ROLE_ADMIN));
+        User admin = create(username, email, password, EnumSet.of(RoleName.ROLE_USER, RoleName.ROLE_ADMIN));
+        events.publishEvent(AuditEvent.success(AuditAction.ADMIN_BOOTSTRAPPED, AuditActor.SYSTEM, target(admin)));
         return true;
     }
 
@@ -165,10 +202,32 @@ public class UserAccountService {
                 .collect(Collectors.toSet());
     }
 
-    private void ensureAnotherAdminRemains() {
+    private void ensureAnotherAdminRemains(AuditAction attempted, User user) {
         if (users.countEnabledWithRole(RoleName.ROLE_ADMIN) <= 1) {
+            events.publishEvent(AuditEvent.failure(attempted, actorOr(user), target(user), "LAST_ADMIN"));
             throw UserException.lastAdmin();
         }
+    }
+
+    /** L'utilisateur connecté, ou à défaut l'utilisateur concerné (inscription, appel hors requête HTTP). */
+    private static AuditActor actorOr(User user) {
+        return AuditActor.current().orElseGet(() -> AuditActor.user(user.getId(), user.getUsername()));
+    }
+
+    private static AuditTarget target(User user) {
+        return AuditTarget.user(user.getId(), user.getUsername());
+    }
+
+    private static String roleList(Collection<RoleName> names) {
+        return names.stream().map(Enum::name).sorted().collect(Collectors.joining(","));
+    }
+
+    private static boolean changed(Object current, Object wanted, String field, List<String> changed) {
+        if (Objects.equals(current, wanted)) {
+            return false;
+        }
+        changed.add(field);
+        return true;
     }
 
     private User load(Long userId) {
