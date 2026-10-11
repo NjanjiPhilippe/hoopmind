@@ -6,6 +6,8 @@ export interface Problem {
   title?: string;
   status?: number;
   detail?: string;
+  /** Code applicatif stable (par exemple MODEL_NOT_TRAINED), à préférer au texte pour décider d'un affichage. */
+  code?: string;
   /** Erreurs de validation par champ, quand l'API en renvoie. */
   errors?: Record<string, string>;
 }

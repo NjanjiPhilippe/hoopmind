@@ -14,6 +14,7 @@ import { FileReport } from '../../../core/api/generated/models/file-report';
 import { TrainingReport } from '../../../core/api/generated/models/training-report';
 import { toProblem } from '../../../core/http/problem';
 import { pollWhile } from '../../../core/util/poll';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import {
   downloadPercent,
@@ -47,6 +48,7 @@ const MAX_IMPORT_SEASONS = 80;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDataComponent {
+  protected readonly currentValue = currentValue;
   private readonly api = inject(Api);
 
   protected readonly featureLabel = featureLabel;
@@ -58,18 +60,18 @@ export class AdminDataComponent {
 
   // Base de Wyatt Walsh
   protected readonly nbaStatus = resource({ loader: () => this.api.invoke(getNbaDatabaseStatus) });
-  protected readonly job = computed(() => this.nbaStatus.value()?.job ?? null);
+  protected readonly job = computed(() => currentValue(this.nbaStatus)?.job ?? null);
   protected readonly jobRunning = computed(() => isRunning(this.job()));
   protected readonly downloadPercent = computed(() => downloadPercent(this.job()));
-  protected readonly importSeasons = linkedSignal(() => this.nbaStatus.value()?.defaultSeasons ?? 10);
-  protected readonly maxImportSeasons = computed(() => this.nbaStatus.value()?.maxSeasons ?? MAX_IMPORT_SEASONS);
+  protected readonly importSeasons = linkedSignal(() => currentValue(this.nbaStatus)?.defaultSeasons ?? 10);
+  protected readonly maxImportSeasons = computed(() => currentValue(this.nbaStatus)?.maxSeasons ?? MAX_IMPORT_SEASONS);
   protected readonly importSeasonsValid = computed(() => validSeasons(this.importSeasons(), this.maxImportSeasons()));
   protected readonly nbaError = signal<string | null>(null);
   protected readonly starting = signal(false);
 
   // Archive CSV de Sumitro Datta
   protected readonly datasets = resource({ loader: () => this.api.invoke(listReferenceDatasets) });
-  protected readonly importedDatasets = computed(() => (this.datasets.value() ?? []).filter(d => (d.rows ?? 0) > 0).length);
+  protected readonly importedDatasets = computed(() => (currentValue(this.datasets) ?? []).filter(d => (d.rows ?? 0) > 0).length);
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly dragging = signal(false);
   protected readonly uploading = signal(false);
@@ -79,15 +81,15 @@ export class AdminDataComponent {
   // Modèle de prédiction : dernier modèle enregistré et dernier entraînement lancé en arrière-plan
   protected readonly model = resource({ loader: () => this.latestModel() });
   protected readonly trainingJob = resource({ loader: () => this.api.invoke(getGameOutcomeTrainingStatus) });
-  protected readonly training = computed(() => isTraining(this.trainingJob.value()));
+  protected readonly training = computed(() => isTraining(currentValue(this.trainingJob)));
   protected readonly trainingSeasons = signal(DEFAULT_TRAINING_SEASONS);
   protected readonly trainingSeasonsValid = computed(() => validSeasons(this.trainingSeasons(), MAX_TRAINING_SEASONS));
   protected readonly startingTraining = signal(false);
   protected readonly modelError = signal<string | null>(null);
   /** Le rapport du job qui vient de finir, sinon le dernier modèle enregistré. */
   protected readonly report = computed(() => {
-    const job = this.trainingJob.value();
-    return job?.phase === 'SUCCEEDED' && job.report ? job.report : this.model.value();
+    const job = currentValue(this.trainingJob);
+    return job?.phase === 'SUCCEEDED' && job.report ? job.report : currentValue(this.model);
   });
   protected readonly gain = computed(() => gainOverBaseline(this.report()));
 
@@ -97,13 +99,16 @@ export class AdminDataComponent {
   protected readonly weights = computed(() => {
     const weights = Object.entries(this.report()?.featureWeights ?? {});
     const max = Math.max(...weights.map(([, w]) => Math.abs(w)), 1e-9);
-    return weights.map(([feature, weight]) => ({ feature, weight, width: (Math.abs(weight) / max) * 100 }));
+    // Du poids le plus fort au plus faible : la variable qui pèse le plus se lit en premier.
+    return weights
+      .map(([feature, weight]) => ({ feature, weight, width: (Math.abs(weight) / max) * 100 }))
+      .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
   });
 
   constructor() {
     // Tant qu'un import ou un entraînement tourne, son état est relu régulièrement.
-    pollWhile(() => isRunning(this.nbaStatus.value()?.job), () => this.nbaStatus.reload(), POLL_MS);
-    pollWhile(() => isTraining(this.trainingJob.value()), () => this.trainingJob.reload(), POLL_MS);
+    pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS);
+    pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS);
   }
 
   async startImport(download: boolean): Promise<void> {

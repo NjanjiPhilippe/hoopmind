@@ -32,7 +32,7 @@
           <label for="favoriteTeam" class="mb-2 block text-sm font-medium text-gray-700">Équipe favorite</label>
           <select id="favoriteTeam" formControlName="favoriteTeamId" class="input-field">
             <option [ngValue]="null">Aucune</option>
-            @for (team of teams.value() ?? []; track team.id) {
+            @for (team of currentValue(teams) ?? []; track team.id) {
               <option [ngValue]="team.id">{{ team.city }} {{ team.name }}</option>
             }
           </select>

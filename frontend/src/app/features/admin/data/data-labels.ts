@@ -5,7 +5,7 @@ import { TrainingReport } from '../../../core/api/generated/models/training-repo
 /** Variables du modèle de prédiction des matchs, en clair. */
 const FEATURE_LABELS: Record<string, string> = {
   win_pct: '% de victoires',
-  last10_win_pct: '% de victoires sur les 10 derniers matchs',
+  last10_win_pct: 'forme sur 10 matchs',
   net_rating: 'net rating',
   offensive_rating: 'rating offensif',
   defensive_rating: 'rating défensif',

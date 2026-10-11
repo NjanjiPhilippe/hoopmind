@@ -7,6 +7,7 @@ import { updateMyProfile } from '../../../core/api/generated/fn/mon-compte/updat
 import { getAllTeams } from '../../../core/api/generated/fn/teams/get-all-teams';
 import { AuthService } from '../../../core/auth/auth.service';
 import { toProblem } from '../../../core/http/problem';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { PasswordInputComponent } from '../../../shared/components/password-input/password-input.component';
 
@@ -17,6 +18,7 @@ import { PasswordInputComponent } from '../../../shared/components/password-inpu
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileComponent implements OnInit {
+  protected readonly currentValue = currentValue;
   private readonly api = inject(Api);
   private readonly fb = inject(NonNullableFormBuilder);
   protected readonly auth = inject(AuthService);

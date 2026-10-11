@@ -1,1 +1,110 @@
-<p>dashboard works!</p>
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header>
+      <h1 class="text-3xl font-bold text-gray-900">Bonjour {{ firstName() }}</h1>
+      <p class="mt-1 text-gray-600">
+        @if (catalog.latestSeason(); as season) {
+          Saison {{ season.name }} : prédisez un match ou parcourez les résultats.
+        } @else {
+          Bienvenue sur HoopMind.
+        }
+      </p>
+    </header>
+
+    @if (catalog.empty()) {
+      <section class="card space-y-3">
+        <h2 class="text-lg font-bold">Aucune donnée pour l'instant</h2>
+        @if (auth.isAdmin()) {
+          <p class="text-gray-600">Première étape : importer les matchs NBA, puis entraîner le modèle. Les deux se lancent depuis la page Données.</p>
+          <a routerLink="/admin/data" class="btn-primary inline-block">Ouvrir la page Données</a>
+        } @else {
+          <p class="text-gray-600">Les matchs n'ont pas encore été importés. Revenez un peu plus tard : un administrateur doit d'abord charger les données.</p>
+        }
+      </section>
+    } @else {
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section class="card flex flex-col justify-between gap-4 bg-gradient-to-br from-primary-600 to-primary-800 text-white lg:col-span-2">
+          <div>
+            <h2 class="text-xl font-bold">Qui va gagner ?</h2>
+            <p class="mt-1 text-primary-100">Choisissez deux équipes : le modèle compare leur forme récente et donne la probabilité de victoire de chacune.</p>
+          </div>
+          <a routerLink="/predict" class="btn-primary self-start bg-white text-primary-700 hover:bg-gray-100">Prédire un match</a>
+        </section>
+
+        <section class="card space-y-2" aria-labelledby="model-title">
+          <h2 id="model-title" class="text-lg font-bold">Le modèle</h2>
+          @if (currentValue(model); as report) {
+            <p class="text-3xl font-bold">{{ report.accuracy | percent: '1.0-0' }}</p>
+            <p class="text-sm text-gray-600">
+              de bons pronostics sur les {{ report.testGames | number }} matchs de la saison {{ report.testSeason }}, que le modèle n'avait pas vus.
+            </p>
+            @if (modelGain(); as gain) {
+              <p class="text-sm" [class.text-green-700]="gain > 0" [class.text-amber-700]="gain <= 0">
+                {{ gain > 0 ? 'Mieux' : 'Moins bien' }} que la règle « le meilleur bilan gagne » ({{ report.betterRecordBaseline | percent: '1.0-0' }}).
+              </p>
+            }
+          } @else if (model.isLoading()) {
+            <p class="text-sm text-gray-500">Chargement…</p>
+          } @else {
+            <p class="text-sm text-gray-600">Pas encore entraîné.</p>
+            @if (auth.isAdmin()) {
+              <a routerLink="/admin/data" class="text-sm font-medium text-primary-600 hover:underline">Entraîner le modèle</a>
+            }
+          }
+        </section>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="card" aria-labelledby="results-title">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 id="results-title" class="text-lg font-bold">Derniers résultats</h2>
+            <a routerLink="/games" class="text-sm font-medium text-primary-600 hover:underline">Tous les matchs</a>
+          </div>
+          @if (games.isLoading()) {
+            <p class="text-sm text-gray-500">Chargement…</p>
+          } @else if (split().results.length === 0) {
+            <p class="text-sm text-gray-500">Aucun match joué cette saison.</p>
+          } @else {
+            <ul class="divide-y divide-gray-100 text-sm">
+              @for (game of split().results; track game.id) {
+                <li class="flex items-center justify-between gap-3 py-2">
+                  <span class="w-20 shrink-0 text-gray-500">{{ game.scheduledDate | date: 'd MMM' }}</span>
+                  <span class="flex-1">
+                    <span [class.font-semibold]="game.result?.winner?.id === game.awayTeam?.id">{{ game.awayTeam?.abbreviation }} {{ game.result?.awayTeamScore }}</span>
+                    <span class="text-gray-400"> &#64; </span>
+                    <span [class.font-semibold]="game.result?.winner?.id === game.homeTeam?.id">{{ game.homeTeam?.abbreviation }} {{ game.result?.homeTeamScore }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="card" aria-labelledby="upcoming-title">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 id="upcoming-title" class="text-lg font-bold">À venir</h2>
+            <a routerLink="/standings" class="text-sm font-medium text-primary-600 hover:underline">Classement</a>
+          </div>
+          @if (games.isLoading()) {
+            <p class="text-sm text-gray-500">Chargement…</p>
+          } @else if (split().upcoming.length === 0) {
+            <p class="text-sm text-gray-500">Aucun match programmé dans les données importées.</p>
+          } @else {
+            <ul class="divide-y divide-gray-100 text-sm">
+              @for (game of split().upcoming; track game.id) {
+                <li class="flex items-center justify-between gap-3 py-2">
+                  <span class="w-20 shrink-0 text-gray-500">{{ game.scheduledDate | date: 'd MMM' }}</span>
+                  <span class="flex-1">{{ game.awayTeam?.abbreviation }} <span class="text-gray-400">&#64;</span> {{ game.homeTeam?.abbreviation }}</span>
+                  <a class="font-medium text-primary-600 hover:underline" routerLink="/predict"
+                     [queryParams]="{ season: game.season?.id, home: game.homeTeam?.id, away: game.awayTeam?.id, date: game.scheduledDate?.slice(0, 10) }">Prédire</a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+    }
+  </main>
+</div>

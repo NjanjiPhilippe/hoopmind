@@ -1,45 +1,17 @@
-import { Component, OnInit } from '@angular/core';
-
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
-import { PredictionCardComponent } from '../../shared/components/prediction-card/prediction-card.component';
-import { TeamCardComponent } from '../../shared/components/team-card/team-card.component';
-import { LoadingSpinnerComponent } from '../../shared/components/loading-spinner/loading-spinner.component';
-import { DashboardService } from '../../core/services/dashboard.service';
-import { Dashboard } from '../../core/models/dashboard.model';
 
+import { AuthService } from '../../core/auth/auth.service';
+import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { FooterComponent } from '../../shared/components/footer/footer.component';
+
+/** Page d'accueil publique : ce que fait HoopMind, sans appel à l'API (un visiteur n'a pas accès aux données). */
 @Component({
   selector: 'app-home',
-  imports: [
-    RouterLink,
-    NavbarComponent,
-    PredictionCardComponent,
-    TeamCardComponent,
-    LoadingSpinnerComponent,
-  ],
+  imports: [RouterLink, NavbarComponent, FooterComponent],
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent {
-  dashboard: Dashboard | null = null;
-  isLoading = false;
-
-  constructor(private dashboardService: DashboardService) {}
-
-  ngOnInit(): void {
-    this.loadDashboard();
-  }
-
-  loadDashboard(): void {
-    this.isLoading = true;
-    this.dashboardService.getDashboard().subscribe({
-      next: (response) => {
-        this.dashboard = response.data;
-        this.isLoading = false;
-      },
-      error: () => {
-        this.isLoading = false;
-      },
-    });
-  }
+  protected readonly auth = inject(AuthService);
 }

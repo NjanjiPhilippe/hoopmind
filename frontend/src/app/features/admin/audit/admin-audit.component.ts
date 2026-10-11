@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { Api } from '../../../core/api/generated/api';
 import { listAuditEvents } from '../../../core/api/generated/fn/journal-d-audit/list-audit-events';
 import { AuditEvent } from '../../../core/api/generated/models/audit-event';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { AUDIT_ACTION_LABELS, AUDIT_ACTIONS, AuditAction, describeDetails } from './audit-labels';
 
@@ -65,8 +66,8 @@ export class AdminAuditComponent {
     },
     loader: ({ params }) => this.api.invoke(listAuditEvents, params),
   });
-  protected readonly rows = computed(() => this.events.value()?.content ?? []);
-  protected readonly pageInfo = computed(() => this.events.value()?.page);
+  protected readonly rows = computed(() => currentValue(this.events)?.content ?? []);
+  protected readonly pageInfo = computed(() => currentValue(this.events)?.page);
 
   private userTimer?: ReturnType<typeof setTimeout>;
 

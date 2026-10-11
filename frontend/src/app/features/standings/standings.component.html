@@ -1,0 +1,83 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Classement</h1>
+        <p class="mt-1 text-gray-600">Bilans de saison régulière, calculés à partir des matchs importés.</p>
+      </div>
+      @if (catalog.seasons().length > 0) {
+        <div>
+          <label for="season" class="mb-1 block text-sm font-medium text-gray-700">Saison</label>
+          <select id="season" class="input-field" (change)="onSeason($any($event.target).value)">
+            @for (season of catalog.seasons(); track season.id) {
+              <option [value]="season.id" [selected]="season.id === seasonId()">{{ season.name }}</option>
+            }
+          </select>
+        </div>
+      }
+    </header>
+
+    @if (catalog.loading() || standings.isLoading()) {
+      <p class="text-sm text-gray-500">Chargement du classement…</p>
+    } @else if (catalog.failed() || standings.error()) {
+      <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">Le classement est indisponible. Réessayez dans un instant.</p>
+    } @else if (conferences().length === 0) {
+      <section class="card text-center">
+        <p class="font-medium">Aucun bilan pour cette saison.</p>
+        <p class="mt-1 text-sm text-gray-500">Les bilans sont calculés lors de l'import des matchs.</p>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin/data" class="btn-primary mt-4 inline-block">Importer les données NBA</a>
+        }
+      </section>
+    } @else {
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        @for (group of conferences(); track group.conference) {
+          <section class="card overflow-x-auto p-0" [attr.aria-labelledby]="'conf-' + group.conference">
+            <h2 [id]="'conf-' + group.conference" class="px-4 pt-4 text-lg font-bold">{{ group.label }}</h2>
+            <table class="mt-2 min-w-full text-sm">
+              <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th scope="col" class="px-3 py-2 text-right">#</th>
+                  <th scope="col" class="px-3 py-2">Équipe</th>
+                  <th scope="col" class="px-3 py-2 text-right"><abbr title="Victoires">V</abbr></th>
+                  <th scope="col" class="px-3 py-2 text-right"><abbr title="Défaites">D</abbr></th>
+                  <th scope="col" class="px-3 py-2 text-right">%</th>
+                  <th scope="col" class="hidden px-3 py-2 text-right sm:table-cell">Domicile</th>
+                  <th scope="col" class="hidden px-3 py-2 text-right sm:table-cell">Extérieur</th>
+                  <th scope="col" class="hidden px-3 py-2 text-right md:table-cell"><abbr title="Points marqués moins points encaissés pour 100 possessions">Net rating</abbr></th>
+                  <th scope="col" class="hidden px-3 py-2 text-right md:table-cell">Série</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                @for (row of group.rows; track row.id; let i = $index) {
+                  <tr>
+                    <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ i + 1 }}</td>
+                    <td class="whitespace-nowrap px-3 py-2">
+                      <a class="font-medium hover:text-primary-600 hover:underline" routerLink="/games"
+                         [queryParams]="{ season: seasonId(), team: row.team?.id }" [title]="'Matchs de ' + teamName(row.team)">
+                        <span class="sm:hidden">{{ row.team?.abbreviation }}</span>
+                        <span class="hidden sm:inline">{{ teamName(row.team) }}</span>
+                      </a>
+                    </td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ row.wins }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ row.losses }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ row.winPercentage | number: '1.3-3' }}</td>
+                    <td class="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{{ row.homeWins }}-{{ row.homeLosses }}</td>
+                    <td class="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{{ row.awayWins }}-{{ row.awayLosses }}</td>
+                    <td class="hidden px-3 py-2 text-right tabular-nums md:table-cell"
+                        [class.text-green-700]="(row.netRating ?? 0) > 0" [class.text-red-600]="(row.netRating ?? 0) < 0">
+                      {{ row.netRating | number: '1.1-1' }}
+                    </td>
+                    <td class="hidden px-3 py-2 text-right md:table-cell">{{ streakLabel(row.currentStreak) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+        }
+      </div>
+    }
+  </main>
+</div>

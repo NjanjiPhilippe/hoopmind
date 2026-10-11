@@ -17,7 +17,7 @@
         </p>
       </div>
 
-      @if (nbaStatus.value(); as status) {
+      @if (currentValue(nbaStatus); as status) {
         <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
           <div>
             <dt class="text-gray-500">Fichier sur le serveur</dt>
@@ -207,11 +207,11 @@
 
       <details class="text-sm">
         <summary class="cursor-pointer font-medium">
-          Contenu en base : {{ importedDatasets() }} fichier(s) sur {{ datasets.value()?.length ?? 0 }}
+          Contenu en base : {{ importedDatasets() }} fichier(s) sur {{ currentValue(datasets)?.length ?? 0 }}
         </summary>
         <table class="mt-2 min-w-full divide-y divide-gray-200">
           <tbody class="divide-y divide-gray-100">
-            @for (dataset of datasets.value() ?? []; track dataset.dataset) {
+            @for (dataset of currentValue(datasets) ?? []; track dataset.dataset) {
               <tr [class.text-gray-400]="!dataset.rows">
                 <td class="py-1.5 pr-3">{{ dataset.label }}</td>
                 <td class="py-1.5 pr-3 text-right">{{ dataset.rows | number }} lignes</td>
@@ -259,7 +259,7 @@
         <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
       }
 
-      @if (trainingJob.value(); as job) {
+      @if (currentValue(trainingJob); as job) {
         @if (job.phase !== 'SUCCEEDED') {
           <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -287,7 +287,7 @@
           @if (gain(); as gain) {
             @if (gain < 0) {
               <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800" role="status">
-                Le modèle fait moins bien qu'une règle simple ({{ -gain | percent: '1.1-1' }} de précision en moins).
+                Le modèle fait moins bien qu'une règle simple ({{ -gain * 100 | number: '1.1-1' }} points de précision en moins).
                 Ses prédictions ne sont pas fiables : importez plus de saisons puis réentraînez-le.
               </p>
             }
@@ -305,7 +305,7 @@
               <h3 class="mb-2 font-medium">Poids des variables</h3>
               <ul class="space-y-1">
                 @for (w of weights(); track w.feature) {
-                  <li class="grid grid-cols-[minmax(0,16rem)_1fr_4rem] items-center gap-3">
+                  <li class="grid grid-cols-[minmax(0,18rem)_1fr_4rem] items-center gap-3">
                     <span class="truncate" [title]="w.feature">{{ featureLabel(w.feature) }}</span>
                     <span class="h-2 min-w-0.5 rounded" [class.bg-green-500]="w.weight > 0" [class.bg-red-400]="w.weight < 0" [class.bg-gray-300]="w.weight === 0" [style.width.%]="w.width"></span>
                     <span class="text-right tabular-nums">{{ w.weight | number: '1.2-2' }}</span>

@@ -14,6 +14,7 @@ import {
 describe('data-labels', () => {
   it('names the model features in French', () => {
     expect(featureLabel('win_pct_diff')).toBe('Écart de % de victoires');
+    expect(featureLabel('last10_win_pct_diff')).toBe('Écart de forme sur 10 matchs');
     expect(featureLabel('net_rating_diff')).toBe('Écart de net rating');
     expect(featureLabel('is_playoff')).toBe('Match de playoffs');
     expect(featureLabel('unknown_feature')).toBe('Unknown_feature');
