@@ -72,7 +72,7 @@ public class NbaDatabaseJobService {
             throw new NbaImportException("Aucune clé Kaggle configurée sur le serveur (KAGGLE_USERNAME et KAGGLE_KEY).");
         }
         if (!download && !file().present()) {
-            throw new NbaImportException("Le fichier " + properties.path() + " est absent : téléchargez d'abord la base.");
+            throw new NbaImportException("La base NBA est absente du serveur : téléchargez-la d'abord.");
         }
         Permit permit = lock.acquire(DataOperationLock.Operation.NBA_DATABASE_IMPORT);
         JobStatus started = new JobStatus(download ? Phase.DOWNLOADING : Phase.IMPORTING, download, seasonCount,
@@ -105,7 +105,9 @@ public class NbaDatabaseJobService {
                     report.games()));
         } catch (RuntimeException e) {
             log.error("Échec de l'import de la base NBA", e);
-            String message = e instanceof AppException ? e.getMessage() : "Erreur inattendue : " + e.getMessage();
+            // Les messages des AppException sont écrits pour l'administrateur ; les autres restent dans les journaux.
+            String message = e instanceof AppException ? e.getMessage()
+                    : "Erreur inattendue. Le détail est dans les journaux du serveur.";
             current.updateAndGet(s -> new JobStatus(Phase.FAILED, s.download(), s.seasons(), s.startedAt(),
                     Instant.now(), s.downloadedBytes(), s.totalBytes(), null, message));
             events.publishEvent(new DataImportEvent.NbaDatabaseImportFailed(requestedBy, job.download(), job.seasons(),

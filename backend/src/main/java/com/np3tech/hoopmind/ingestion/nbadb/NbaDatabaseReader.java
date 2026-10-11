@@ -4,6 +4,7 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.GameRow;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.StandingRow;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamGameRow;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamRow;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
  * Lecture du fichier {@code nba.sqlite} de nbadb, en lecture seule. Seules les tables utiles aux prédictions sont lues,
  * et seulement pour les saisons demandées.
  */
+@Slf4j
 final class NbaDatabaseReader implements AutoCloseable {
 
     /** Saison régulière (002) et playoffs (004) ; présaison, All-Star, play-in et finale de la NBA Cup sont ignorés. */
@@ -37,13 +39,15 @@ final class NbaDatabaseReader implements AutoCloseable {
 
     static NbaDatabaseReader open(Path file) {
         if (!Files.isRegularFile(file)) {
-            throw new NbaImportException("Base NBA introuvable : " + file.toAbsolutePath()
-                    + ". Téléchargez-la avec scripts/download-nba-database.sh ou renseignez NBA_DATABASE_PATH.");
+            log.warn("Base NBA introuvable : {}", file.toAbsolutePath());
+            throw new NbaImportException("Base NBA introuvable sur le serveur. Téléchargez-la depuis la page Données, "
+                    + "avec scripts/download-nba-database.sh, ou renseignez NBA_DATABASE_PATH.");
         }
         try {
             return new NbaDatabaseReader(DriverManager.getConnection("jdbc:sqlite:file:" + file.toAbsolutePath() + "?mode=ro"));
         } catch (SQLException e) {
-            throw new NbaImportException("Impossible d'ouvrir la base NBA " + file + " : " + e.getMessage(), e);
+            log.warn("Impossible d'ouvrir la base NBA {}", file.toAbsolutePath(), e);
+            throw new NbaImportException("Impossible d'ouvrir la base NBA : le fichier n'est pas une base SQLite lisible.", e);
         }
     }
 
@@ -131,8 +135,8 @@ final class NbaDatabaseReader implements AutoCloseable {
             }
             return rows;
         } catch (SQLException e) {
-            throw new NbaImportException("Lecture de la base NBA impossible (" + e.getMessage()
-                    + "). Le fichier suit-il bien le schéma de nbadb ?", e);
+            log.warn("Lecture de la base NBA impossible", e);
+            throw new NbaImportException("Lecture de la base NBA impossible. Le fichier suit-il bien le schéma de nbadb ?", e);
         }
     }
 

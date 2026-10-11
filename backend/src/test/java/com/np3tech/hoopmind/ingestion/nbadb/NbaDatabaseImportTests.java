@@ -158,7 +158,9 @@ class NbaDatabaseImportTests {
 
         assertThatThrownBy(() -> importer.importDatabase(null))
                 .isInstanceOf(NbaImportException.class)
-                .hasMessageContaining("download-nba-database.sh");
+                .hasMessageContaining("download-nba-database.sh")
+                .as("le message montré à l'administrateur ne révèle pas l'arborescence du serveur")
+                .hasMessageNotContaining(directory.toString());
     }
 
     @Test

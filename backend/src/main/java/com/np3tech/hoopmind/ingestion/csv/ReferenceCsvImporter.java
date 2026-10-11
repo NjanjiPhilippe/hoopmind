@@ -122,7 +122,8 @@ public class ReferenceCsvImporter {
                 add(reports, importCsv(name, limited(nonClosing(zip), budget)));
             }
         } catch (IOException | UncheckedIOException e) {
-            reports.add(failed(upload.name(), "Archive zip illisible : " + e.getMessage()));
+            log.warn("Archive zip {} illisible", upload.name(), e);
+            reports.add(failed(upload.name(), tooLarge(e) ? UploadTooLargeException.MESSAGE : "Archive zip illisible."));
         }
     }
 
@@ -151,10 +152,13 @@ public class ReferenceCsvImporter {
             log.info("CSV {} importé comme {} : {}", name, dataset, report);
             return report;
         } catch (IOException | UncheckedIOException e) {
-            return failed(name, "Fichier illisible : " + e.getMessage());
+            log.warn("CSV {} illisible", name, e);
+            return failed(name, tooLarge(e) ? UploadTooLargeException.MESSAGE
+                    : "Fichier illisible : CSV mal formé ou encodage autre que UTF-8.");
         } catch (RuntimeException e) {
             log.warn("Import du CSV {} impossible", name, e);
-            return failed(name, e instanceof NbaImportException ? e.getMessage() : "Import impossible : " + e.getMessage());
+            return failed(name, e instanceof NbaImportException ? e.getMessage()
+                    : "Import impossible : erreur inattendue. Le détail est dans les journaux du serveur.");
         }
     }
 
@@ -240,6 +244,20 @@ public class ReferenceCsvImporter {
         return value instanceof Long l && l > 1800 && l < 3000 ? l.intValue() : null;
     }
 
+    private static boolean tooLarge(Exception e) {
+        return e instanceof UploadTooLargeException || e.getCause() instanceof UploadTooLargeException;
+    }
+
+    /** Budget d'octets dépassé : le seul détail d'entrée/sortie utile à l'administrateur. */
+    private static final class UploadTooLargeException extends IOException {
+
+        static final String MESSAGE = "Envoi trop volumineux une fois décompressé (512 Mo au plus).";
+
+        UploadTooLargeException() {
+            super(MESSAGE);
+        }
+    }
+
     private static FileReport failed(String name, String message) {
         return new FileReport(name, FileStatus.FAILED, null, null, 0, 0, 0, 0, 0, message);
     }
@@ -268,7 +286,7 @@ public class ReferenceCsvImporter {
             private void consume(long n) throws IOException {
                 budget[0] -= n;
                 if (budget[0] < 0) {
-                    throw new IOException("envoi trop volumineux une fois décompressé (512 Mo au plus)");
+                    throw new UploadTooLargeException();
                 }
             }
         };

@@ -63,7 +63,7 @@ class ReferenceCsvController {
                     reports.stream().mapToInt(FileReport::updated).sum()));
             return reports;
         } catch (IOException e) {
-            throw new NbaImportException("Lecture des fichiers reçus impossible : " + e.getMessage(), e);
+            throw new NbaImportException("Lecture des fichiers reçus impossible.", e);
         } finally {
             for (InputStream in : opened) {
                 try {

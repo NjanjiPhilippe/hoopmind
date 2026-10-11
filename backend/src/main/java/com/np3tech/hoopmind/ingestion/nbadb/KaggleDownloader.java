@@ -76,7 +76,9 @@ class KaggleDownloader {
             temporary = null;
             log.info("Base NBA téléchargée : {} ({} octets)", target.toAbsolutePath(), Files.size(target));
         } catch (IOException e) {
-            throw new NbaImportException("Téléchargement Kaggle impossible : " + e.getMessage(), e);
+            log.warn("Téléchargement Kaggle impossible", e);
+            throw new NbaImportException("Téléchargement Kaggle impossible (réseau ou espace disque). "
+                    + "Le détail est dans les journaux du serveur.", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new NbaImportException("Téléchargement Kaggle interrompu.", e);
