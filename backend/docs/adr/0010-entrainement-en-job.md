@@ -36,3 +36,7 @@ fin. Un fil du serveur restait occupé pendant tout ce temps, et un double clic 
 
 - Deux endpoints pour la même action pendant la transition.
 - Le frontend doit gérer un état « en cours » (chantier frontend).
+
+## Suite
+
+La page Données suit maintenant le job (ADR 0001 du frontend) ; l'endpoint synchrone a été supprimé.
