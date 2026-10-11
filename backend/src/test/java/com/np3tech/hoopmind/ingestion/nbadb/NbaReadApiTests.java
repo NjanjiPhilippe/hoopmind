@@ -72,34 +72,52 @@ class NbaReadApiTests {
         bearer = TestAccounts.register(mvc).bearer();
     }
 
+    // La base est partagée par les tests d'intégration : on ne regarde que les matchs de ce jeu de données.
     @Test
     void theGamesOfASeasonComeWithTeamsAndScores() {
+        int bostonHome = gameId("0022400001");
+        int newYorkHome = gameId("0022400002");
+        int scheduled = gameId("0022400003");
+
         assertThat(mvc.get().uri("/api/v1/games/season/{id}", seasonId).header(HttpHeaders.AUTHORIZATION, bearer))
                 .hasStatusOk()
                 .bodyJson()
                 .satisfies(json -> {
-                    assertThat(json).extractingPath("$.length()").isEqualTo(3);
-                    assertThat(json).extractingPath("$[?(@.homeTeam.abbreviation == 'BOS')].result.homeTeamScore")
+                    assertThat(json).extractingPath("$[*].id").asArray()
+                            .contains(bostonHome, newYorkHome, scheduled);
+                    assertThat(json).extractingPath("$[?(@.id == " + bostonHome + ")].result.homeTeamScore")
                             .asArray().containsExactly(110);
-                    assertThat(json).extractingPath("$[?(@.homeTeam.abbreviation == 'NYK')].result.winner.abbreviation")
+                    assertThat(json).extractingPath("$[?(@.id == " + bostonHome + ")].homeTeam.abbreviation")
+                            .asArray().containsExactly("BOS");
+                    assertThat(json).extractingPath("$[?(@.id == " + newYorkHome + ")].result.winner.abbreviation")
                             .asArray().containsExactly("NYK");
                     // Les champs nuls ne sont pas sérialisés : un match à venir n'a pas de résultat.
-                    assertThat(json).extractingPath("$[?(@.status == 'SCHEDULED')].result").asArray().isEmpty();
-                    assertThat(json).extractingPath("$[0].season.year").isEqualTo(2024);
+                    assertThat(json).extractingPath("$[?(@.id == " + scheduled + ")].result").asArray().isEmpty();
+                    assertThat(json).extractingPath("$[?(@.id == " + bostonHome + ")].season.year")
+                            .asArray().containsExactly(2024);
                 });
     }
 
     @Test
     void oneGameAndTheGamesOfATeamCanBeRead() {
-        long gameId = jdbc.queryForObject("SELECT id FROM games WHERE external_id = '0022400001'", Long.class);
+        int bostonHome = gameId("0022400001");
+        int newYorkHome = gameId("0022400002");
+        int withoutBoston = gameId("0022400003");
         long bostonId = teams.findByAbbreviation("BOS").orElseThrow().getId();
 
-        assertThat(mvc.get().uri("/api/v1/games/{id}", gameId).header(HttpHeaders.AUTHORIZATION, bearer))
+        assertThat(mvc.get().uri("/api/v1/games/{id}", bostonHome).header(HttpHeaders.AUTHORIZATION, bearer))
                 .hasStatusOk()
                 .bodyJson().extractingPath("$.result.awayTeamScore").isEqualTo(100);
         assertThat(mvc.get().uri("/api/v1/games/team/{id}", bostonId).header(HttpHeaders.AUTHORIZATION, bearer))
                 .hasStatusOk()
-                .bodyJson().extractingPath("$.length()").isEqualTo(2);
+                .bodyJson().extractingPath("$[*].id").asArray()
+                .contains(bostonHome, newYorkHome)
+                .doesNotContain(withoutBoston);
+    }
+
+    /** Identifiant en int : c'est ainsi que le JSON des réponses le relit. */
+    private int gameId(String externalId) {
+        return jdbc.queryForObject("SELECT id FROM games WHERE external_id = ?", Integer.class, externalId);
     }
 
     @Test
