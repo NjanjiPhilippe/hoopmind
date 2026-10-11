@@ -52,9 +52,19 @@ hoopmind:
     username: ${HOOPMIND_ADMIN_USERNAME:admin}
     email: ${HOOPMIND_ADMIN_EMAIL:admin@hoopmind.local}
     password: ${HOOPMIND_ADMIN_PASSWORD:}
+  # Import de la base NBA de Wyatt Walsh (Kaggle wyattowalsh/basketball), voir scripts/download-nba-database.sh
+  import:
+    nba-database:
+      path: ${NBA_DATABASE_PATH:data/nba.sqlite}
+      seasons: ${NBA_IMPORT_SEASONS:10}
+      on-startup: ${NBA_IMPORT_ON_STARTUP:false}
   ml:
     spark:
       enabled: ${SPARK_ENABLED:true}
+    # Nombre de saisons (les plus récentes) utilisées pour entraîner le modèle de prédiction des matchs
+    training-seasons: ${ML_TRAINING_SEASONS:5}
+    # Dossier où le modèle entraîné est enregistré (rechargé au redémarrage)
+    model-dir: ${ML_MODEL_DIR:spark-models}
 
 # Apache Spark (module ml)
 spark:

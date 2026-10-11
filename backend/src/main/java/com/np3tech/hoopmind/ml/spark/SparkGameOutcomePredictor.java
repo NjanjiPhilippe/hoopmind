@@ -5,25 +5,20 @@ import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 /**
- * Adaptateur Spark ML du port {@link GameOutcomePredictor} (forêt aléatoire entraînée par saison).
+ * Adaptateur Spark ML du port {@link GameOutcomePredictor} : régression logistique entraînée sur plusieurs saisons,
+ * appliquée à la forme actuelle des deux équipes.
  */
 @Component
 @ConditionalOnSpark
 @RequiredArgsConstructor
 class SparkGameOutcomePredictor implements GameOutcomePredictor {
 
-    private final SparkMLPredictionService mlService;
+    private final GameOutcomeModelService model;
 
     @Override
     public GameOutcomePrediction predict(Long seasonId, Long homeTeamId, Long awayTeamId) {
-        Map<String, Object> result = mlService.predictGameOutcome(seasonId, homeTeamId, awayTeamId);
-        return new GameOutcomePrediction(
-                (Boolean) result.get("homeTeamWins"),
-                ((Number) result.get("homeWinProbability")).doubleValue(),
-                ((Number) result.get("awayWinProbability")).doubleValue(),
-                "spark-random-forest-season-" + seasonId);
+        double home = model.homeWinProbability(seasonId, homeTeamId, awayTeamId);
+        return new GameOutcomePrediction(home >= 0.5, home, 1 - home, GameOutcomeModelService.MODEL_NAME);
     }
 }

@@ -15,6 +15,8 @@ public interface PredictionModelMetricsRepository extends JpaRepository<Predicti
 
     List<PredictionModelMetrics> findByModel(String model);
 
+    Optional<PredictionModelMetrics> findFirstByModelOrderByCreatedAtDesc(String model);
+
     Optional<PredictionModelMetrics> findByModelAndModelVersionAndEvaluationDate(
             String model, String modelVersion, LocalDate evaluationDate);
 

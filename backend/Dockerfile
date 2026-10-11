@@ -12,6 +12,8 @@ FROM eclipse-temurin:21-jre-alpine
 RUN apk add --no-cache curl && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
+# Dossier du modèle Spark entraîné (volume spark_models dans docker-compose.yml)
+RUN mkdir -p /app/models && chown app:app /app/models
 USER app
 
 EXPOSE 8083 8085

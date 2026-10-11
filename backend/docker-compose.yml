@@ -28,6 +28,12 @@ services:
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/hoopmind
       SPARK_DRIVER_HOST: backend
+      NBA_DATABASE_PATH: /app/data/nba.sqlite
+      ML_MODEL_DIR: /app/models
+    volumes:
+      # Base NBA téléchargée par scripts/download-nba-database.sh (lecture seule) et modèle entraîné
+      - ./data:/app/data:ro
+      - spark_models:/app/models
     ports:
       - "8083:8083"
     depends_on:
@@ -56,3 +62,4 @@ services:
 
 volumes:
   postgres_data:
+  spark_models:

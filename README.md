@@ -25,6 +25,12 @@ npm start                       # http://localhost:4200
 
 Le détail de l'architecture, de la sécurité et des choix techniques est dans le README de chaque dossier.
 
+## Données
+
+Les matchs viennent de la [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh**
+(licence CC BY-SA 4.0) et les statistiques de saison de [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats)
+de **Sumitro Datta**. Elles ne sont pas incluses dans ce dépôt : voir [Données NBA](backend/README.md#données-nba) pour les télécharger et les importer.
+
 ## Historique du projet
 
 HoopMind a été conçu et écrit par Saiko ([NjanjiPhilippe](https://github.com/NjanjiPhilippe)) entre novembre et décembre 2025 :

@@ -19,6 +19,23 @@ set -a && . ./.env && set +a
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
 - Tout en conteneurs : `docker compose --profile app up -d --build`.
 
+### Charger les données NBA
+
+La base n'est pas fournie avec le dépôt (voir [Données NBA](#données-nba)) :
+
+```bash
+scripts/download-nba-database.sh         # télécharge data/nba.sqlite (jeton d'API Kaggle requis)
+```
+
+Puis, avec un jeton administrateur :
+
+```bash
+curl -X POST "localhost:8083/api/v1/admin/imports/nba-database?seasons=10" -H "Authorization: Bearer $TOKEN"
+curl -X POST "localhost:8083/api/v1/spark/ml/train/game-outcome?seasons=5" -H "Authorization: Bearer $TOKEN"
+```
+
+`NBA_IMPORT_ON_STARTUP=true` lance l'import au démarrage. L'import est rejouable : il met à jour les lignes existantes sans créer de doublon.
+
 ## Documentation de l'API
 
 Swagger UI : http://localhost:8083/swagger-ui.html, réservé aux administrateurs (identifiants HoopMind en HTTP Basic).
@@ -76,7 +93,39 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 | GET, DELETE | `/api/v1/admin/users/{id}` | ADMIN |
 | PUT | `/api/v1/admin/users/{id}/status`, `/roles` | ADMIN |
 | GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats`… | public |
+| POST | `/api/v1/admin/imports/nba-database?seasons=` | ADMIN |
+| POST | `/api/v1/spark/ml/train/game-outcome?seasons=` | ADMIN |
+| GET | `/api/v1/spark/ml/model-metrics`, `/ml/predict/game` | connecté |
 | * | `/api/v1/spark/**` | connecté (entraînement : ADMIN) |
+
+## Données NBA
+
+| Source | Contenu | Utilisation |
+|---|---|---|
+| [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh** ([nbadb](https://github.com/wyattowalsh/nbadb)), licence CC BY-SA 4.0 | Tous les matchs depuis 1946-47 avec scores, feuilles de match, classements, issus de stats.nba.com | Équipes, saisons, matchs, résultats, statistiques par match et bilans de saison |
+| [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats) de **Sumitro Datta**, d'après Basketball-Reference | Statistiques de saison des joueurs et des équipes, votes des trophées individuels | Prévue pour la prédiction des trophées (MVP, DPOY, ROY…) |
+
+Les données ne sont pas versionnées : chacun les télécharge depuis Kaggle, et `data/` est ignoré par git.
+Merci à Wyatt Walsh et à Sumitro Datta pour leur travail de collecte et de publication.
+
+L'import (`nba.importer`) lit le fichier `nba.sqlite` en lecture seule et ne garde que la saison régulière et les playoffs
+des `NBA_IMPORT_SEASONS` dernières saisons (10 par défaut). Il calcule ensuite le bilan de chaque équipe par saison
+(victoires, domicile et extérieur, séries, ratings offensif et défensif, rythme) à partir des feuilles de match.
+
+## Modèle de prédiction des matchs
+
+Une régression logistique Spark ML prédit la probabilité de victoire de l'équipe à domicile.
+
+- **Variables** : pour chaque équipe, sa forme *avant* le match (bilan, dix derniers matchs, ratings offensif, défensif et net,
+  jours de repos) et les écarts entre les deux équipes. Elles sont calculées avec des fenêtres Spark
+  (`rowsBetween(unboundedPreceding, -1)`) : le modèle ne voit jamais le résultat qu'il doit prédire,
+  contrairement à un bilan de fin de saison qui le contient déjà.
+- **Évaluation dans le temps** : le modèle apprend sur les saisons les plus anciennes et il est testé sur la plus récente.
+  Le nombre de saisons se règle avec `ML_TRAINING_SEASONS` (5 par défaut) ou `?seasons=`, pour comparer la précision selon l'historique utilisé.
+- **Références** : la précision est comparée à deux règles simples sur les mêmes matchs, « l'équipe à domicile gagne » et
+  « l'équipe au meilleur bilan gagne ». Les métriques (précision, AUC, log loss, matrice de confusion, poids des variables)
+  sont enregistrées à chaque entraînement et servies par `GET /api/v1/spark/ml/model-metrics`.
+- Le modèle est enregistré dans `ML_MODEL_DIR` et rechargé au redémarrage.
 
 ## Versions
 
@@ -108,3 +157,4 @@ En octobre 2026, avec l'aide de Claude (Anthropic) :
 - réécriture de l'authentification (Resource Server, jetons de rafraîchissement rotatifs) et gestion des utilisateurs (profil, administration) ;
 - Swagger réservé aux administrateurs ;
 - secrets sortis du dépôt, erreurs au format RFC 9457, tests d'intégration sur PostgreSQL, intégration continue.
+- import des données NBA de Wyatt Walsh et modèle de prédiction des matchs évalué sur une saison réservée.

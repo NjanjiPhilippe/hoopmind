@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-external-ids
+      author: hoopmind
+      comment: Identifiants NBA (stats.nba.com) des équipes et des matchs, pour rendre l'import rejouable sans doublon
+      changes:
+        - addColumn:
+            tableName: teams
+            columns:
+              - column:
+                  name: external_id
+                  type: BIGINT
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uk_teams_external_id
+        - addColumn:
+            tableName: games
+            columns:
+              - column:
+                  name: external_id
+                  type: VARCHAR(20)
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: uk_games_external_id
+
+  - changeSet:
+      id: 010-team-game-stats-unique
+      author: hoopmind
+      comment: Une seule ligne de statistiques par équipe et par match
+      changes:
+        - addUniqueConstraint:
+            tableName: team_game_stats
+            columnNames: team_id, game_id
+            constraintName: uk_team_game_stats_team_game
+
+  - changeSet:
+      id: 010-model-evaluation-metrics
+      author: hoopmind
+      comment: Métriques d'évaluation du modèle de prédiction (saison de test, AUC, log loss, règles de référence)
+      changes:
+        - addColumn:
+            tableName: prediction_model_metrics
+            columns:
+              - column:
+                  name: training_seasons
+                  type: INTEGER
+              - column:
+                  name: test_season
+                  type: VARCHAR(20)
+              - column:
+                  name: auc
+                  type: DECIMAL(5,4)
+              - column:
+                  name: log_loss
+                  type: DECIMAL(6,4)
+              - column:
+                  name: baseline_accuracy
+                  type: DECIMAL(5,4)
+              - column:
+                  name: home_baseline_accuracy
+                  type: DECIMAL(5,4)

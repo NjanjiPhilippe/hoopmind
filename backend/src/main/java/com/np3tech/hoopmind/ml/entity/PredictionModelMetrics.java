@@ -59,6 +59,29 @@ public class PredictionModelMetrics {
     @Column(name = "feature_importance_json", columnDefinition = "TEXT")
     private String featureImportanceJson;
 
+    /** Nombre de saisons utilisées pour l'entraînement et la saison gardée pour le test. */
+    @Column(name = "training_seasons")
+    private Integer trainingSeasons;
+
+    @Column(name = "test_season", length = 20)
+    private String testSeason;
+
+    @Column(precision = 5, scale = 4)
+    private BigDecimal auc;
+
+    @Column(name = "log_loss", precision = 6, scale = 4)
+    private BigDecimal logLoss;
+
+    /**
+     * Précision de règles simples sur le même jeu de test, pour juger le gain réel du modèle :
+     * « l'équipe au meilleur bilan gagne » et « l'équipe à domicile gagne ».
+     */
+    @Column(name = "baseline_accuracy", precision = 5, scale = 4)
+    private BigDecimal baselineAccuracy;
+
+    @Column(name = "home_baseline_accuracy", precision = 5, scale = 4)
+    private BigDecimal homeBaselineAccuracy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

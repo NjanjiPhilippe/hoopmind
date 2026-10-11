@@ -14,6 +14,8 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     Optional<Team> findByAbbreviation(String abbreviation);
 
+    Optional<Team> findByExternalId(Long externalId);
+
     Optional<Team> findByName(String name);
 
     List<Team> findByConference(Conference conference);
