@@ -1,0 +1,268 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+    <header>
+      <h1 class="text-3xl font-bold text-gray-900">Données</h1>
+      <p class="mt-1 text-gray-600">Importer les données NBA et entraîner le modèle de prédiction. Chaque import peut être relancé sans créer de doublon.</p>
+    </header>
+
+    <!-- Base de Wyatt Walsh : matchs, résultats, bilans -->
+    <section class="card space-y-4" aria-labelledby="nba-title">
+      <div>
+        <h2 id="nba-title" class="text-xl font-bold">Matchs et résultats</h2>
+        <p class="text-sm text-gray-600">
+          Base « NBA Database » de Wyatt Walsh (Kaggle, licence CC BY-SA 4.0) : équipes, matchs, scores, statistiques par match et bilans de saison.
+          Le serveur la télécharge lui-même depuis Kaggle, sans passer par votre navigateur.
+        </p>
+      </div>
+
+      @if (nbaStatus.value(); as status) {
+        <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt class="text-gray-500">Fichier sur le serveur</dt>
+            <dd class="font-medium">
+              @if (status.file?.present) {
+                {{ formatBytes(status.file?.sizeBytes) }}, du {{ status.file?.modifiedAt | date: 'short' }}
+              } @else {
+                Pas encore téléchargé
+              }
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500">Clé Kaggle</dt>
+            <dd>
+              <span class="badge" [class.badge-success]="status.kaggleConfigured" [class.badge-warning]="!status.kaggleConfigured">
+                {{ status.kaggleConfigured ? 'Configurée' : 'Absente' }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <label for="import-seasons" class="block text-gray-500">Saisons à importer (les plus récentes)</label>
+            <input id="import-seasons" type="number" min="1" [max]="status.maxSeasons" class="input-field mt-1 max-w-28"
+                   [value]="importSeasons()" (change)="onSeasons($any($event.target).value, 'import')" [disabled]="jobRunning()" />
+          </div>
+        </dl>
+
+        @if (!status.kaggleConfigured) {
+          <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            Pour activer le téléchargement, créez un jeton sur kaggle.com (Settings, API, Create New Token) puis renseignez
+            <code>KAGGLE_USERNAME</code> et <code>KAGGLE_KEY</code> dans la configuration du serveur (fichier <code>.env</code>).
+          </p>
+        }
+
+        <div class="flex flex-wrap gap-3">
+          <button type="button" class="btn-primary" [disabled]="!status.kaggleConfigured || jobRunning() || starting()" (click)="startImport(true)">
+            Télécharger depuis Kaggle et importer
+          </button>
+          @if (status.file?.present) {
+            <button type="button" class="btn-secondary" [disabled]="jobRunning() || starting()" (click)="startImport(false)">
+              Réimporter le fichier présent
+            </button>
+          }
+        </div>
+      } @else if (nbaStatus.error()) {
+        <p class="text-sm text-red-600" role="alert">État de la base indisponible.</p>
+      } @else {
+        <p class="text-sm text-gray-500">Chargement…</p>
+      }
+
+      @if (nbaError(); as message) {
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+      }
+
+      @if (job(); as job) {
+        <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-medium">{{ phaseLabel(job.phase) }} · {{ job.seasons }} saison(s)</span>
+            <span class="text-gray-500">lancé le {{ job.startedAt | date: 'short' }}</span>
+          </div>
+
+          @if (job.phase === 'DOWNLOADING') {
+            <div class="mt-3 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" [attr.aria-valuenow]="downloadPercent()">
+              <div class="h-full bg-primary-600 transition-all" [style.width.%]="downloadPercent() ?? 100"
+                   [class.animate-pulse]="downloadPercent() === null"></div>
+            </div>
+            <p class="mt-1 text-gray-500">
+              {{ formatBytes(job.downloadedBytes ?? 0) }}@if (job.totalBytes) { sur {{ formatBytes(job.totalBytes) }} }
+            </p>
+          } @else if (job.phase === 'IMPORTING') {
+            <p class="mt-2 text-gray-500">Lecture de la base et écriture des matchs, cela peut prendre quelques minutes…</p>
+          } @else if (job.phase === 'FAILED') {
+            <p class="mt-2 text-red-600" role="alert">{{ job.error }}</p>
+          } @else if (job.report; as report) {
+            <dl class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div><dt class="text-gray-500">Saisons</dt><dd class="font-medium">{{ report.seasons?.[0] }} à {{ report.seasons?.[report.seasons!.length - 1] }}</dd></div>
+              <div><dt class="text-gray-500">Équipes</dt><dd class="font-medium">{{ report.teams }}</dd></div>
+              <div><dt class="text-gray-500">Matchs (joués)</dt><dd class="font-medium">{{ report.games | number }} ({{ report.playedGames | number }})</dd></div>
+              <div><dt class="text-gray-500">Bilans de saison</dt><dd class="font-medium">{{ report.teamSeasons }}</dd></div>
+              <div><dt class="text-gray-500">Stats par match</dt><dd class="font-medium">{{ report.teamGameStats | number }}</dd></div>
+              <div><dt class="text-gray-500">Matchs ignorés</dt><dd class="font-medium">{{ report.skippedGames }}</dd></div>
+              <div><dt class="text-gray-500">Durée</dt><dd class="font-medium">{{ (report.durationMs ?? 0) / 1000 | number: '1.0-0' }} s</dd></div>
+            </dl>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- Archive CSV de Sumitro Datta : statistiques par saison et trophées -->
+    <section class="card space-y-4" aria-labelledby="csv-title">
+      <div>
+        <h2 id="csv-title" class="text-xl font-bold">Statistiques de saison et trophées</h2>
+        <p class="text-sm text-gray-600">
+          Archive « NBA Stats (1947-present) » de Sumitro Datta (Kaggle, données Basketball-Reference). Déposez le zip ou des CSV, dans n'importe quel ordre :
+          chaque fichier est reconnu par ses colonnes, quel que soit son nom.
+        </p>
+      </div>
+
+      <label class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors"
+             [class.border-primary-500]="dragging()" [class.bg-primary-50]="dragging()" [class.border-gray-300]="!dragging()"
+             (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
+        <span class="text-3xl" aria-hidden="true">📂</span>
+        <span class="font-medium">Glissez le zip ou les CSV ici, ou cliquez pour les choisir</span>
+        <span class="text-xs text-gray-500">.zip ou .csv</span>
+        <input type="file" class="sr-only" multiple accept=".zip,.csv" (change)="onFilesSelected($any($event.target))" />
+      </label>
+
+      @if (selectedFiles().length > 0) {
+        <ul class="divide-y divide-gray-100 rounded-lg border border-gray-200 text-sm">
+          @for (file of selectedFiles(); track file.name + file.size) {
+            <li class="flex items-center justify-between px-3 py-2">
+              <span>{{ file.name }} <span class="text-gray-500">({{ formatBytes(file.size) }})</span></span>
+              <button type="button" class="text-xs text-red-700 hover:underline" [disabled]="uploading()" (click)="removeFile(file)">Retirer</button>
+            </li>
+          }
+        </ul>
+        <button type="button" class="btn-primary" [disabled]="uploading()" (click)="uploadFiles()">
+          {{ uploading() ? 'Import en cours…' : 'Importer ' + selectedFiles().length + ' fichier(s)' }}
+        </button>
+      }
+
+      @if (csvError(); as message) {
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+      }
+
+      @if (fileReports(); as reports) {
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-sm" aria-label="Compte rendu de l'import">
+            <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr>
+                <th scope="col" class="px-3 py-2">Fichier</th>
+                <th scope="col" class="px-3 py-2">Reconnu comme</th>
+                <th scope="col" class="px-3 py-2 text-right">Lignes</th>
+                <th scope="col" class="px-3 py-2 text-right">Nouvelles</th>
+                <th scope="col" class="px-3 py-2 text-right">Mises à jour</th>
+                <th scope="col" class="px-3 py-2 text-right">Inchangées</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              @for (report of reports; track $index) {
+                <tr>
+                  <td class="px-3 py-2 font-medium">{{ report.file }}</td>
+                  <td class="px-3 py-2">
+                    @switch (report.status) {
+                      @case ('IMPORTED') { {{ report.label }} }
+                      @case ('UNRECOGNIZED') { <span class="badge badge-warning">Non reconnu</span> }
+                      @default { <span class="badge badge-danger">Erreur</span> }
+                    }
+                    @if (report.message) {
+                      <div class="text-xs text-gray-500">{{ report.message }}</div>
+                    }
+                  </td>
+                  <td class="px-3 py-2 text-right">{{ report.rows | number }}</td>
+                  <td class="px-3 py-2 text-right">{{ report.inserted | number }}</td>
+                  <td class="px-3 py-2 text-right">{{ report.updated | number }}</td>
+                  <td class="px-3 py-2 text-right">{{ report.unchanged | number }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <details class="text-sm" [open]="importedDatasets() > 0">
+        <summary class="cursor-pointer font-medium">
+          Contenu en base : {{ importedDatasets() }} fichier(s) sur {{ datasets.value()?.length ?? 0 }}
+        </summary>
+        <table class="mt-2 min-w-full divide-y divide-gray-200">
+          <tbody class="divide-y divide-gray-100">
+            @for (dataset of datasets.value() ?? []; track dataset.dataset) {
+              <tr [class.text-gray-400]="!dataset.rows">
+                <td class="py-1.5 pr-3">{{ dataset.label }}</td>
+                <td class="py-1.5 pr-3 text-right">{{ dataset.rows | number }} lignes</td>
+                <td class="py-1.5 pr-3">
+                  @if (dataset.firstSeason) { {{ dataset.firstSeason }} à {{ dataset.lastSeason }} }
+                </td>
+                <td class="py-1.5 text-gray-500">@if (dataset.importedAt) { {{ dataset.importedAt | date: 'short' }} }</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    </section>
+
+    <!-- Modèle de prédiction des matchs -->
+    <section class="card space-y-4" aria-labelledby="model-title">
+      <div>
+        <h2 id="model-title" class="text-xl font-bold">Modèle de prédiction des matchs</h2>
+        <p class="text-sm text-gray-600">
+          Régression logistique (Spark ML) sur la forme des équipes avant chaque match. Le modèle apprend sur les saisons les plus anciennes
+          et il est évalué sur la plus récente, puis comparé à deux règles simples.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-end gap-3">
+        <div>
+          <label for="training-seasons" class="block text-sm text-gray-500">Saisons utilisées</label>
+          <input id="training-seasons" type="number" min="1" max="30" class="input-field mt-1 max-w-28"
+                 [value]="trainingSeasons()" (change)="onSeasons($any($event.target).value, 'training')" [disabled]="training()" />
+        </div>
+        <button type="button" class="btn-primary" [disabled]="training()" (click)="train()">
+          {{ training() ? 'Entraînement en cours…' : 'Entraîner le modèle' }}
+        </button>
+      </div>
+
+      @if (modelError(); as message) {
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+      }
+
+      @if (model.value(); as report) {
+        <div class="space-y-4 text-sm">
+          <p class="text-gray-500">
+            Entraîné le {{ report.trainedAt | date: 'short' }} sur {{ report.seasonsUsed }} saison(s), testé sur {{ report.testSeason }}
+            ({{ report.testGames | number }} matchs).
+          </p>
+          <dl class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div class="rounded-lg bg-primary-50 p-3"><dt class="text-gray-600">Précision du modèle</dt><dd class="text-2xl font-bold">{{ report.accuracy | percent: '1.1-1' }}</dd></div>
+            <div class="rounded-lg bg-gray-50 p-3"><dt class="text-gray-600">« Meilleur bilan gagne »</dt><dd class="text-2xl font-bold">{{ report.betterRecordBaseline | percent: '1.1-1' }}</dd></div>
+            <div class="rounded-lg bg-gray-50 p-3"><dt class="text-gray-600">« Domicile gagne »</dt><dd class="text-2xl font-bold">{{ report.homeTeamBaseline | percent: '1.1-1' }}</dd></div>
+            <div class="rounded-lg bg-gray-50 p-3"><dt class="text-gray-600">AUC</dt><dd class="text-2xl font-bold">{{ report.auc | number: '1.3-3' }}</dd></div>
+            <div class="rounded-lg bg-gray-50 p-3"><dt class="text-gray-600">Log loss</dt><dd class="text-2xl font-bold">{{ report.logLoss | number: '1.3-3' }}</dd></div>
+          </dl>
+
+          @if (weights().length > 0) {
+            <div>
+              <h3 class="mb-2 font-medium">Poids des variables</h3>
+              <ul class="space-y-1">
+                @for (w of weights(); track w.feature) {
+                  <li class="grid grid-cols-[minmax(0,16rem)_1fr_4rem] items-center gap-3">
+                    <span class="truncate" [title]="w.feature">{{ featureLabel(w.feature) }}</span>
+                    <span class="h-2 rounded" [class.bg-green-500]="w.weight >= 0" [class.bg-red-400]="w.weight < 0" [style.width.%]="w.width"></span>
+                    <span class="text-right tabular-nums">{{ w.weight | number: '1.2-2' }}</span>
+                  </li>
+                }
+              </ul>
+              <p class="mt-2 text-xs text-gray-500">Vert : favorise l'équipe à domicile. Rouge : favorise l'équipe à l'extérieur.</p>
+            </div>
+          }
+        </div>
+      } @else if (model.isLoading()) {
+        <p class="text-sm text-gray-500">Chargement…</p>
+      } @else if (model.error()) {
+        <p class="text-sm text-red-600" role="alert">Résultats du modèle indisponibles.</p>
+      } @else {
+        <p class="text-sm text-gray-500">Le modèle n'a pas encore été entraîné. Importez d'abord les matchs.</p>
+      }
+    </section>
+  </main>
+</div>

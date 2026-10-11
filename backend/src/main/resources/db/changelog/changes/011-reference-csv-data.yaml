@@ -1,0 +1,53 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-reference-csv-rows
+      author: hoopmind
+      comment: >-
+        Archive CSV « NBA Stats (1947-present) » de Sumitro Datta (statistiques Basketball-Reference par saison, votes des
+        trophées). Une ligne par enregistrement, reconnue par sa clé naturelle pour rendre l'import rejouable sans doublon.
+      changes:
+        - createTable:
+            tableName: reference_csv_rows
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: dataset
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: row_key
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: season
+                  type: INT
+              - column:
+                  name: data
+                  type: JSONB
+                  constraints:
+                    nullable: false
+              - column:
+                  name: imported_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: reference_csv_rows
+            columnNames: dataset, row_key
+            constraintName: uk_reference_csv_rows_dataset_key
+        - createIndex:
+            tableName: reference_csv_rows
+            indexName: idx_reference_csv_rows_dataset_season
+            columns:
+              - column:
+                  name: dataset
+              - column:
+                  name: season

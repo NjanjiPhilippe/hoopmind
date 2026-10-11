@@ -864,6 +864,45 @@
         ]
       }
     },
+    "/api/v1/spark/ml/train/game-outcome": {
+      "post": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Entraîner le modèle de prédiction des matchs",
+        "description": "Régression logistique sur la forme des équipes avant chaque match (bilan, ratings, dix derniers matchs, repos), apprise sur les saisons les plus anciennes et testée sur la plus récente. La précision est comparée à deux règles simples : l'équipe à domicile gagne, l'équipe au meilleur bilan gagne.",
+        "operationId": "trainGameOutcomeModel",
+        "parameters": [
+          {
+            "name": "seasons",
+            "in": "query",
+            "description": "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingReport"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/seasons": {
       "get": {
         "tags": [
@@ -1266,6 +1305,145 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/imports/nba-database": {
+      "post": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Importer la base NBA (Wyatt Walsh)",
+        "description": "Lit le fichier nba.sqlite configuré (NBA_DATABASE_PATH) et importe équipes, saisons, matchs, résultats, statistiques par match et bilans de saison. Rejouable sans doublon.",
+        "operationId": "importNbaDatabase",
+        "parameters": [
+          {
+            "name": "seasons",
+            "in": "query",
+            "description": "Nombre de saisons à importer, en partant de la plus récente (réglage par défaut sinon)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReport"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/imports/nba-database/jobs": {
+      "post": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Lancer l'import de la base NBA en arrière-plan",
+        "description": "Télécharge d'abord la base depuis Kaggle si download=true (clé KAGGLE_USERNAME et KAGGLE_KEY requise), puis l'importe. Suivre l'avancement avec GET /nba-database/status.",
+        "operationId": "startNbaDatabaseImport",
+        "parameters": [
+          {
+            "name": "seasons",
+            "in": "query",
+            "description": "Nombre de saisons à importer, en partant de la plus récente (réglage par défaut sinon)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "description": "Télécharger la base depuis Kaggle avant l'import",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/imports/csv": {
+      "post": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Importer des CSV de l'archive NBA Stats (Sumitro Datta)",
+        "description": "Accepte le zip de l'archive et/ou des fichiers CSV. Chaque fichier est reconnu par ses colonnes, quel que soit son nom, puis importé sans doublon. Renvoie un compte rendu par fichier.",
+        "operationId": "importReferenceCsv",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "files"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FileReport"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/v1/users/me": {
@@ -2195,37 +2373,15 @@
           "Spark Analytics"
         ],
         "summary": "Get model metrics",
-        "description": "Récupère les métriques de performance d'un modèle entraîné. Utile pour comparer différents modèles.",
+        "description": "Métriques du dernier entraînement du modèle de prédiction des matchs (404 s'il n'a jamais été entraîné).",
         "operationId": "getModelMetrics",
-        "parameters": [
-          {
-            "name": "modelType",
-            "in": "query",
-            "description": "Type de modèle",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
+                  "$ref": "#/components/schemas/TrainingReport"
                 }
               }
             }
@@ -3580,6 +3736,63 @@
           }
         ]
       }
+    },
+    "/api/v1/admin/imports/nba-database/status": {
+      "get": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "État de la base NBA (Wyatt Walsh)",
+        "description": "Fichier présent sur le serveur, clé Kaggle configurée ou non, et avancement du dernier import.",
+        "operationId": "getNbaDatabaseStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NbaDatabaseStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/imports/csv/datasets": {
+      "get": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Contenu importé de l'archive NBA Stats",
+        "description": "Pour chaque fichier connu de l'archive : nombre de lignes, saisons couvertes, date du dernier import.",
+        "operationId": "listReferenceDatasets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetSummary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -4298,6 +4511,82 @@
           "name"
         ]
       },
+      "TrainingReport": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "trainedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "seasonsUsed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "testSeason": {
+            "type": "string"
+          },
+          "trainingGames": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "testGames": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "accuracy": {
+            "type": "number",
+            "format": "double"
+          },
+          "auc": {
+            "type": "number",
+            "format": "double"
+          },
+          "logLoss": {
+            "type": "number",
+            "format": "double"
+          },
+          "precision": {
+            "type": "number",
+            "format": "double"
+          },
+          "recall": {
+            "type": "number",
+            "format": "double"
+          },
+          "f1": {
+            "type": "number",
+            "format": "double"
+          },
+          "homeTeamBaseline": {
+            "type": "number",
+            "format": "double"
+          },
+          "betterRecordBaseline": {
+            "type": "number",
+            "format": "double"
+          },
+          "confusionMatrix": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "featureWeights": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        }
+      },
       "SeasonCreateRequest": {
         "type": "object",
         "properties": {
@@ -4713,6 +5002,133 @@
           "login",
           "password"
         ]
+      },
+      "ImportReport": {
+        "type": "object",
+        "properties": {
+          "seasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "teams": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "games": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "playedGames": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamGameStats": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamSeasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedGames": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "durationMs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "JobStatus": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "DOWNLOADING",
+              "IMPORTING",
+              "SUCCEEDED",
+              "FAILED"
+            ]
+          },
+          "download": {
+            "type": "boolean"
+          },
+          "seasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "downloadedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ImportReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "FileReport": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IMPORTED",
+              "UNRECOGNIZED",
+              "FAILED"
+            ]
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inserted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unchanged": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
       },
       "UpdateProfileRequest": {
         "type": "object",
@@ -5157,6 +5573,77 @@
           },
           "page": {
             "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "DatabaseFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NbaDatabaseStatus": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/DatabaseFile"
+          },
+          "kaggleConfigured": {
+            "type": "boolean"
+          },
+          "kaggleDataset": {
+            "type": "string"
+          },
+          "defaultSeasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxSeasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobStatus"
+          }
+        }
+      },
+      "DatasetSummary": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstSeason": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastSeason": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "importedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

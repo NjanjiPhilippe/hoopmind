@@ -11,4 +11,9 @@ export const ADMIN_ROUTES: Routes = [
     title: 'Utilisateurs · HoopMind',
     loadComponent: () => import('./users/admin-users.component').then(m => m.AdminUsersComponent),
   },
+  {
+    path: 'data',
+    title: 'Données · HoopMind',
+    loadComponent: () => import('./data/admin-data.component').then(m => m.AdminDataComponent),
+  },
 ];

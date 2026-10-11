@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(NbaDatabaseImportProperties.class)
+@EnableConfigurationProperties({NbaDatabaseImportProperties.class, KaggleProperties.class})
 class NbaImportConfig {
 
     /** Import au démarrage, pratique pour une démo en conteneurs ({@code NBA_IMPORT_ON_STARTUP=true}). */

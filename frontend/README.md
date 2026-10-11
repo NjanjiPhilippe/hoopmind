@@ -68,4 +68,5 @@ En octobre 2026, avec l'aide de Claude (Anthropic) :
 - passage à Tailwind CSS 4 (configuration en CSS) ;
 - client API généré depuis l'OpenAPI du backend ;
 - nouvelle gestion de session (jeton en mémoire, cookie HttpOnly, renouvellement automatique) ;
-- pages de compte (profil, mot de passe) et d'administration des utilisateurs.
+- pages de compte (profil, mot de passe) et d'administration des utilisateurs ;
+- page d'administration « Données » : import des matchs depuis Kaggle, dépôt des CSV, entraînement et résultats du modèle.
