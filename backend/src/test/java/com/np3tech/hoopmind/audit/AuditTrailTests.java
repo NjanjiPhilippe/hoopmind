@@ -83,6 +83,19 @@ class AuditTrailTests {
     }
 
     @Test
+    void savingTheSameRolesIsNotAChange() {
+        Session user = TestAccounts.register(mvc);
+        Session admin = TestAccounts.admin(mvc);
+
+        assertThat(mvc.put().uri("/api/v1/admin/users/{id}/roles", user.userId())
+                .header(HttpHeaders.AUTHORIZATION, admin.bearer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"roles\":[\"ROLE_USER\"]}"))
+                .hasStatusOk();
+
+        assertThat(eventsFor(user.userId())).extracting(e -> e.get("action")).doesNotContain("USER_ROLES_CHANGED");
+    }
+
+    @Test
     void unknownLoginIsRecordedWithoutTheTypedIdentifier() {
         String typed = "inconnu-" + System.nanoTime();
         assertThat(mvc.post().uri("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)

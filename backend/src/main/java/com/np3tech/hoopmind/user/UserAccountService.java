@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -37,6 +37,7 @@ public class UserAccountService {
     private final RoleRepository roles;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     // --- Authentification -------------------------------------------------------------------
 
@@ -53,7 +54,7 @@ public class UserAccountService {
 
     @Transactional
     public void recordSuccessfulLogin(Long userId) {
-        users.findById(userId).ifPresent(user -> user.setLastLogin(Instant.now()));
+        users.findById(userId).ifPresent(user -> user.setLastLogin(clock.instant()));
     }
 
     @Transactional
@@ -138,6 +139,10 @@ public class UserAccountService {
             ensureAnotherAdminRemains(Attempt.CHANGE_ROLES, user);
         }
         Set<RoleName> before = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+        if (before.equals(wanted)) {
+            // Rien ne change : ni entrée d'audit, ni déconnexion forcée de l'utilisateur.
+            return UserProfile.of(user);
+        }
         user.getRoles().clear();
         user.getRoles().addAll(resolveRoles(wanted));
         events.publishEvent(new UserAccountEvent.RolesChanged(user.getId(), user.getUsername(), before, wanted));
