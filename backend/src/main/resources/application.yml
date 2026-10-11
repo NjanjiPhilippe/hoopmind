@@ -36,6 +36,12 @@ spring:
     problemdetails:
       enabled: true
 
+  # Dépôt des CSV de l'archive NBA Stats depuis l'interface (le zip complet fait environ 10 Mo, 32 Mo décompressé)
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 200MB
+
 hoopmind:
   version: '@project.version@'
   security:
@@ -58,6 +64,10 @@ hoopmind:
       path: ${NBA_DATABASE_PATH:data/nba.sqlite}
       seasons: ${NBA_IMPORT_SEASONS:10}
       on-startup: ${NBA_IMPORT_ON_STARTUP:false}
+    # Téléchargement de cette base par le serveur, depuis la page « Données » (clé : https://www.kaggle.com/settings)
+    kaggle:
+      username: ${KAGGLE_USERNAME:}
+      key: ${KAGGLE_KEY:}
   ml:
     spark:
       enabled: ${SPARK_ENABLED:true}

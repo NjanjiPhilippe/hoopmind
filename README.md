@@ -29,7 +29,7 @@ Le détail de l'architecture, de la sécurité et des choix techniques est dans 
 
 Les matchs viennent de la [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh**
 (licence CC BY-SA 4.0) et les statistiques de saison de [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats)
-de **Sumitro Datta**. Elles ne sont pas incluses dans ce dépôt : voir [Données NBA](backend/README.md#données-nba) pour les télécharger et les importer.
+de **Sumitro Datta**. Elles ne sont pas incluses dans ce dépôt : elles se chargent depuis la page **Administration > Données**, voir [Charger les données NBA](backend/README.md#charger-les-données-nba).
 
 ## Historique du projet
 

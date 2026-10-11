@@ -136,6 +136,12 @@
 			<groupId>org.xerial</groupId>
 			<artifactId>sqlite-jdbc</artifactId>
 		</dependency>
+		<!-- Lecture des CSV déposés depuis l'interface (archive de Sumitro Datta) -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.14.1</version>
+		</dependency>
 
 		<!-- JWT : Spring Security OAuth2 Resource Server (Nimbus), signé HS256 -->
 		<dependency>

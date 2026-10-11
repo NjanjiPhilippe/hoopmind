@@ -174,6 +174,27 @@ class NbaDatabaseImportTests {
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
+    @Test
+    void theDataPageSeesTheFileAndTheKaggleKeyBeforeAnyBackgroundImport() {
+        String admin = TestAccounts.admin(mvc).bearer();
+        assertThat(mvc.get().uri("/api/v1/admin/imports/nba-database/status").header(HttpHeaders.AUTHORIZATION, admin))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    assertThat(json).extractingPath("$.file.present").isEqualTo(false);
+                    assertThat(json).extractingPath("$.kaggleConfigured").isEqualTo(false);
+                    assertThat(json).extractingPath("$.kaggleDataset").isEqualTo("wyattowalsh/basketball");
+                });
+
+        // Sans fichier ni clé Kaggle, l'import en arrière-plan est refusé avec une explication.
+        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database/jobs").header(HttpHeaders.AUTHORIZATION, admin))
+                .hasStatus(422);
+        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database/jobs").param("download", "true")
+                .header(HttpHeaders.AUTHORIZATION, admin))
+                .hasStatus(422)
+                .bodyJson().extractingPath("$.detail").asString().contains("KAGGLE_KEY");
+    }
+
     private int countImportedGames() {
         return jdbc.queryForObject("SELECT count(*) FROM games WHERE external_id IS NOT NULL", Integer.class);
     }
