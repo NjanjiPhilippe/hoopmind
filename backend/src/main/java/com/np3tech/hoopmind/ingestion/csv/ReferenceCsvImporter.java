@@ -1,6 +1,6 @@
-package com.np3tech.hoopmind.nba.importer.csv;
+package com.np3tech.hoopmind.ingestion.csv;
 
-import com.np3tech.hoopmind.nba.importer.NbaImportException;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaImportException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;

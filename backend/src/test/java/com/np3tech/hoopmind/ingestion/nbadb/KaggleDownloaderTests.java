@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;

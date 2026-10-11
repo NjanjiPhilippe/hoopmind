@@ -1,9 +1,9 @@
-package com.np3tech.hoopmind.nba.importer.csv;
+package com.np3tech.hoopmind.ingestion.csv;
 
-import com.np3tech.hoopmind.nba.importer.NbaImportException;
-import com.np3tech.hoopmind.nba.importer.csv.ReferenceCsvImporter.DatasetSummary;
-import com.np3tech.hoopmind.nba.importer.csv.ReferenceCsvImporter.FileReport;
-import com.np3tech.hoopmind.nba.importer.csv.ReferenceCsvImporter.Upload;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaImportException;
+import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.DatasetSummary;
+import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.FileReport;
+import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.Upload;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;

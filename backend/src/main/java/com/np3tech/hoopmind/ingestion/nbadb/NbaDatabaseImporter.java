@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.nba.entity.Season;
 import com.np3tech.hoopmind.nba.entity.Team;
@@ -7,11 +7,11 @@ import com.np3tech.hoopmind.nba.entity.enummeration.Division;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameType;
 import com.np3tech.hoopmind.nba.entity.enummeration.SeasonStatus;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.GameRow;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.StandingRow;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.TeamGameRow;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.TeamRow;
-import com.np3tech.hoopmind.nba.importer.TeamSeasonAggregator.TeamSeason;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.GameRow;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.StandingRow;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamGameRow;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamRow;
+import com.np3tech.hoopmind.ingestion.nbadb.TeamSeasonAggregator.TeamSeason;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;

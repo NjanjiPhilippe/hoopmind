@@ -1,8 +1,8 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.IntegrationTest;
 import com.np3tech.hoopmind.TestAccounts;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseImporter.ImportReport;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import org.junit.jupiter.api.BeforeAll;
@@ -20,10 +20,10 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Map;
 
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.BOS;
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.LAL;
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.NYK;
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.UNKNOWN;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.BOS;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.LAL;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.NYK;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.UNKNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

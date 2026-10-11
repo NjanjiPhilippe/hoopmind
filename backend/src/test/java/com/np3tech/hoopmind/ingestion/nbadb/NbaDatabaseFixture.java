@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import java.nio.file.Path;
 import java.sql.Connection;

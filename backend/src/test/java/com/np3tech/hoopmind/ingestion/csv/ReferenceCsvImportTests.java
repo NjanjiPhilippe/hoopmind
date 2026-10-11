@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer.csv;
+package com.np3tech.hoopmind.ingestion.csv;
 
 import com.np3tech.hoopmind.IntegrationTest;
 import com.np3tech.hoopmind.TestAccounts;

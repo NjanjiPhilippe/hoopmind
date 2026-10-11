@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.shared.exception.AppException;
 import org.springframework.http.HttpStatus;

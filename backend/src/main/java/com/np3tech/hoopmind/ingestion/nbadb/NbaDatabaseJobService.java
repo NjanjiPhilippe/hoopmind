@@ -1,6 +1,6 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseImporter.ImportReport;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

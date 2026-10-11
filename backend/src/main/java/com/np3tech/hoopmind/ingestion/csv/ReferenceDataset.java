@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer.csv;
+package com.np3tech.hoopmind.ingestion.csv;
 
 import java.util.Collection;
 import java.util.Comparator;

@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

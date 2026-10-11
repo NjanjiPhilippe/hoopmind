@@ -1,7 +1,7 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.GameRow;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseRows.TeamGameRow;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.GameRow;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamGameRow;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

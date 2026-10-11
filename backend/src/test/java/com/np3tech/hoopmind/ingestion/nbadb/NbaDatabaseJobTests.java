@@ -1,8 +1,8 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.IntegrationTest;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseJobService.JobStatus;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseJobService.Phase;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.JobStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.Phase;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import com.np3tech.hoopmind.shared.exception.AppException;
@@ -19,8 +19,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.BOS;
-import static com.np3tech.hoopmind.nba.importer.NbaDatabaseFixture.LAL;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.BOS;
+import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.LAL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

@@ -1,8 +1,8 @@
-package com.np3tech.hoopmind.nba.importer;
+package com.np3tech.hoopmind.ingestion.nbadb;
 
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseImporter.ImportReport;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseJobService.JobStatus;
-import com.np3tech.hoopmind.nba.importer.NbaDatabaseJobService.NbaDatabaseStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.JobStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.NbaDatabaseStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
