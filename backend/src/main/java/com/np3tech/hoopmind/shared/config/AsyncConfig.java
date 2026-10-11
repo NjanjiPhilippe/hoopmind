@@ -1,24 +1,14 @@
 package com.np3tech.hoopmind.shared.config;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
-
-@Configuration
+/**
+ * Active {@code @Async}. L'exécuteur est celui de Spring Boot ({@code applicationTaskExecutor}) : avec
+ * {@code spring.threads.virtual.enabled}, un fil virtuel par tâche, et un arrêt qui attend les tâches en cours
+ * ({@code spring.task.execution.shutdown.*}).
+ */
+@Configuration(proxyBeanMethods = false)
 @EnableAsync
 public class AsyncConfig {
-
-    @Bean(name = "taskExecutor")
-    public Executor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("HoopMind-Async-");
-        executor.initialize();
-        return executor;
-    }
 }

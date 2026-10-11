@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-reference-csv-imported-at-timestamptz
+      author: hoopmind
+      comment: >
+        Date d'import des CSV en TIMESTAMP WITH TIME ZONE (instant absolu), comme le reste du schéma récent.
+        Les valeurs existantes ont été écrites par un serveur à l'heure UTC (conteneur).
+      changes:
+        - sql:
+            sql: >
+              ALTER TABLE reference_csv_rows
+              ALTER COLUMN imported_at TYPE TIMESTAMP WITH TIME ZONE USING imported_at AT TIME ZONE 'UTC'
+      rollback:
+        - sql:
+            sql: >
+              ALTER TABLE reference_csv_rows
+              ALTER COLUMN imported_at TYPE TIMESTAMP USING imported_at AT TIME ZONE 'UTC'

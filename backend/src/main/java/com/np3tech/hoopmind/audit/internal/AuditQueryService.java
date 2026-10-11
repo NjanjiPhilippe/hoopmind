@@ -2,7 +2,6 @@ package com.np3tech.hoopmind.audit.internal;
 
 import com.np3tech.hoopmind.audit.AuditAction;
 import com.np3tech.hoopmind.audit.AuditOutcome;
-import com.np3tech.hoopmind.audit.AuditTarget;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -6,6 +6,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   USER_REGISTERED: 'Inscription',
   LOGIN_SUCCEEDED: 'Connexion',
   LOGIN_FAILED: 'Échec de connexion',
+  LOGIN_THROTTLED: 'Connexion bloquée (trop de tentatives)',
   LOGOUT: 'Déconnexion',
   REFRESH_TOKEN_REUSED: 'Jeton de session réutilisé',
   PROFILE_UPDATED: 'Profil modifié',
@@ -16,6 +17,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   USER_DISABLED: 'Compte désactivé',
   USER_ROLES_CHANGED: 'Rôles modifiés',
   USER_DELETED: 'Compte supprimé',
+  DATA_IMPORTED: 'Import de données',
+  MODEL_TRAINED: 'Entraînement du modèle',
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[];
@@ -27,6 +30,9 @@ const REASON_LABELS: Record<string, string> = {
   WRONG_CURRENT_PASSWORD: 'mot de passe actuel incorrect',
   LAST_ADMIN: 'dernier administrateur actif',
   TOKEN_ALREADY_USED: 'jeton déjà utilisé, sessions révoquées',
+  TOO_MANY_ATTEMPTS: 'trop de tentatives récentes',
+  IMPORT_FAILED: "échec de l'import",
+  TRAINING_FAILED: "échec de l'entraînement",
 };
 
 const FIELD_LABELS: Record<string, string> = {

@@ -873,8 +873,8 @@
         "tags": [
           "Spark Analytics"
         ],
-        "summary": "Entraîner le modèle de prédiction des matchs",
-        "description": "Régression logistique sur la forme des équipes avant chaque match (bilan, ratings, dix derniers matchs, repos), apprise sur les saisons les plus anciennes et testée sur la plus récente. La précision est comparée à deux règles simples : l'équipe à domicile gagne, l'équipe au meilleur bilan gagne.",
+        "summary": "Entraîner le modèle et attendre le résultat (remplacé par POST /train/game-outcome/jobs)",
+        "description": "Lance le même job que POST /train/game-outcome/jobs et attend sa fin.",
         "operationId": "trainGameOutcomeModel",
         "parameters": [
           {
@@ -895,6 +895,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrainingReport"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/spark/ml/train/game-outcome/jobs": {
+      "post": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Lancer l'entraînement du modèle en arrière-plan",
+        "description": "Régression logistique sur la forme des équipes avant chaque match, apprise sur les saisons les plus anciennes et testée sur la plus récente. Suivre l'avancement avec GET /train/game-outcome/status. 409 si un import ou un autre entraînement est en cours.",
+        "operationId": "startGameOutcomeTraining",
+        "parameters": [
+          {
+            "name": "seasons",
+            "in": "query",
+            "description": "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingJobStatus"
                 }
               }
             }
@@ -1309,45 +1349,6 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/admin/imports/nba-database": {
-      "post": {
-        "tags": [
-          "Import des données"
-        ],
-        "summary": "Importer la base NBA (Wyatt Walsh)",
-        "description": "Lit le fichier nba.sqlite configuré (NBA_DATABASE_PATH) et importe équipes, saisons, matchs, résultats, statistiques par match et bilans de saison. Rejouable sans doublon.",
-        "operationId": "importNbaDatabase",
-        "parameters": [
-          {
-            "name": "seasons",
-            "in": "query",
-            "description": "Nombre de saisons à importer, en partant de la plus récente (réglage par défaut sinon)",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportReport"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
       }
     },
     "/api/v1/admin/imports/nba-database/jobs": {
@@ -2311,13 +2312,40 @@
         }
       }
     },
+    "/api/v1/spark/ml/train/game-outcome/status": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "État du dernier entraînement du modèle",
+        "description": "204 si le modèle n'a jamais été entraîné par un job.",
+        "operationId": "getGameOutcomeTrainingStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingJobStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/spark/ml/predict/game": {
       "get": {
         "tags": [
           "Spark Analytics"
         ],
-        "summary": "Predict game outcome",
-        "description": "Utilise le modèle entraîné pour prédire le résultat d'un match. Retourne la prédiction (équipe gagnante) et les probabilités.",
+        "summary": "Prédire le vainqueur d'un match",
+        "description": "Forme des deux équipes avant la date du match (matchs déjà joués de la saison), puis le modèle entraîné. Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
         "operationId": "predictGameOutcome",
         "parameters": [
           {
@@ -2333,7 +2361,7 @@
           {
             "name": "homeTeamId",
             "in": "query",
-            "description": "ID de l'équipe domicile",
+            "description": "ID de l'équipe à domicile",
             "required": true,
             "schema": {
               "type": "integer",
@@ -2343,11 +2371,31 @@
           {
             "name": "awayTeamId",
             "in": "query",
-            "description": "ID de l'équipe extérieure",
+            "description": "ID de l'équipe à l'extérieur",
             "required": true,
             "schema": {
               "type": "integer",
               "format": "int64"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "Jour du match (aujourd'hui par défaut)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "playoff",
+            "in": "query",
+            "description": "Match de playoffs",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
             }
           }
         ],
@@ -2357,8 +2405,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
+                  "$ref": "#/components/schemas/GameOutcomePrediction"
                 }
               }
             }
@@ -2376,8 +2423,8 @@
         "tags": [
           "Spark Analytics"
         ],
-        "summary": "Get model metrics",
-        "description": "Métriques du dernier entraînement du modèle de prédiction des matchs (404 s'il n'a jamais été entraîné).",
+        "summary": "Métriques du modèle de prédiction des matchs",
+        "description": "Dernier entraînement enregistré (404 s'il n'a jamais été entraîné).",
         "operationId": "getModelMetrics",
         "responses": {
           "200": {
@@ -3817,6 +3864,7 @@
                 "USER_REGISTERED",
                 "LOGIN_SUCCEEDED",
                 "LOGIN_FAILED",
+                "LOGIN_THROTTLED",
                 "LOGOUT",
                 "REFRESH_TOKEN_REUSED",
                 "PROFILE_UPDATED",
@@ -3826,7 +3874,9 @@
                 "USER_ENABLED",
                 "USER_DISABLED",
                 "USER_ROLES_CHANGED",
-                "USER_DELETED"
+                "USER_DELETED",
+                "DATA_IMPORTED",
+                "MODEL_TRAINED"
               ]
             }
           },
@@ -4731,6 +4781,42 @@
           }
         }
       },
+      "TrainingJobStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "TRAINING",
+              "SUCCEEDED",
+              "FAILED",
+              "INTERRUPTED"
+            ]
+          },
+          "seasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "report": {
+            "$ref": "#/components/schemas/TrainingReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "SeasonCreateRequest": {
         "type": "object",
         "properties": {
@@ -5189,13 +5275,18 @@
       "JobStatus": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "phase": {
             "type": "string",
             "enum": [
               "DOWNLOADING",
               "IMPORTING",
               "SUCCEEDED",
-              "FAILED"
+              "FAILED",
+              "INTERRUPTED"
             ]
           },
           "download": {
@@ -5685,6 +5776,25 @@
           }
         }
       },
+      "GameOutcomePrediction": {
+        "type": "object",
+        "properties": {
+          "homeTeamWins": {
+            "type": "boolean"
+          },
+          "homeWinProbability": {
+            "type": "number",
+            "format": "double"
+          },
+          "awayWinProbability": {
+            "type": "number",
+            "format": "double"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      },
       "PageMetadata": {
         "type": "object",
         "properties": {
@@ -5808,6 +5918,7 @@
               "USER_REGISTERED",
               "LOGIN_SUCCEEDED",
               "LOGIN_FAILED",
+              "LOGIN_THROTTLED",
               "LOGOUT",
               "REFRESH_TOKEN_REUSED",
               "PROFILE_UPDATED",
@@ -5817,7 +5928,9 @@
               "USER_ENABLED",
               "USER_DISABLED",
               "USER_ROLES_CHANGED",
-              "USER_DELETED"
+              "USER_DELETED",
+              "DATA_IMPORTED",
+              "MODEL_TRAINED"
             ]
           },
           "outcome": {

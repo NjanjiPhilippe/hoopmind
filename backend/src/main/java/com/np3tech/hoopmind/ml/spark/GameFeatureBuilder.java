@@ -1,5 +1,6 @@
 package com.np3tech.hoopmind.ml.spark;
 
+import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -10,7 +11,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 import static org.apache.spark.sql.functions.avg;
 import static org.apache.spark.sql.functions.coalesce;
@@ -55,13 +55,13 @@ public final class GameFeatureBuilder {
             "offensive_rating", "defensive_rating", "net_rating", "rest_days"
     };
 
-    /** Variables d'entrée du modèle, dans l'ordre du VectorAssembler. */
-    public static final String[] FEATURES = Stream.concat(
-            Stream.of("win_pct", "last10_win_pct", "net_rating", "offensive_rating", "defensive_rating", "rest_days")
-                    .flatMap(c -> Stream.of("home_" + c, "away_" + c)),
-            Stream.of("win_pct_diff", "last10_win_pct_diff", "net_rating_diff", "point_diff_diff", "rest_days_diff",
-                    "is_playoff")
-    ).toArray(String[]::new);
+    /**
+     * Variables d'entrée du modèle, dans l'ordre du VectorAssembler : uniquement des écarts entre les deux équipes.
+     * L'avantage du terrain est porté par l'ordonnée à l'origine (l'équipe « home » reçoit toujours).
+     * Garder aussi les valeurs de chaque équipe ({@code home_x}, {@code away_x}) en plus de leur écart rendrait les
+     * variables colinéaires ({@code x_diff = home_x - away_x}) : poids instables et illisibles.
+     */
+    public static final String[] FEATURES = GameOutcomeFeatures.NAMES.toArray(String[]::new);
 
     public static final String LABEL = "home_won";
 
@@ -100,36 +100,6 @@ public final class GameFeatureBuilder {
         return pairTeams(withNeutralValues(form));
     }
 
-    /**
-     * Forme actuelle de chaque équipe (tous ses matchs joués de la saison), pour prédire un match à venir.
-     */
-    public static Dataset<Row> currentForm(Dataset<Row> teamGames) {
-        Dataset<Row> played = teamGames.filter(col("won").isNotNull())
-                .withColumn("box_points", when(col("possessions").isNotNull(), col("points")))
-                .withColumn("box_points_allowed", when(col("opponent_possessions").isNotNull(), col("points_allowed")));
-        Dataset<Row> lastTen = played
-                .withColumn("recency", org.apache.spark.sql.functions.row_number().over(
-                        Window.partitionBy("team_id").orderBy(col("game_date").desc(), col("game_id").desc())))
-                .filter(col("recency").leq(10))
-                .groupBy("team_id").agg(avg("won").alias("last10_win_pct"));
-        Dataset<Row> form = played.groupBy("team_id").agg(
-                        count("won").alias("games_played"),
-                        avg("won").alias("win_pct"),
-                        avg("points").alias("points_per_game"),
-                        avg("points_allowed").alias("points_allowed_per_game"),
-                        rating(sum("box_points"), sum("possessions")).alias("offensive_rating"),
-                        rating(sum("box_points_allowed"), sum("opponent_possessions")).alias("defensive_rating"))
-                .join(lastTen, "team_id")
-                .withColumn("rest_days", lit(2));
-        return withNeutralValues(form);
-    }
-
-    /** Assemble la forme de l'équipe à domicile et de l'équipe extérieure en une ligne de match. */
-    public static Dataset<Row> matchup(Dataset<Row> homeForm, Dataset<Row> awayForm, boolean playoff) {
-        return derived(prefixed(homeForm, "home_").crossJoin(prefixed(awayForm, "away_"))
-                .withColumn("is_playoff", lit(playoff ? 1.0 : 0.0)));
-    }
-
     private static Column rating(Column points, Column possessions) {
         return when(possessions.gt(0), points.multiply(100.0).divide(possessions));
     }
@@ -165,9 +135,6 @@ public final class GameFeatureBuilder {
                 .withColumn("win_pct_diff", col("home_win_pct").minus(col("away_win_pct")))
                 .withColumn("last10_win_pct_diff", col("home_last10_win_pct").minus(col("away_last10_win_pct")))
                 .withColumn("net_rating_diff", col("home_net_rating").minus(col("away_net_rating")))
-                .withColumn("point_diff_diff",
-                        col("home_points_per_game").minus(col("home_points_allowed_per_game"))
-                                .minus(col("away_points_per_game").minus(col("away_points_allowed_per_game"))))
                 .withColumn("rest_days_diff", col("home_rest_days").minus(col("away_rest_days")));
     }
 

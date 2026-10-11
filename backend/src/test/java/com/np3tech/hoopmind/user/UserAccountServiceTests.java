@@ -11,6 +11,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,7 +29,7 @@ class UserAccountServiceTests {
     private final RoleRepository roles = mock(RoleRepository.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final UserAccountService service =
-            new UserAccountService(users, roles, NoOpPasswordEncoder.getInstance(), events);
+            new UserAccountService(users, roles, NoOpPasswordEncoder.getInstance(), events, Clock.systemUTC());
 
     private User admin;
 

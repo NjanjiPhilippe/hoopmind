@@ -6,6 +6,14 @@ spring:
   threads:
     virtual:
       enabled: true
+  task:
+    execution:
+      thread-name-prefix: hoopmind-task-
+      # À l'arrêt, on laisse aux tâches en cours (jobs d'import, d'entraînement) le temps de finir ;
+      # celles qui dépassent seront marquées « interrompues » au prochain démarrage.
+      shutdown:
+        await-termination: true
+        await-termination-period: 30s
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/hoopmind}
@@ -13,6 +21,10 @@ spring:
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
+      data-source-properties:
+        # Le pilote réécrit chaque lot d'INSERT en un seul INSERT multi-lignes : bien moins d'allers-retours
+        # pendant l'import des données NBA.
+        reWriteBatchedInserts: true
 
   jpa:
     # Le schéma appartient à Liquibase ; Hibernate se contente de le vérifier.
