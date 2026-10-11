@@ -37,6 +37,17 @@ public sealed interface AuthenticationEvent {
     record LoggedOut(Long userId, String username) implements AuthenticationEvent {
     }
 
+    /**
+     * Connexion refusée sans vérifier le mot de passe : trop d'échecs récents depuis cette adresse.
+     * Publié une seule fois par blocage, pour qu'une attaque ne remplisse pas le journal.
+     */
+    record LoginThrottled(Long userId, String username, long retryAfterSeconds) implements AuthenticationEvent {
+        @Override
+        public boolean failed() {
+            return true;
+        }
+    }
+
     /** Un jeton de rafraîchissement déjà utilisé a été présenté : toute sa famille vient d'être révoquée. */
     record RefreshTokenReused(Long userId, String username, int revokedTokens) implements AuthenticationEvent {
         @Override

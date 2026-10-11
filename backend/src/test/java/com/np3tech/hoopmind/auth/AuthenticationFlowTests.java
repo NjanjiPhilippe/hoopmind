@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -148,5 +149,34 @@ class AuthenticationFlowTests {
 
     private MvcTestResult refresh(Cookie cookie) {
         return mvc.post().uri("/api/v1/auth/refresh").cookie(cookie).exchange();
+    }
+
+    @Test
+    void tooManyFailedLoginsBlockTheAddressWithRetryAfterEvenForTheRightPassword() {
+        Session user = TestAccounts.register(mvc);
+        String wrong = "{\"login\":\"%s\",\"password\":\"mauvais\"}".formatted(user.username());
+        String right = "{\"login\":\"%s\",\"password\":\"%s\"}".formatted(user.username(), TestAccounts.PASSWORD);
+        for (int i = 0; i < 5; i++) {
+            assertThat(mvc.post().uri("/api/v1/auth/login").with(fromAddress("192.0.2.10"))
+                    .contentType(MediaType.APPLICATION_JSON).content(wrong)).hasStatus(401);
+        }
+
+        assertThat(mvc.post().uri("/api/v1/auth/login").with(fromAddress("192.0.2.10"))
+                .contentType(MediaType.APPLICATION_JSON).content(right))
+                .hasStatus(429)
+                .hasHeader(HttpHeaders.RETRY_AFTER, "30")
+                .bodyJson().extractingPath("$.code").isEqualTo("TOO_MANY_ATTEMPTS");
+
+        // Le propriétaire du compte peut toujours se connecter depuis une autre adresse.
+        assertThat(mvc.post().uri("/api/v1/auth/login").with(fromAddress("192.0.2.11"))
+                .contentType(MediaType.APPLICATION_JSON).content(right))
+                .hasStatusOk();
+    }
+
+    private static RequestPostProcessor fromAddress(String address) {
+        return request -> {
+            request.setRemoteAddr(address);
+            return request;
+        };
     }
 }

@@ -43,6 +43,7 @@ public class AuthService {
     private final JwtProperties properties;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final LoginThrottle throttle;
 
     /** Hash factice comparé quand le compte n'existe pas, pour ne pas révéler son existence par le temps de réponse. */
     private String dummyHash;
@@ -55,18 +56,30 @@ public class AuthService {
 
     @Transactional
     public Session login(String login, String password, ClientInfo client) {
+        // Vérifié avant le mot de passe : un attaquant bloqué ne peut plus rien tester, même le bon mot de passe.
+        throttle.check(login, client.ipAddress()).ifPresent(rejection -> {
+            if (rejection.firstRejection()) {
+                UserAccount target = accounts.findAccountByLogin(login).orElse(null);
+                events.publishEvent(new AuthenticationEvent.LoginThrottled(target == null ? null : target.id(),
+                        target == null ? null : target.username(), rejection.retryAfter().toSeconds()));
+            }
+            throw new LoginThrottledException(rejection.retryAfter());
+        });
         UserAccount account = accounts.findAccountByLogin(login).orElse(null);
         if (account == null) {
             passwordEncoder.matches(password, dummyHash());
+            throttle.failed(login, client.ipAddress());
             events.publishEvent(LoginFailed.unknownAccount());
             throw AuthenticationFailedException.badCredentials();
         }
         if (!passwordEncoder.matches(password, account.passwordHash())) {
+            throttle.failed(login, client.ipAddress());
             loginFailed(account, LoginFailed.Reason.BAD_PASSWORD);
         }
         if (!account.active()) {
             loginFailed(account, LoginFailed.Reason.ACCOUNT_DISABLED);
         }
+        throttle.succeeded(login, client.ipAddress());
         accounts.recordSuccessfulLogin(account.id());
         events.publishEvent(new AuthenticationEvent.LoginSucceeded(account.id(), account.username()));
         return openSession(account, UUID.randomUUID().toString(), client);

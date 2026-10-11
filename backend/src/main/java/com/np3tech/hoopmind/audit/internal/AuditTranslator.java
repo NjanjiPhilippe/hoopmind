@@ -116,6 +116,9 @@ class AuditTranslator {
             case AuthenticationEvent.LoginSucceeded loginSucceeded -> AuditEvent.success(AuditAction.LOGIN_SUCCEEDED, actor, target);
             case AuthenticationEvent.LoginFailed failed ->
                     AuditEvent.failure(AuditAction.LOGIN_FAILED, actor, target, failed.reason().name());
+            case AuthenticationEvent.LoginThrottled throttled ->
+                    AuditEvent.failure(AuditAction.LOGIN_THROTTLED, actor, target, "TOO_MANY_ATTEMPTS")
+                            .withDetail("retryAfterSeconds", String.valueOf(throttled.retryAfterSeconds()));
             case AuthenticationEvent.LoggedOut loggedOut -> AuditEvent.success(AuditAction.LOGOUT, actor, target);
             case AuthenticationEvent.RefreshTokenReused reused ->
                     AuditEvent.failure(AuditAction.REFRESH_TOKEN_REUSED, actor, target, "TOKEN_ALREADY_USED")
