@@ -39,8 +39,13 @@
           </div>
           <div>
             <label for="import-seasons" class="block text-gray-500">Saisons à importer (les plus récentes)</label>
-            <input id="import-seasons" type="number" min="1" [max]="status.maxSeasons" class="input-field mt-1 max-w-28"
-                   [value]="importSeasons()" (change)="onSeasons($any($event.target).value, 'import')" [disabled]="jobRunning()" />
+            <input id="import-seasons" type="number" min="1" [max]="maxImportSeasons()" class="input-field mt-1 max-w-28"
+                   [class.border-red-500]="!importSeasonsValid()" [attr.aria-invalid]="!importSeasonsValid()"
+                   aria-describedby="import-seasons-error"
+                   [value]="importSeasons()" (input)="onSeasons($any($event.target).value, 'import')" [disabled]="dataBusy()" />
+            @if (!importSeasonsValid()) {
+              <p id="import-seasons-error" class="mt-1 text-xs text-red-600">Entre 1 et {{ maxImportSeasons() }} saisons.</p>
+            }
           </div>
         </dl>
 
@@ -52,15 +57,18 @@
         }
 
         <div class="flex flex-wrap gap-3">
-          <button type="button" class="btn-primary" [disabled]="!status.kaggleConfigured || jobRunning() || starting()" (click)="startImport(true)">
+          <button type="button" class="btn-primary" [disabled]="!status.kaggleConfigured || dataBusy() || starting() || !importSeasonsValid()" (click)="startImport(true)">
             Télécharger depuis Kaggle et importer
           </button>
           @if (status.file?.present) {
-            <button type="button" class="btn-secondary" [disabled]="jobRunning() || starting()" (click)="startImport(false)">
+            <button type="button" class="btn-secondary" [disabled]="dataBusy() || starting() || !importSeasonsValid()" (click)="startImport(false)">
               Réimporter le fichier présent
             </button>
           }
         </div>
+        @if (training()) {
+          <p class="text-sm text-gray-500">Un entraînement du modèle est en cours : l'import sera possible à sa fin.</p>
+        }
       } @else if (nbaStatus.error()) {
         <p class="text-sm text-red-600" role="alert">État de la base indisponible.</p>
       } @else {
@@ -74,12 +82,13 @@
       @if (job(); as job) {
         <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="font-medium">{{ phaseLabel(job.phase) }} · {{ job.seasons }} saison(s)</span>
+            <span class="font-medium">{{ phaseLabel(job.phase) }} · {{ job.seasons }} saison(s) demandée(s)</span>
             <span class="text-gray-500">lancé le {{ job.startedAt | date: 'short' }}</span>
           </div>
 
           @if (job.phase === 'DOWNLOADING') {
-            <div class="mt-3 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" [attr.aria-valuenow]="downloadPercent()">
+            <div class="mt-3 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-label="Téléchargement de la base"
+                 aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="downloadPercent()">
               <div class="h-full bg-primary-600 transition-all" [style.width.%]="downloadPercent() ?? 100"
                    [class.animate-pulse]="downloadPercent() === null"></div>
             </div>
@@ -88,17 +97,23 @@
             </p>
           } @else if (job.phase === 'IMPORTING') {
             <p class="mt-2 text-gray-500">Lecture de la base et écriture des matchs, cela peut prendre quelques minutes…</p>
-          } @else if (job.phase === 'FAILED') {
+          } @else if (job.phase === 'FAILED' || job.phase === 'INTERRUPTED') {
             <p class="mt-2 text-red-600" role="alert">{{ job.error }}</p>
           } @else if (job.report; as report) {
             <dl class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div><dt class="text-gray-500">Saisons</dt><dd class="font-medium">{{ report.seasons?.[0] }} à {{ report.seasons?.[report.seasons!.length - 1] }}</dd></div>
+              <div>
+                <dt class="text-gray-500">Saisons importées</dt>
+                <dd class="font-medium">
+                  {{ report.seasons?.length ?? 0 }}
+                  @if (report.seasons?.length) { ({{ report.seasons![0] }} à {{ report.seasons![report.seasons!.length - 1] }}) }
+                </dd>
+              </div>
               <div><dt class="text-gray-500">Équipes</dt><dd class="font-medium">{{ report.teams }}</dd></div>
               <div><dt class="text-gray-500">Matchs (joués)</dt><dd class="font-medium">{{ report.games | number }} ({{ report.playedGames | number }})</dd></div>
               <div><dt class="text-gray-500">Bilans de saison</dt><dd class="font-medium">{{ report.teamSeasons }}</dd></div>
               <div><dt class="text-gray-500">Stats par match</dt><dd class="font-medium">{{ report.teamGameStats | number }}</dd></div>
               <div><dt class="text-gray-500">Matchs ignorés</dt><dd class="font-medium">{{ report.skippedGames }}</dd></div>
-              <div><dt class="text-gray-500">Durée</dt><dd class="font-medium">{{ (report.durationMs ?? 0) / 1000 | number: '1.0-0' }} s</dd></div>
+              <div><dt class="text-gray-500">Durée</dt><dd class="font-medium">{{ formatDuration(report.durationMs) }}</dd></div>
             </dl>
           }
         </div>
@@ -115,7 +130,7 @@
         </p>
       </div>
 
-      <label class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors"
+      <label class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2"
              [class.border-primary-500]="dragging()" [class.bg-primary-50]="dragging()" [class.border-gray-300]="!dragging()"
              (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
         <span class="text-3xl" aria-hidden="true">📂</span>
@@ -133,9 +148,19 @@
             </li>
           }
         </ul>
-        <button type="button" class="btn-primary" [disabled]="uploading()" (click)="uploadFiles()">
+        <button type="button" class="btn-primary" [disabled]="uploading() || dataBusy()" (click)="uploadFiles()">
           {{ uploading() ? 'Import en cours…' : 'Importer ' + selectedFiles().length + ' fichier(s)' }}
         </button>
+        @if (uploading()) {
+          <div aria-live="polite">
+            <div class="h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-label="Import des CSV">
+              <div class="h-full w-full animate-pulse bg-primary-600"></div>
+            </div>
+            <p class="mt-1 text-sm text-gray-500">Envoi des fichiers, reconnaissance des colonnes et écriture en base. Un zip complet prend environ 30 secondes.</p>
+          </div>
+        } @else if (dataBusy()) {
+          <p class="text-sm text-gray-500">Un import ou un entraînement est en cours : l'envoi sera possible à sa fin.</p>
+        }
       }
 
       @if (csvError(); as message) {
@@ -180,7 +205,7 @@
         </div>
       }
 
-      <details class="text-sm" [open]="importedDatasets() > 0">
+      <details class="text-sm">
         <summary class="cursor-pointer font-medium">
           Contenu en base : {{ importedDatasets() }} fichier(s) sur {{ datasets.value()?.length ?? 0 }}
         </summary>
@@ -211,27 +236,62 @@
         </p>
       </div>
 
-      <div class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-wrap items-start gap-3">
         <div>
           <label for="training-seasons" class="block text-sm text-gray-500">Saisons utilisées</label>
-          <input id="training-seasons" type="number" min="1" max="30" class="input-field mt-1 max-w-28"
-                 [value]="trainingSeasons()" (change)="onSeasons($any($event.target).value, 'training')" [disabled]="training()" />
+          <input id="training-seasons" type="number" min="1" [max]="maxTrainingSeasons" class="input-field mt-1 max-w-28"
+                 [class.border-red-500]="!trainingSeasonsValid()" [attr.aria-invalid]="!trainingSeasonsValid()"
+                 aria-describedby="training-seasons-error"
+                 [value]="trainingSeasons()" (input)="onSeasons($any($event.target).value, 'training')" [disabled]="training()" />
+          @if (!trainingSeasonsValid()) {
+            <p id="training-seasons-error" class="mt-1 text-xs text-red-600">Entre 1 et {{ maxTrainingSeasons }} saisons.</p>
+          }
         </div>
-        <button type="button" class="btn-primary" [disabled]="training()" (click)="train()">
+        <button type="button" class="btn-primary mt-6" [disabled]="dataBusy() || startingTraining() || !trainingSeasonsValid()" (click)="train()">
           {{ training() ? 'Entraînement en cours…' : 'Entraîner le modèle' }}
         </button>
       </div>
+      @if (jobRunning()) {
+        <p class="text-sm text-gray-500">Un import est en cours : l'entraînement sera possible à sa fin.</p>
+      }
 
       @if (modelError(); as message) {
         <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
       }
 
-      @if (model.value(); as report) {
+      @if (trainingJob.value(); as job) {
+        @if (job.phase !== 'SUCCEEDED') {
+          <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-medium">{{ trainingPhaseLabel(job.phase) }}@if (job.seasons) { · {{ job.seasons }} saison(s) }</span>
+              <span class="text-gray-500">lancé le {{ job.startedAt | date: 'short' }}</span>
+            </div>
+            @if (job.phase === 'TRAINING') {
+              <div class="mt-3 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-label="Entraînement du modèle">
+                <div class="h-full w-full animate-pulse bg-primary-600"></div>
+              </div>
+              <p class="mt-1 text-gray-500">Spark calcule la forme des équipes avant chaque match puis ajuste le modèle. Vous pouvez quitter la page : l'entraînement continue sur le serveur.</p>
+            } @else {
+              <p class="mt-2 text-red-600" role="alert">{{ job.error }}</p>
+            }
+          </div>
+        }
+      }
+
+      @if (report(); as report) {
         <div class="space-y-4 text-sm">
           <p class="text-gray-500">
             Entraîné le {{ report.trainedAt | date: 'short' }} sur {{ report.seasonsUsed }} saison(s), testé sur {{ report.testSeason }}
             ({{ report.testGames | number }} matchs).
           </p>
+          @if (gain(); as gain) {
+            @if (gain < 0) {
+              <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800" role="status">
+                Le modèle fait moins bien qu'une règle simple ({{ -gain | percent: '1.1-1' }} de précision en moins).
+                Ses prédictions ne sont pas fiables : importez plus de saisons puis réentraînez-le.
+              </p>
+            }
+          }
           <dl class="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <div class="rounded-lg bg-primary-50 p-3"><dt class="text-gray-600">Précision du modèle</dt><dd class="text-2xl font-bold">{{ report.accuracy | percent: '1.1-1' }}</dd></div>
             <div class="rounded-lg bg-gray-50 p-3"><dt class="text-gray-600">« Meilleur bilan gagne »</dt><dd class="text-2xl font-bold">{{ report.betterRecordBaseline | percent: '1.1-1' }}</dd></div>
@@ -247,12 +307,15 @@
                 @for (w of weights(); track w.feature) {
                   <li class="grid grid-cols-[minmax(0,16rem)_1fr_4rem] items-center gap-3">
                     <span class="truncate" [title]="w.feature">{{ featureLabel(w.feature) }}</span>
-                    <span class="h-2 rounded" [class.bg-green-500]="w.weight >= 0" [class.bg-red-400]="w.weight < 0" [style.width.%]="w.width"></span>
+                    <span class="h-2 min-w-0.5 rounded" [class.bg-green-500]="w.weight > 0" [class.bg-red-400]="w.weight < 0" [class.bg-gray-300]="w.weight === 0" [style.width.%]="w.width"></span>
                     <span class="text-right tabular-nums">{{ w.weight | number: '1.2-2' }}</span>
                   </li>
                 }
               </ul>
-              <p class="mt-2 text-xs text-gray-500">Vert : favorise l'équipe à domicile. Rouge : favorise l'équipe à l'extérieur.</p>
+              <p class="mt-2 text-xs text-gray-500">
+                Variables centrées réduites : les poids se comparent entre eux. Vert : un écart positif favorise l'équipe à domicile.
+                Rouge : il favorise l'équipe à l'extérieur. Un poids nul ne pèse pas sur la prédiction.
+              </p>
             </div>
           }
         </div>

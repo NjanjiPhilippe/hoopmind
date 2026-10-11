@@ -92,18 +92,6 @@ class GameOutcomeModelController {
         return trainings.latest().map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @Deprecated
-    @PostMapping("/train/game-outcome")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(operationId = "trainGameOutcomeModel", deprecated = true,
-            summary = "Entraîner le modèle et attendre le résultat (remplacé par POST /train/game-outcome/jobs)",
-            description = "Lance le même job que POST /train/game-outcome/jobs et attend sa fin.")
-    TrainingReport trainGameOutcomeModel(
-            @Parameter(description = "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)")
-            @RequestParam(required = false) Integer seasons) {
-        return trainings.trainAndWait(seasons);
-    }
-
     private GameOutcomeModel model() {
         GameOutcomeModel available = model.getIfAvailable();
         if (available == null) {

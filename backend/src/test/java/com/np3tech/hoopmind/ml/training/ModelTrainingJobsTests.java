@@ -6,6 +6,7 @@ import com.np3tech.hoopmind.ml.GameOutcomeModel;
 import com.np3tech.hoopmind.ml.ModelTrainingEvent;
 import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.ml.training.ModelTrainingJobs.Phase;
+import com.np3tech.hoopmind.ml.training.ModelTrainingJobs.TrainingJobStatus;
 import com.np3tech.hoopmind.shared.job.JobService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +54,9 @@ class ModelTrainingJobsTests {
                 new StaticListableBeanFactory(Map.of("engine", engine)).getBeanProvider(GameOutcomeModel.class),
                 jobService, events::add);
 
-        assertThat(trainings.trainAndWait(3)).isEqualTo(report);
-        assertThat(trainings.latest()).hasValueSatisfying(status -> {
+        assertThat(trainings.start(3).phase()).isEqualTo(Phase.TRAINING);
+        TrainingJobStatus done = waitForEnd(trainings);
+        assertThat(done).satisfies(status -> {
             assertThat(status.phase()).isEqualTo(Phase.SUCCEEDED);
             assertThat(status.seasons()).isEqualTo(3);
             assertThat(status.report()).isEqualTo(report);
@@ -78,5 +82,17 @@ class ModelTrainingJobsTests {
                 .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer()))
                 .hasStatus(409)
                 .bodyJson().extractingPath("$.code").isEqualTo("MODEL_NOT_TRAINED");
+    }
+
+    private static TrainingJobStatus waitForEnd(ModelTrainingJobs trainings) throws InterruptedException {
+        Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
+        while (Instant.now().isBefore(deadline)) {
+            Optional<TrainingJobStatus> status = trainings.latest();
+            if (status.isPresent() && status.get().phase() != Phase.TRAINING) {
+                return status.get();
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("entraînement toujours en cours");
     }
 }
