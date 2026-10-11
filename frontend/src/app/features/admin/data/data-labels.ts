@@ -27,6 +27,7 @@ const PHASE_LABELS: Record<NonNullable<JobStatus['phase']>, string> = {
   IMPORTING: 'Import en base',
   SUCCEEDED: 'Import terminé',
   FAILED: 'Échec',
+  INTERRUPTED: 'Interrompu (serveur redémarré)',
 };
 
 export function phaseLabel(phase: JobStatus['phase']): string {
