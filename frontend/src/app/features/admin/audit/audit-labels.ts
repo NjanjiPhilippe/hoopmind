@@ -53,7 +53,13 @@ function list(value: string, labels: Record<string, string>): string {
 
 /** Résumé lisible des détails d'un événement, par exemple « Motif : mot de passe incorrect ». */
 export function describeDetails(event: Pick<AuditEvent, 'details'>): string {
-  const { reason, fields, before, after, revokedTokens, ...rest } = event.details;
+  const {
+    reason, fields, before, after, revokedTokens, retryAfterSeconds,
+    downloaded, download, seasons, games, error,
+    files, importedFiles, failedFiles, insertedRows, updatedRows,
+    accuracy, testSeason,
+    ...rest
+  } = event.details;
   const parts: string[] = [];
   if (reason) parts.push(`Motif : ${REASON_LABELS[reason] ?? reason}`);
   if (fields) parts.push(`Champs : ${list(fields, FIELD_LABELS)}`);
@@ -61,6 +67,31 @@ export function describeDetails(event: Pick<AuditEvent, 'details'>): string {
     parts.push(`Rôles : ${list(before ?? '', ROLE_LABELS) || '—'} → ${list(after ?? '', ROLE_LABELS) || '—'}`);
   }
   if (revokedTokens) parts.push(`${revokedTokens} jeton(s) révoqué(s)`);
+  if (retryAfterSeconds) parts.push(`Bloquée ${retryAfterSeconds} s`);
+  // Import de la base NBA
+  if (downloaded === 'true' || download === 'true') parts.push('Téléchargée depuis Kaggle');
+  if (seasons) parts.push(describeSeasons(seasons));
+  if (games) parts.push(`${Number(games).toLocaleString('fr-FR')} matchs`);
+  // Import des CSV
+  if (files) {
+    parts.push(`Fichiers : ${importedFiles ?? 0} importé(s) sur ${files}${Number(failedFiles) > 0 ? `, ${failedFiles} en erreur` : ''}`);
+  }
+  if (insertedRows !== undefined || updatedRows !== undefined) {
+    parts.push(`Lignes : ${insertedRows ?? 0} nouvelle(s), ${updatedRows ?? 0} mise(s) à jour`);
+  }
+  // Entraînement du modèle
+  if (accuracy) parts.push(`Précision : ${(Number(accuracy) * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`);
+  if (testSeason) parts.push(`testé sur ${testSeason}`);
+  if (error) parts.push(`Erreur : ${error}`);
   for (const [key, value] of Object.entries(rest)) parts.push(`${key} : ${value}`);
   return parts.join(' · ');
+}
+
+/** Liste des saisons importées (« 2022-23,2023-24 ») ou nombre de saisons demandées (« 3 ») en cas d'échec. */
+function describeSeasons(seasons: string): string {
+  const names = seasons.split(',').filter(Boolean);
+  if (names.length === 1 && /^\d+$/.test(names[0])) {
+    return `${names[0]} saison(s) demandée(s)`;
+  }
+  return names.length === 1 ? `Saison ${names[0]}` : `Saisons ${names[0]} à ${names[names.length - 1]} (${names.length})`;
 }
