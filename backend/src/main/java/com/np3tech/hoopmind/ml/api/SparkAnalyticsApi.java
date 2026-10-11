@@ -1,6 +1,5 @@
 package com.np3tech.hoopmind.ml.api;
 
-import com.np3tech.hoopmind.ml.spark.GameOutcomeModelService.TrainingReport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -145,25 +144,5 @@ public interface SparkAnalyticsApi {
     @GetMapping("/analytics/insights")
     ResponseEntity<Map<String, Object>> generateInsights(
             @Parameter(description = "ID de la saison") @RequestParam Long seasonId
-    );
-
-    @Operation(
-            summary = "Get model metrics",
-            description = "Métriques du dernier entraînement du modèle de prédiction des matchs (404 s'il n'a jamais été entraîné)."
-    )
-    @GetMapping("/ml/model-metrics")
-    ResponseEntity<TrainingReport> getModelMetrics();
-
-    @Operation(
-            summary = "Entraîner le modèle de prédiction des matchs",
-            description = "Régression logistique sur la forme des équipes avant chaque match (bilan, ratings, dix derniers "
-                    + "matchs, repos), apprise sur les saisons les plus anciennes et testée sur la plus récente. "
-                    + "La précision est comparée à deux règles simples : l'équipe à domicile gagne, "
-                    + "l'équipe au meilleur bilan gagne."
-    )
-    @PostMapping("/ml/train/game-outcome")
-    TrainingReport trainGameOutcomeModel(
-            @Parameter(description = "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)")
-            @RequestParam(required = false) Integer seasons
     );
 }

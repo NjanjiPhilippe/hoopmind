@@ -1,5 +1,7 @@
 package com.np3tech.hoopmind.ml.spark;
 
+import com.np3tech.hoopmind.ml.GameOutcomeModel;
+import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.ml.entity.PredictionModelMetrics;
 import com.np3tech.hoopmind.ml.repository.PredictionModelMetricsRepository;
 import com.np3tech.hoopmind.ml.spark.GameOutcomeTrainer.Evaluation;
@@ -40,7 +42,7 @@ import static org.apache.spark.sql.functions.col;
 @ConditionalOnSpark
 @RequiredArgsConstructor
 @Slf4j
-public class GameOutcomeModelService {
+public class GameOutcomeModelService implements GameOutcomeModel {
 
     public static final String MODEL_NAME = "game-outcome-logistic-regression";
 
@@ -57,17 +59,10 @@ public class GameOutcomeModelService {
 
     private final AtomicReference<PipelineModel> currentModel = new AtomicReference<>();
 
-    /** Résultat d'un entraînement, tel qu'il est montré à l'administrateur. */
-    public record TrainingReport(String model, String version, LocalDateTime trainedAt, Integer seasonsUsed,
-                                 String testSeason, Long trainingGames, long testGames, double accuracy, Double auc,
-                                 Double logLoss, Double precision, Double recall, Double f1, Double homeTeamBaseline,
-                                 Double betterRecordBaseline, Map<String, Long> confusionMatrix,
-                                 Map<String, Double> featureWeights) {
-    }
-
     /**
      * @param seasons nombre de saisons (les plus récentes) à utiliser ; {@code null} reprend {@code hoopmind.ml.training-seasons}
      */
+    @Override
     public TrainingReport train(Integer seasons) {
         int seasonCount = seasons != null ? seasons : defaultTrainingSeasons;
         if (seasonCount < 1 || seasonCount > 30) {
@@ -98,6 +93,7 @@ public class GameOutcomeModelService {
     }
 
     /** Dernier entraînement enregistré. */
+    @Override
     public Optional<TrainingReport> latestReport() {
         return metricsRepository.findFirstByModelOrderByCreatedAtDesc(MODEL_NAME).map(m -> toReport(m, null));
     }
