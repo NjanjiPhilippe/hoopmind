@@ -3,6 +3,8 @@ package com.np3tech.hoopmind.audit.internal;
 import com.np3tech.hoopmind.audit.AuditAction;
 import com.np3tech.hoopmind.auth.AuthenticationEvent;
 import com.np3tech.hoopmind.auth.CurrentUser;
+import com.np3tech.hoopmind.ingestion.DataImportEvent;
+import com.np3tech.hoopmind.ml.ModelTrainingEvent;
 import com.np3tech.hoopmind.user.UserAccountEvent;
 import com.np3tech.hoopmind.user.domain.RoleName;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -48,6 +51,30 @@ class AuditTranslator {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION, fallbackExecution = true,
             condition = "#event.failed()")
     void onFailed(AuthenticationEvent event) {
+        recorder.record(translate(event));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true,
+            condition = "!#event.failed()")
+    void onCommitted(DataImportEvent event) {
+        recorder.record(translate(event));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION, fallbackExecution = true,
+            condition = "#event.failed()")
+    void onFailed(DataImportEvent event) {
+        recorder.record(translate(event));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true,
+            condition = "!#event.failed()")
+    void onCommitted(ModelTrainingEvent event) {
+        recorder.record(translate(event));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION, fallbackExecution = true,
+            condition = "#event.failed()")
+    void onFailed(ModelTrainingEvent event) {
         recorder.record(translate(event));
     }
 
@@ -94,6 +121,51 @@ class AuditTranslator {
                     AuditEvent.failure(AuditAction.REFRESH_TOKEN_REUSED, actor, target, "TOKEN_ALREADY_USED")
                             .withDetail("revokedTokens", String.valueOf(reused.revokedTokens()));
         };
+    }
+
+    static AuditEvent translate(DataImportEvent event) {
+        AuditActor actor = requester(event.requestedBy());
+        AuditTarget walsh = new AuditTarget(AuditTarget.DATASET, "nba-database", "Base NBA (Wyatt Walsh)");
+        return switch (event) {
+            case DataImportEvent.NbaDatabaseImported imported -> AuditEvent.success(AuditAction.DATA_IMPORTED, actor, walsh)
+                    .withDetail("downloaded", String.valueOf(imported.downloaded()))
+                    .withDetail("seasons", String.join(",", imported.seasons()))
+                    .withDetail("games", String.valueOf(imported.games()));
+            case DataImportEvent.NbaDatabaseImportFailed failed ->
+                    AuditEvent.failure(AuditAction.DATA_IMPORTED, actor, walsh, "IMPORT_FAILED")
+                            .withDetail("download", String.valueOf(failed.download()))
+                            .withDetail("seasons", String.valueOf(failed.seasons()))
+                            .withDetail("error", shorten(failed.error()));
+            case DataImportEvent.ReferenceCsvImported csv -> AuditEvent.success(AuditAction.DATA_IMPORTED, actor,
+                            new AuditTarget(AuditTarget.DATASET, "reference-csv", "Archive NBA Stats (CSV)"))
+                    .withDetail("files", String.valueOf(csv.files()))
+                    .withDetail("importedFiles", String.valueOf(csv.importedFiles()))
+                    .withDetail("failedFiles", String.valueOf(csv.failedFiles()))
+                    .withDetail("insertedRows", String.valueOf(csv.insertedRows()))
+                    .withDetail("updatedRows", String.valueOf(csv.updatedRows()));
+        };
+    }
+
+    static AuditEvent translate(ModelTrainingEvent event) {
+        AuditActor actor = requester(event.requestedBy());
+        return switch (event) {
+            case ModelTrainingEvent.ModelTrained trained -> AuditEvent.success(AuditAction.MODEL_TRAINED, actor,
+                            new AuditTarget(AuditTarget.MODEL, "game-outcome", trained.version()))
+                    .withDetail("accuracy", String.format(Locale.ROOT, "%.3f", trained.accuracy()))
+                    .withDetail("testSeason", trained.testSeason());
+            case ModelTrainingEvent.ModelTrainingFailed failed -> AuditEvent.failure(AuditAction.MODEL_TRAINED, actor,
+                            new AuditTarget(AuditTarget.MODEL, "game-outcome", "Prédiction des matchs"), "TRAINING_FAILED")
+                    .withDetail("error", shorten(failed.error()));
+        };
+    }
+
+    /** L'administrateur qui a lancé l'opération, ou le système (import au démarrage). */
+    private static AuditActor requester(CurrentUser user) {
+        return user == null ? AuditActor.SYSTEM : AuditActor.user(user.id(), user.username());
+    }
+
+    private static String shorten(String message) {
+        return message == null || message.length() <= 200 ? message : message.substring(0, 200) + "…";
     }
 
     private static Optional<AuditActor> currentUser() {

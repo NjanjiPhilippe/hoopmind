@@ -1,6 +1,8 @@
 package com.np3tech.hoopmind.ml.web;
 
+import com.np3tech.hoopmind.auth.CurrentUser;
 import com.np3tech.hoopmind.ml.GameOutcomeModel;
+import com.np3tech.hoopmind.ml.ModelTrainingEvent;
 import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock;
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,10 +34,13 @@ class GameOutcomeModelController {
 
     private final ObjectProvider<GameOutcomeModel> model;
     private final DataOperationLock lock;
+    private final ApplicationEventPublisher events;
 
-    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model, DataOperationLock lock) {
+    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model, DataOperationLock lock,
+                               ApplicationEventPublisher events) {
         this.model = model;
         this.lock = lock;
+        this.events = events;
     }
 
     @GetMapping("/model-metrics")
@@ -53,8 +59,19 @@ class GameOutcomeModelController {
             @Parameter(description = "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)")
             @RequestParam(required = false) Integer seasons) {
         GameOutcomeModel engine = model();
-        try (Permit ignored = lock.acquire(DataOperationLock.Operation.MODEL_TRAINING)) {
-            return engine.train(seasons);
+        CurrentUser requestedBy = CurrentUser.get().orElse(null);
+        Permit permit = lock.acquire(DataOperationLock.Operation.MODEL_TRAINING);
+        try (permit) {
+            TrainingReport report = engine.train(seasons);
+            events.publishEvent(new ModelTrainingEvent.ModelTrained(requestedBy, report.version(), report.accuracy(),
+                    report.testSeason()));
+            return report;
+        } catch (AppException e) {
+            events.publishEvent(new ModelTrainingEvent.ModelTrainingFailed(requestedBy, e.getMessage()));
+            throw e;
+        } catch (RuntimeException e) {
+            events.publishEvent(new ModelTrainingEvent.ModelTrainingFailed(requestedBy, "Erreur inattendue."));
+            throw e;
         }
     }
 

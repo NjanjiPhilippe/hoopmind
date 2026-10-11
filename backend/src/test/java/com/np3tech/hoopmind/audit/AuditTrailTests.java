@@ -7,8 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -100,6 +102,28 @@ class AuditTrailTests {
                 .hasStatusOk()
                 .bodyJson()
                 .hasPathSatisfying("$.page.totalElements", v -> assertThat(v).asNumber().isEqualTo(0));
+    }
+
+    @Test
+    void recordsDataImportsWithTheAdminWhoStartedThem() {
+        Session admin = TestAccounts.admin(mvc);
+        var file = new MockMultipartFile("files", "inconnu.csv", "text/csv",
+                "colonne_a,colonne_b\n1,2\n".getBytes(StandardCharsets.UTF_8));
+        assertThat(mvc.post().uri("/api/v1/admin/imports/csv").multipart().file(file)
+                .header(HttpHeaders.AUTHORIZATION, admin.bearer()))
+                .hasStatusOk();
+
+        assertThat(mvc.get().uri("/api/v1/admin/audit-events").param("action", "DATA_IMPORTED")
+                .header(HttpHeaders.AUTHORIZATION, admin.bearer()))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    assertThat(json).extractingPath("$.content[0].outcome").isEqualTo("SUCCESS");
+                    assertThat(json).extractingPath("$.content[0].actorLogin").isEqualTo("admin");
+                    assertThat(json).extractingPath("$.content[0].targetLabel").isEqualTo("Archive NBA Stats (CSV)");
+                    assertThat(json).extractingPath("$.content[0].details.files").isEqualTo("1");
+                    assertThat(json).extractingPath("$.content[0].details.importedFiles").isEqualTo("0");
+                });
     }
 
     @Test

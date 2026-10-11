@@ -4,12 +4,16 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaImportException;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.DatasetSummary;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.FileReport;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.Upload;
+import com.np3tech.hoopmind.auth.CurrentUser;
+import com.np3tech.hoopmind.ingestion.DataImportEvent;
+import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.FileStatus;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock.Permit;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +38,7 @@ class ReferenceCsvController {
 
     private final ReferenceCsvImporter importer;
     private final DataOperationLock lock;
+    private final ApplicationEventPublisher events;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(operationId = "importReferenceCsv", summary = "Importer des CSV de l'archive NBA Stats (Sumitro Datta)",
@@ -51,7 +56,12 @@ class ReferenceCsvController {
                 opened.add(in);
                 uploads.add(new Upload(file.getOriginalFilename(), in));
             }
-            return importer.importFiles(uploads);
+            List<FileReport> reports = importer.importFiles(uploads);
+            events.publishEvent(new DataImportEvent.ReferenceCsvImported(CurrentUser.get().orElse(null), reports.size(),
+                    count(reports, FileStatus.IMPORTED), count(reports, FileStatus.FAILED),
+                    reports.stream().mapToInt(FileReport::inserted).sum(),
+                    reports.stream().mapToInt(FileReport::updated).sum()));
+            return reports;
         } catch (IOException e) {
             throw new NbaImportException("Lecture des fichiers reçus impossible : " + e.getMessage(), e);
         } finally {
@@ -70,5 +80,9 @@ class ReferenceCsvController {
             description = "Pour chaque fichier connu de l'archive : nombre de lignes, saisons couvertes, date du dernier import.")
     List<DatasetSummary> listReferenceDatasets() {
         return importer.summary();
+    }
+
+    private static int count(List<FileReport> reports, FileStatus status) {
+        return (int) reports.stream().filter(report -> report.status() == status).count();
     }
 }

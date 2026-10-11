@@ -16,5 +16,7 @@ public enum AuditAction {
     USER_ENABLED,
     USER_DISABLED,
     USER_ROLES_CHANGED,
-    USER_DELETED
+    USER_DELETED,
+    DATA_IMPORTED,
+    MODEL_TRAINED
 }

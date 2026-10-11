@@ -1,11 +1,14 @@
 package com.np3tech.hoopmind.ingestion.nbadb;
 
+import com.np3tech.hoopmind.auth.CurrentUser;
+import com.np3tech.hoopmind.ingestion.DataImportEvent;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock.Permit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -46,6 +49,7 @@ public class NbaDatabaseJobService {
     private final NbaDatabaseImportProperties properties;
     private final KaggleProperties kaggle;
     private final DataOperationLock lock;
+    private final ApplicationEventPublisher events;
 
     private final AtomicReference<JobStatus> current = new AtomicReference<>();
 
@@ -74,8 +78,10 @@ public class NbaDatabaseJobService {
         JobStatus started = new JobStatus(download ? Phase.DOWNLOADING : Phase.IMPORTING, download, seasonCount,
                 Instant.now(), null, null, null, null, null);
         current.set(started);
+        // Le job tourne hors requête : l'administrateur qui l'a lancé est retenu maintenant pour le journal d'audit.
+        CurrentUser requestedBy = CurrentUser.get().orElse(null);
         try {
-            Thread.ofVirtual().name("nba-database-import").start(() -> run(started, permit));
+            Thread.ofVirtual().name("nba-database-import").start(() -> run(started, requestedBy, permit));
         } catch (RuntimeException e) {
             permit.close();
             throw e;
@@ -83,7 +89,7 @@ public class NbaDatabaseJobService {
         return started;
     }
 
-    private void run(JobStatus job, Permit permit) {
+    private void run(JobStatus job, CurrentUser requestedBy, Permit permit) {
         try (permit) {
             if (job.download()) {
                 downloader.download(Path.of(properties.path()), (done, total) -> current.updateAndGet(s ->
@@ -95,11 +101,15 @@ public class NbaDatabaseJobService {
             ImportReport report = importer.importDatabase(job.seasons());
             current.updateAndGet(s -> new JobStatus(Phase.SUCCEEDED, s.download(), s.seasons(), s.startedAt(),
                     Instant.now(), s.downloadedBytes(), s.totalBytes(), report, null));
+            events.publishEvent(new DataImportEvent.NbaDatabaseImported(requestedBy, job.download(), report.seasons(),
+                    report.games()));
         } catch (RuntimeException e) {
             log.error("Échec de l'import de la base NBA", e);
             String message = e instanceof AppException ? e.getMessage() : "Erreur inattendue : " + e.getMessage();
             current.updateAndGet(s -> new JobStatus(Phase.FAILED, s.download(), s.seasons(), s.startedAt(),
                     Instant.now(), s.downloadedBytes(), s.totalBytes(), null, message));
+            events.publishEvent(new DataImportEvent.NbaDatabaseImportFailed(requestedBy, job.download(), job.seasons(),
+                    message));
         }
     }
 
