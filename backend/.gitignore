@@ -39,3 +39,6 @@ logs/
 spark-warehouse/
 models/
 uploads/
+spark-models/
+# Base NBA téléchargée (CC BY-SA 4.0, jamais versionnée) : voir scripts/download-nba-database.sh
+data/

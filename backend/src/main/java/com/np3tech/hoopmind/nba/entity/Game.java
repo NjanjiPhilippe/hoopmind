@@ -65,6 +65,10 @@ public class Game {
     @Column(name = "broadcast_network", length = 100)
     private String broadcastNetwork;
 
+    /** Identifiant du match sur stats.nba.com, renseigné par l'import des données. */
+    @Column(name = "external_id", unique = true, length = 20)
+    private String externalId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

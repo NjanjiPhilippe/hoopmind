@@ -131,6 +131,12 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!-- Lecture de la base NBA de Wyatt Walsh (fichier SQLite) pour l'import des données -->
+		<dependency>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+		</dependency>
+
 		<!-- JWT : Spring Security OAuth2 Resource Server (Nimbus), signé HS256 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -15,4 +15,5 @@ databaseChangeLog:
       file: db/changelog/changes/007-insert-initial-data.yaml
   - include:
       file: db/changelog/changes/008-auth-refresh-token-families.yaml
-
+  - include:
+      file: db/changelog/changes/010-nba-data-import.yaml

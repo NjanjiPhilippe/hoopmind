@@ -4,8 +4,11 @@ import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import com.np3tech.hoopmind.ml.api.SparkAnalyticsApi;
 import com.np3tech.hoopmind.ml.spark.ConditionalOnSpark;
+import com.np3tech.hoopmind.ml.spark.GameOutcomeModelService;
+import com.np3tech.hoopmind.ml.spark.GameOutcomeModelService.TrainingReport;
 import com.np3tech.hoopmind.ml.spark.SparkAnalyticsService;
 import com.np3tech.hoopmind.ml.spark.SparkMLPredictionService;
+import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,7 @@ public class SparkAnalyticsController implements SparkAnalyticsApi {
     private final SparkMLPredictionService mlService;
     private final SparkAnalyticsService analyticsService;
     private final GameOutcomePredictor predictor;
+    private final GameOutcomeModelService gameOutcomeModel;
 
     // ========== MACHINE LEARNING ENDPOINTS ==========
 
@@ -140,6 +144,8 @@ public class SparkAnalyticsController implements SparkAnalyticsApi {
 
             return ResponseEntity.ok(response);
 
+        } catch (AppException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error predicting game outcome", e);
 
@@ -297,20 +303,14 @@ public class SparkAnalyticsController implements SparkAnalyticsApi {
     // ========== ADVANCED ENDPOINTS ==========
 
     @Override
-    public ResponseEntity<Map<String, Object>> getModelMetrics(
-            String modelType, Long seasonId) {
+    public ResponseEntity<TrainingReport> getModelMetrics() {
+        return ResponseEntity.of(gameOutcomeModel.latestReport());
+    }
 
-        log.info("Getting metrics for model: {} season: {}", modelType, seasonId);
-
-        // TODO: Charger les métriques depuis la base ou le modèle sauvegardé
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("modelType", modelType);
-        response.put("seasonId", seasonId);
-        response.put("message", "Not yet implemented");
-
-        return ResponseEntity.ok(response);
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public TrainingReport trainGameOutcomeModel(Integer seasons) {
+        return gameOutcomeModel.train(seasons);
     }
 
     // ========== HELPER METHODS ==========
