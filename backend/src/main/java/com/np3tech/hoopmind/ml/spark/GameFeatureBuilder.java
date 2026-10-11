@@ -10,7 +10,6 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 import static org.apache.spark.sql.functions.avg;
 import static org.apache.spark.sql.functions.coalesce;
@@ -55,13 +54,15 @@ public final class GameFeatureBuilder {
             "offensive_rating", "defensive_rating", "net_rating", "rest_days"
     };
 
-    /** Variables d'entrée du modèle, dans l'ordre du VectorAssembler. */
-    public static final String[] FEATURES = Stream.concat(
-            Stream.of("win_pct", "last10_win_pct", "net_rating", "offensive_rating", "defensive_rating", "rest_days")
-                    .flatMap(c -> Stream.of("home_" + c, "away_" + c)),
-            Stream.of("win_pct_diff", "last10_win_pct_diff", "net_rating_diff", "point_diff_diff", "rest_days_diff",
-                    "is_playoff")
-    ).toArray(String[]::new);
+    /**
+     * Variables d'entrée du modèle, dans l'ordre du VectorAssembler : uniquement des écarts entre les deux équipes.
+     * L'avantage du terrain est porté par l'ordonnée à l'origine (l'équipe « home » reçoit toujours).
+     * Garder aussi les valeurs de chaque équipe ({@code home_x}, {@code away_x}) en plus de leur écart rendrait les
+     * variables colinéaires ({@code x_diff = home_x - away_x}) : poids instables et illisibles.
+     */
+    public static final String[] FEATURES = {
+            "win_pct_diff", "last10_win_pct_diff", "net_rating_diff", "rest_days_diff", "is_playoff"
+    };
 
     public static final String LABEL = "home_won";
 
@@ -165,9 +166,6 @@ public final class GameFeatureBuilder {
                 .withColumn("win_pct_diff", col("home_win_pct").minus(col("away_win_pct")))
                 .withColumn("last10_win_pct_diff", col("home_last10_win_pct").minus(col("away_last10_win_pct")))
                 .withColumn("net_rating_diff", col("home_net_rating").minus(col("away_net_rating")))
-                .withColumn("point_diff_diff",
-                        col("home_points_per_game").minus(col("home_points_allowed_per_game"))
-                                .minus(col("away_points_per_game").minus(col("away_points_allowed_per_game"))))
                 .withColumn("rest_days_diff", col("home_rest_days").minus(col("away_rest_days")));
     }
 
