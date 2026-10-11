@@ -12,6 +12,7 @@ hoopmind:
   ml:
     spark:
       enabled: false
+    model-dir: target/test-models
 
 logging:
   level:

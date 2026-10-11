@@ -1,5 +1,6 @@
 package com.np3tech.hoopmind.ml.spark;
 
+import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,9 +61,7 @@ public final class GameFeatureBuilder {
      * Garder aussi les valeurs de chaque équipe ({@code home_x}, {@code away_x}) en plus de leur écart rendrait les
      * variables colinéaires ({@code x_diff = home_x - away_x}) : poids instables et illisibles.
      */
-    public static final String[] FEATURES = {
-            "win_pct_diff", "last10_win_pct_diff", "net_rating_diff", "rest_days_diff", "is_playoff"
-    };
+    public static final String[] FEATURES = GameOutcomeFeatures.NAMES.toArray(String[]::new);
 
     public static final String LABEL = "home_won";
 
@@ -99,36 +98,6 @@ public final class GameFeatureBuilder {
                         coalesce(datediff(col("game_date"), lag("game_date", 1).over(ordered)), lit(MAX_REST_DAYS)),
                         lit(MAX_REST_DAYS)));
         return pairTeams(withNeutralValues(form));
-    }
-
-    /**
-     * Forme actuelle de chaque équipe (tous ses matchs joués de la saison), pour prédire un match à venir.
-     */
-    public static Dataset<Row> currentForm(Dataset<Row> teamGames) {
-        Dataset<Row> played = teamGames.filter(col("won").isNotNull())
-                .withColumn("box_points", when(col("possessions").isNotNull(), col("points")))
-                .withColumn("box_points_allowed", when(col("opponent_possessions").isNotNull(), col("points_allowed")));
-        Dataset<Row> lastTen = played
-                .withColumn("recency", org.apache.spark.sql.functions.row_number().over(
-                        Window.partitionBy("team_id").orderBy(col("game_date").desc(), col("game_id").desc())))
-                .filter(col("recency").leq(10))
-                .groupBy("team_id").agg(avg("won").alias("last10_win_pct"));
-        Dataset<Row> form = played.groupBy("team_id").agg(
-                        count("won").alias("games_played"),
-                        avg("won").alias("win_pct"),
-                        avg("points").alias("points_per_game"),
-                        avg("points_allowed").alias("points_allowed_per_game"),
-                        rating(sum("box_points"), sum("possessions")).alias("offensive_rating"),
-                        rating(sum("box_points_allowed"), sum("opponent_possessions")).alias("defensive_rating"))
-                .join(lastTen, "team_id")
-                .withColumn("rest_days", lit(2));
-        return withNeutralValues(form);
-    }
-
-    /** Assemble la forme de l'équipe à domicile et de l'équipe extérieure en une ligne de match. */
-    public static Dataset<Row> matchup(Dataset<Row> homeForm, Dataset<Row> awayForm, boolean playoff) {
-        return derived(prefixed(homeForm, "home_").crossJoin(prefixed(awayForm, "away_"))
-                .withColumn("is_playoff", lit(playoff ? 1.0 : 0.0)));
     }
 
     private static Column rating(Column points, Column possessions) {

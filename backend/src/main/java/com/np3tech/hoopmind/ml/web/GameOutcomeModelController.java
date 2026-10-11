@@ -1,6 +1,8 @@
 package com.np3tech.hoopmind.ml.web;
 
 import com.np3tech.hoopmind.ml.GameOutcomeModel;
+import com.np3tech.hoopmind.ml.GameOutcomePrediction;
+import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.ml.training.ModelTrainingJobs;
 import com.np3tech.hoopmind.ml.training.ModelTrainingJobs.TrainingJobStatus;
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,9 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
+import java.time.LocalDate;
+
 /**
- * Entraînement et métriques du modèle de prédiction des matchs. Ne dépend que du port {@link GameOutcomeModel} :
- * sans moteur de calcul (Spark désactivé), les routes répondent 503 au lieu de disparaître.
+ * Entraînement, métriques et prédictions du modèle des matchs. Ne dépend que des ports {@link GameOutcomeModel}
+ * et {@link GameOutcomePredictor} : sans Spark, l'entraînement répond 503 et les prédictions restent disponibles.
  */
 @RestController
 @RequestMapping("/api/v1/spark/ml")
@@ -32,10 +38,30 @@ class GameOutcomeModelController {
 
     private final ObjectProvider<GameOutcomeModel> model;
     private final ModelTrainingJobs trainings;
+    private final GameOutcomePredictor predictor;
+    private final Clock clock;
 
-    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model, ModelTrainingJobs trainings) {
+    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model, ModelTrainingJobs trainings,
+                               GameOutcomePredictor predictor, Clock clock) {
         this.model = model;
         this.trainings = trainings;
+        this.predictor = predictor;
+        this.clock = clock;
+    }
+
+    @GetMapping("/predict/game")
+    @Operation(operationId = "predictGameOutcome", summary = "Prédire le vainqueur d'un match",
+            description = "Forme des deux équipes avant la date du match (matchs déjà joués de la saison), puis le modèle "
+                    + "entraîné. Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas "
+                    + "entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.")
+    GameOutcomePrediction predictGameOutcome(
+            @Parameter(description = "ID de la saison") @RequestParam long seasonId,
+            @Parameter(description = "ID de l'équipe à domicile") @RequestParam long homeTeamId,
+            @Parameter(description = "ID de l'équipe à l'extérieur") @RequestParam long awayTeamId,
+            @Parameter(description = "Jour du match (aujourd'hui par défaut)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @Parameter(description = "Match de playoffs") @RequestParam(defaultValue = "false") boolean playoff) {
+        return predictor.predict(seasonId, homeTeamId, awayTeamId, date != null ? date : LocalDate.now(clock), playoff);
     }
 
     @GetMapping("/model-metrics")

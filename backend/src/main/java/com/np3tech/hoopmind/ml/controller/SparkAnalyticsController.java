@@ -1,7 +1,5 @@
 package com.np3tech.hoopmind.ml.controller;
 
-import com.np3tech.hoopmind.ml.GameOutcomePrediction;
-import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import com.np3tech.hoopmind.ml.api.SparkAnalyticsApi;
 import com.np3tech.hoopmind.ml.spark.ConditionalOnSpark;
 import com.np3tech.hoopmind.ml.spark.SparkAnalyticsService;
@@ -39,7 +37,6 @@ public class SparkAnalyticsController implements SparkAnalyticsApi {
 
     private final SparkMLPredictionService mlService;
     private final SparkAnalyticsService analyticsService;
-    private final GameOutcomePredictor predictor;
 
     // ========== MACHINE LEARNING ENDPOINTS ==========
 
@@ -119,36 +116,6 @@ public class SparkAnalyticsController implements SparkAnalyticsApi {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", "error");
             errorResponse.put("message", e.getMessage());
-
-            return ResponseEntity.internalServerError().body(errorResponse);
-        }
-    }
-
-    @Override
-    public ResponseEntity<Map<String, Object>> predictGameOutcome(
-            Long seasonId, Long homeTeamId, Long awayTeamId) {
-
-        log.info("Predicting game outcome: Season {}, Home Team {} vs Away Team {}",
-                seasonId, homeTeamId, awayTeamId);
-
-        try {
-            GameOutcomePrediction prediction = predictor.predict(seasonId, homeTeamId, awayTeamId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("prediction", prediction);
-            response.put("timestamp", System.currentTimeMillis());
-
-            return ResponseEntity.ok(response);
-
-        } catch (AppException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error predicting game outcome", e);
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "error");
-            errorResponse.put("message", "Prediction failed: " + e.getMessage());
 
             return ResponseEntity.internalServerError().body(errorResponse);
         }

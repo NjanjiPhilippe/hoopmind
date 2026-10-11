@@ -17,6 +17,9 @@ public interface GameHistory {
     /** Matchs de saison régulière et de playoffs des saisons demandées (année de début : 2024 pour 2024-25). */
     List<GameRecord> games(Collection<Integer> seasonYears);
 
+    /** Matchs d'une saison auxquels participe au moins une des équipes (pour calculer leur forme). */
+    List<GameRecord> teamGames(int seasonYear, Collection<Long> teamIds);
+
     /** Année de début d'une saison, d'après son identifiant. */
     Optional<Integer> seasonYear(long seasonId);
 }

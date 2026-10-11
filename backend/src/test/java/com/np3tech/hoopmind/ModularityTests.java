@@ -39,6 +39,8 @@ class ModularityTests {
                 .or().haveSimpleName("GameFeatureBuilder")
                 .or().haveSimpleName("TrainingReport")
                 .or().resideInAPackage("com.np3tech.hoopmind.ml.web..")
+                .or().resideInAPackage("com.np3tech.hoopmind.ml.scoring..")
+                .or().resideInAPackage("com.np3tech.hoopmind.ml.training..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "com.np3tech.hoopmind.nba.entity..",
                         "com.np3tech.hoopmind.nba.repository..",

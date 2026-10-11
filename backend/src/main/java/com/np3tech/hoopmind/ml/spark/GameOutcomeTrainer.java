@@ -1,5 +1,6 @@
 package com.np3tech.hoopmind.ml.spark;
 
+import com.np3tech.hoopmind.ml.scoring.ScoringCard;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
@@ -8,6 +9,7 @@ import org.apache.spark.ml.classification.LogisticRegressionModel;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator;
 import org.apache.spark.ml.feature.StandardScaler;
+import org.apache.spark.ml.feature.StandardScalerModel;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -137,6 +139,16 @@ public final class GameOutcomeTrainer {
 
         return new Evaluation(trainingSeasons, testSeason, trainingGames, total, correct, ratio(correct, total), auc, logLoss,
                 precision, recall, f1, ratio(homeWins, total), ratio(betterRecordRight, total), confusion, weights(model));
+    }
+
+    /**
+     * Extrait du pipeline entraîné ce qu'il faut pour prédire sans Spark : standardisation et régression.
+     */
+    static ScoringCard scoringCard(PipelineModel model, String name, String version) {
+        StandardScalerModel scaler = (StandardScalerModel) model.stages()[1];
+        LogisticRegressionModel regression = (LogisticRegressionModel) model.stages()[2];
+        return new ScoringCard(name, version, List.of(FEATURES), scaler.mean().toArray(), scaler.std().toArray(),
+                regression.coefficients().toArray(), regression.intercept());
     }
 
     /** Poids de chaque variable (sur l'échelle standardisée), du plus influent au moins influent. */

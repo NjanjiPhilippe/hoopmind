@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static com.np3tech.hoopmind.ml.spark.SparkTestSession.teamGame;
-import static org.apache.spark.sql.functions.col;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
@@ -54,15 +53,5 @@ class GameFeatureBuilderTests {
         assertThat(upcoming.<Double>getAs("home_offensive_rating")).isCloseTo(112.5, within(1e-9));
         assertThat(upcoming.<Double>getAs("home_rest_days")).isEqualTo(7.0);
         assertThat(upcoming.<Object>getAs("home_won")).isNull();
-    }
-
-    @Test
-    void currentFormSummarisesEveryPlayedGame() {
-        Row celtics = GameFeatureBuilder.currentForm(teamGames).filter(col("team_id").equalTo(CELTICS)).first();
-
-        assertThat(celtics.<Long>getAs("games_played")).isEqualTo(2);
-        assertThat(celtics.<Double>getAs("win_pct")).isEqualTo(0.5);
-        assertThat(celtics.<Double>getAs("points_per_game")).isEqualTo(112.5);
-        assertThat(celtics.<Double>getAs("net_rating")).isCloseTo(7.5, within(1e-9));
     }
 }

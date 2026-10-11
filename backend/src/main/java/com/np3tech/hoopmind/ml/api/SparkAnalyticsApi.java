@@ -56,18 +56,6 @@ public interface SparkAnalyticsApi {
             @RequestParam Long seasonId
     );
 
-    @Operation(
-            summary = "Predict game outcome",
-            description = "Utilise le modèle entraîné pour prédire le résultat d'un match. " +
-                    "Retourne la prédiction (équipe gagnante) et les probabilités."
-    )
-    @GetMapping("/ml/predict/game")
-    ResponseEntity<Map<String, Object>> predictGameOutcome(
-            @Parameter(description = "ID de la saison") @RequestParam Long seasonId,
-            @Parameter(description = "ID de l'équipe domicile") @RequestParam Long homeTeamId,
-            @Parameter(description = "ID de l'équipe extérieure") @RequestParam Long awayTeamId
-    );
-
     // ========== ANALYTICS ENDPOINTS ==========
 
     @Operation(

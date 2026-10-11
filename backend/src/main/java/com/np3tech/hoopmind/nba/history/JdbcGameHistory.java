@@ -35,8 +35,9 @@ class JdbcGameHistory implements GameHistory {
             LEFT JOIN team_game_stats h ON h.game_id = g.id AND h.team_id = g.home_team_id
             LEFT JOIN team_game_stats a ON a.game_id = g.id AND a.team_id = g.away_team_id
             WHERE g.game_type IN ('REGULAR_SEASON', 'PLAYOFFS', 'FINALS') AND s.year = ANY (?)
-            ORDER BY game_date, g.id
             """;
+
+    private static final String ORDER = " ORDER BY game_date, g.id";
 
     private final JdbcTemplate jdbc;
 
@@ -55,8 +56,24 @@ class JdbcGameHistory implements GameHistory {
             return List.of();
         }
         return jdbc.query(connection -> {
-            var statement = connection.prepareStatement(GAMES);
+            var statement = connection.prepareStatement(GAMES + ORDER);
             statement.setArray(1, connection.createArrayOf("integer", seasonYears.toArray()));
+            return statement;
+        }, (rs, row) -> game(rs));
+    }
+
+    @Override
+    public List<GameRecord> teamGames(int seasonYear, Collection<Long> teamIds) {
+        if (teamIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.query(connection -> {
+            var statement = connection.prepareStatement(GAMES
+                    + " AND (g.home_team_id = ANY (?) OR g.away_team_id = ANY (?))" + ORDER);
+            statement.setArray(1, connection.createArrayOf("integer", new Object[]{seasonYear}));
+            var teams = connection.createArrayOf("bigint", teamIds.toArray());
+            statement.setArray(2, teams);
+            statement.setArray(3, teams);
             return statement;
         }, (rs, row) -> game(rs));
     }

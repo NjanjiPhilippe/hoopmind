@@ -70,4 +70,13 @@ class ModelTrainingJobsTests {
                 .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer()))
                 .hasStatus(403);
     }
+
+    @Test
+    void predictionsDoNotNeedSparkButNeedATrainedModel() {
+        assertThat(mvc.get().uri("/api/v1/spark/ml/predict/game")
+                .param("seasonId", "1").param("homeTeamId", "1").param("awayTeamId", "2")
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer()))
+                .hasStatus(409)
+                .bodyJson().extractingPath("$.code").isEqualTo("MODEL_NOT_TRAINED");
+    }
 }
