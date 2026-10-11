@@ -7,7 +7,7 @@ import {
   inject,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
-  provideZoneChangeDetection,
+  provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
@@ -22,9 +22,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     { provide: LOCALE_ID, useValue: 'fr' },
-    // Zone.js reste actif tant que les pages NBA existantes n'utilisent pas les signals ;
-    // le nouveau code (auth, compte, admin) est déjà OnPush + signals, prêt pour le mode zoneless.
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    // Sans zone.js : tous les composants sont OnPush et leur état est en signals, Angular sait seul quand rafraîchir.
+    provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     // Chemins relatifs : en développement le proxy d'Angular redirige /api vers le backend,
