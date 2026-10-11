@@ -1,6 +1,5 @@
 package com.np3tech.hoopmind.audit.internal;
 
-import com.np3tech.hoopmind.audit.AuditEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
@@ -43,19 +40,7 @@ class AuditRecorder {
         this.clock = clock;
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true,
-            condition = "#event.outcome == T(com.np3tech.hoopmind.audit.AuditOutcome).SUCCESS")
-    void onSuccess(AuditEvent event) {
-        record(event);
-    }
-
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMPLETION, fallbackExecution = true,
-            condition = "#event.outcome == T(com.np3tech.hoopmind.audit.AuditOutcome).FAILURE")
-    void onFailure(AuditEvent event) {
-        record(event);
-    }
-
-    private void record(AuditEvent event) {
+    void record(AuditEvent event) {
         Instant now = clock.instant();
         AUDIT_LOG.info("action={} outcome={} actor={} target={} details={}", event.action(), event.outcome(),
                 event.actor() == null ? "-" : event.actor().login() + "#" + event.actor().id(),

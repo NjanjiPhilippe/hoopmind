@@ -1,7 +1,6 @@
 package com.np3tech.hoopmind.audit.internal;
 
 import com.np3tech.hoopmind.audit.AuditAction;
-import com.np3tech.hoopmind.audit.AuditEvent;
 import com.np3tech.hoopmind.audit.AuditOutcome;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

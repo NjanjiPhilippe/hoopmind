@@ -1,9 +1,7 @@
 package com.np3tech.hoopmind.auth.internal;
 
-import com.np3tech.hoopmind.audit.AuditAction;
-import com.np3tech.hoopmind.audit.AuditActor;
-import com.np3tech.hoopmind.audit.AuditEvent;
-import com.np3tech.hoopmind.audit.AuditTarget;
+import com.np3tech.hoopmind.auth.AuthenticationEvent;
+import com.np3tech.hoopmind.auth.AuthenticationEvent.LoginFailed;
 import com.np3tech.hoopmind.auth.config.JwtProperties;
 import com.np3tech.hoopmind.user.Registration;
 import com.np3tech.hoopmind.user.UserAccount;
@@ -60,18 +58,17 @@ public class AuthService {
         UserAccount account = accounts.findAccountByLogin(login).orElse(null);
         if (account == null) {
             passwordEncoder.matches(password, dummyHash());
-            // L'identifiant saisi n'est pas conservé : il peut contenir un mot de passe tapé dans le mauvais champ.
-            events.publishEvent(AuditEvent.failure(AuditAction.LOGIN_FAILED, null, null, "UNKNOWN_ACCOUNT"));
+            events.publishEvent(LoginFailed.unknownAccount());
             throw AuthenticationFailedException.badCredentials();
         }
         if (!passwordEncoder.matches(password, account.passwordHash())) {
-            loginFailed(account, "BAD_PASSWORD");
+            loginFailed(account, LoginFailed.Reason.BAD_PASSWORD);
         }
         if (!account.active()) {
-            loginFailed(account, "ACCOUNT_DISABLED");
+            loginFailed(account, LoginFailed.Reason.ACCOUNT_DISABLED);
         }
         accounts.recordSuccessfulLogin(account.id());
-        events.publishEvent(AuditEvent.success(AuditAction.LOGIN_SUCCEEDED, actor(account), target(account)));
+        events.publishEvent(new AuthenticationEvent.LoginSucceeded(account.id(), account.username()));
         return openSession(account, UUID.randomUUID().toString(), client);
     }
 
@@ -90,8 +87,7 @@ public class AuthService {
             log.warn("Réutilisation d'un jeton de rafraîchissement révoqué (utilisateur {}), {} jeton(s) révoqué(s)",
                     current.getUserId(), revoked);
             accounts.findAccountById(current.getUserId()).ifPresent(account -> events.publishEvent(
-                    AuditEvent.failure(AuditAction.REFRESH_TOKEN_REUSED, actor(account), target(account), "TOKEN_ALREADY_USED")
-                            .withDetail("revokedTokens", String.valueOf(revoked))));
+                    new AuthenticationEvent.RefreshTokenReused(account.id(), account.username(), revoked)));
             throw AuthenticationFailedException.invalidRefreshToken();
         }
         if (current.isExpired(now)) {
@@ -111,7 +107,7 @@ public class AuthService {
             refreshTokens.revokeFamily(token.getFamilyId(), clock.instant());
             if (!token.isRevoked()) {
                 accounts.findAccountById(token.getUserId()).ifPresent(account -> events.publishEvent(
-                        AuditEvent.success(AuditAction.LOGOUT, actor(account), target(account))));
+                        new AuthenticationEvent.LoggedOut(account.id(), account.username())));
             }
         });
     }
@@ -149,17 +145,9 @@ public class AuthService {
                 rawRefreshToken, properties.refreshTokenTtl().toSeconds());
     }
 
-    private void loginFailed(UserAccount account, String reason) {
-        events.publishEvent(AuditEvent.failure(AuditAction.LOGIN_FAILED, actor(account), target(account), reason));
+    private void loginFailed(UserAccount account, LoginFailed.Reason reason) {
+        events.publishEvent(new LoginFailed(account.id(), account.username(), reason));
         throw AuthenticationFailedException.badCredentials();
-    }
-
-    private static AuditActor actor(UserAccount account) {
-        return AuditActor.user(account.id(), account.username());
-    }
-
-    private static AuditTarget target(UserAccount account) {
-        return AuditTarget.user(account.id(), account.username());
     }
 
     private String dummyHash() {

@@ -1,4 +1,4 @@
-package com.np3tech.hoopmind.audit;
+package com.np3tech.hoopmind.auth;
 
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -8,28 +8,20 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import java.util.Optional;
 
 /**
- * Auteur d'une action : un utilisateur (identifiant et nom au moment de l'action) ou le système.
+ * L'utilisateur authentifié de la requête en cours. Seul le module auth connaît le format du jeton
+ * (sujet = identifiant, claim {@code username}) : les autres modules passent par ici.
  */
-public record AuditActor(Long id, String login) {
+public record CurrentUser(Long id, String username) {
 
-    public static final AuditActor SYSTEM = new AuditActor(null, "système");
-
-    public static AuditActor user(Long id, String login) {
-        return new AuditActor(id, login);
-    }
-
-    /**
-     * L'utilisateur authentifié de la requête en cours, s'il y en a un.
-     */
-    public static Optional<AuditActor> current() {
+    public static Optional<CurrentUser> get() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
             return Optional.empty();
         }
         if (authentication instanceof JwtAuthenticationToken jwt) {
-            return Optional.of(new AuditActor(Long.valueOf(jwt.getName()), jwt.getToken().getClaimAsString("username")));
+            return Optional.of(new CurrentUser(Long.valueOf(jwt.getName()), jwt.getToken().getClaimAsString("username")));
         }
-        return Optional.of(new AuditActor(null, authentication.getName()));
+        return Optional.of(new CurrentUser(null, authentication.getName()));
     }
 }
