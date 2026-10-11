@@ -20,7 +20,10 @@ import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -48,6 +52,9 @@ public class ReferenceCsvImporter {
     static final int MAX_FILES = 100;
     private static final int BATCH_SIZE = 1000;
 
+    /** Compilée une fois : {@code String.matches} recompilerait l'expression pour chaque case du fichier. */
+    private static final Pattern NUMBER = Pattern.compile("-?(\\d+\\.?\\d*|\\.\\d+)");
+
     private static final String UPSERT = """
             INSERT INTO reference_csv_rows (dataset, row_key, season, data, imported_at)
             VALUES (?, ?, ?, ?::jsonb, ?)
@@ -59,6 +66,7 @@ public class ReferenceCsvImporter {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     private final JsonMapper jsonMapper;
+    private final Clock clock;
 
     public enum FileStatus { IMPORTED, UNRECOGNIZED, FAILED }
 
@@ -76,7 +84,7 @@ public class ReferenceCsvImporter {
 
     /** Ce que contient la base pour un jeu de l'archive. */
     public record DatasetSummary(String dataset, String label, long rows, Integer firstSeason, Integer lastSeason,
-                                 LocalDateTime importedAt) {
+                                 Instant importedAt) {
     }
 
     /** Importe chaque fichier ; un zip est parcouru et chacun de ses CSV traité comme un fichier à part. */
@@ -102,7 +110,7 @@ public class ReferenceCsvImporter {
                 """, rs -> {
             String name = rs.getString("dataset");
             found.put(name, new DatasetSummary(name, null, rs.getLong("n"), (Integer) rs.getObject("first"),
-                    (Integer) rs.getObject("last"), rs.getObject("at", LocalDateTime.class)));
+                    (Integer) rs.getObject("last"), instant(rs.getTimestamp("at"))));
         });
         return Arrays.stream(ReferenceDataset.values()).map(d -> {
             DatasetSummary s = found.get(d.name());
@@ -164,10 +172,10 @@ public class ReferenceCsvImporter {
 
     private FileReport write(String name, ReferenceDataset dataset, List<String> header, CSVParser parser) {
         long before = countRows(dataset);
-        LocalDateTime now = LocalDateTime.now();
+        // Tronqué à la microseconde (précision de PostgreSQL) : sert aussi à compter les lignes écrites par cet import.
+        Timestamp now = Timestamp.from(clock.instant().truncatedTo(ChronoUnit.MICROS));
         int rows = 0;
         int skipped = 0;
-        int affected = 0;
         List<Object[]> batch = new ArrayList<>(BATCH_SIZE);
         for (CSVRecord record : parser) {
             rows++;
@@ -185,10 +193,13 @@ public class ReferenceCsvImporter {
             batch.add(new Object[]{dataset.name(), key, season(values.get("season")),
                     jsonMapper.writeValueAsString(values), now});
             if (batch.size() == BATCH_SIZE) {
-                affected += flush(batch);
+                flush(batch);
             }
         }
-        affected += flush(batch);
+        flush(batch);
+        // Lignes nouvelles ou modifiées : l'upsert ne touche imported_at que dans ces deux cas. On ne se fie pas aux
+        // compteurs du lot, que le pilote ne renvoie plus quand il regroupe les INSERT (reWriteBatchedInserts).
+        int affected = countWrittenAt(dataset, now);
         int inserted = (int) (countRows(dataset) - before);
         int written = rows - skipped;
         return new FileReport(name, FileStatus.IMPORTED, dataset.name(), dataset.label(), rows, inserted,
@@ -196,13 +207,21 @@ public class ReferenceCsvImporter {
                 skipped > 0 ? skipped + " ligne(s) sans clé ignorée(s)." : null);
     }
 
-    private int flush(List<Object[]> batch) {
-        if (batch.isEmpty()) {
-            return 0;
+    private void flush(List<Object[]> batch) {
+        if (!batch.isEmpty()) {
+            jdbc.batchUpdate(UPSERT, batch);
+            batch.clear();
         }
-        int affected = Arrays.stream(jdbc.batchUpdate(UPSERT, batch)).map(n -> Math.max(n, 0)).sum();
-        batch.clear();
-        return affected;
+    }
+
+    private int countWrittenAt(ReferenceDataset dataset, Timestamp at) {
+        Integer n = jdbc.queryForObject("SELECT count(*) FROM reference_csv_rows WHERE dataset = ? AND imported_at = ?",
+                Integer.class, dataset.name(), at);
+        return n == null ? 0 : n;
+    }
+
+    private static Instant instant(Timestamp timestamp) {
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private long countRows(ReferenceDataset dataset) {
@@ -232,7 +251,7 @@ public class ReferenceCsvImporter {
         if (raw.equals("TRUE") || raw.equals("FALSE")) {
             return Boolean.valueOf(raw);
         }
-        if (raw.matches("-?(\\d+\\.?\\d*|\\.\\d+)")) {
+        if (NUMBER.matcher(raw).matches()) {
             BigDecimal number = new BigDecimal(raw);
             return number.scale() <= 0 && number.abs().compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) < 0
                     ? (Object) number.longValueExact() : number;

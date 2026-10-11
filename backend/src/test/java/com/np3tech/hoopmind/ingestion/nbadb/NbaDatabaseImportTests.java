@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Clock;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -72,7 +73,7 @@ class NbaDatabaseImportTests {
 
     private ImportReport importSeasons(int count) {
         NbaDatabaseImporter importer = new NbaDatabaseImporter(
-                new NbaDatabaseImportProperties(database.toString(), count, false), teams, seasons, jdbc);
+                new NbaDatabaseImportProperties(database.toString(), count, false), teams, seasons, jdbc, Clock.systemUTC());
         return transaction.execute(status -> importer.importDatabase(null));
     }
 
@@ -154,7 +155,7 @@ class NbaDatabaseImportTests {
     @Test
     void missingDatabaseFileIsReportedToTheAdministrator() {
         NbaDatabaseImporter importer = new NbaDatabaseImporter(
-                new NbaDatabaseImportProperties(directory.resolve("absent.sqlite").toString(), 2, false), teams, seasons, jdbc);
+                new NbaDatabaseImportProperties(directory.resolve("absent.sqlite").toString(), 2, false), teams, seasons, jdbc, Clock.systemUTC());
 
         assertThatThrownBy(() -> importer.importDatabase(null))
                 .isInstanceOf(NbaImportException.class)

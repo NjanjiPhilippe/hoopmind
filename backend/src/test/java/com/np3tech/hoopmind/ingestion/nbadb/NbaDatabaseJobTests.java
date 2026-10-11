@@ -15,6 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Clock;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
@@ -74,7 +75,7 @@ class NbaDatabaseJobTests {
                     "http://127.0.0.1:" + kaggle.getAddress().getPort() + "/api/v1");
             List<Object> events = new CopyOnWriteArrayList<>();
             NbaDatabaseJobService jobs = new NbaDatabaseJobService(
-                    new NbaDatabaseImporter(properties, teams, seasons, jdbc), new KaggleDownloader(credentials),
+                    new NbaDatabaseImporter(properties, teams, seasons, jdbc, Clock.systemUTC()), new KaggleDownloader(credentials),
                     properties, credentials, jobService, events::add);
 
             assertThat(jobs.status().file().present()).isFalse();

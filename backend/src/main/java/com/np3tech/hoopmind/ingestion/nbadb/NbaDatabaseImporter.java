@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -50,10 +51,14 @@ public class NbaDatabaseImporter {
 
     static final int MAX_SEASONS = 80;
 
+    /** Lignes envoyées par lot : assez pour amortir les allers-retours, assez peu pour borner la mémoire. */
+    static final int BATCH_SIZE = 1_000;
+
     private final NbaDatabaseImportProperties properties;
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
     private final JdbcTemplate jdbc;
+    private final Clock clock;
 
     /** Ce que l'import a écrit, pour l'administrateur. */
     public record ImportReport(List<String> seasons, int teams, int games, int playedGames, int teamGameStats,
@@ -90,6 +95,11 @@ public class NbaDatabaseImporter {
             }
 
             Map<String, Long> seasonIds = importSeasons(seasonYears, games);
+            // Une saison sans match de saison régulière n'est pas créée : ni elle ni ses matchs ne sont importés.
+            List<String> importedSeasons = seasonYears.stream().filter(seasonIds::containsKey).toList();
+            List<GameRow> seasonGames = games.stream().filter(g -> seasonIds.containsKey(g.seasonYear())).toList();
+            skipped += games.size() - seasonGames.size();
+            games = seasonGames;
             Map<String, Long> gameIds = importGames(games, teamIds, seasonIds);
             Map<String, Long> resultIds = importResults(games, gameIds, teamIds);
 
@@ -99,7 +109,7 @@ public class NbaDatabaseImporter {
             int teamGameStats = importTeamGameStats(boxScore, games, gameIds, resultIds, teamIds);
             int teamSeasons = importTeamSeasons(games, boxScore, reader.standings(seasonYears), teamIds, seasonIds);
 
-            ImportReport report = new ImportReport(seasonYears, teamIds.size(), games.size(),
+            ImportReport report = new ImportReport(importedSeasons, teamIds.size(), games.size(),
                     (int) games.stream().filter(GameRow::played).count(), teamGameStats, teamSeasons, skipped,
                     Duration.ofNanos(System.nanoTime() - start).toMillis());
             log.info("Import terminé : {}", report);
@@ -215,7 +225,7 @@ public class NbaDatabaseImporter {
                         gameType(g).name(), g.gameDate().atStartOfDay(), g.arena(),
                         (g.played() ? GameStatus.COMPLETED : GameStatus.SCHEDULED).name()})
                 .toList();
-        jdbc.batchUpdate("""
+        batch("""
                 INSERT INTO games (external_id, home_team_id, away_team_id, season_id, game_type, scheduled_date, venue, status,
                                    created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, now(), now())
@@ -230,6 +240,16 @@ public class NbaDatabaseImporter {
                     ids.put(rs.getString(2), rs.getLong(1));
                 });
         return ids;
+    }
+
+    /**
+     * Envoie les lignes par lots de {@link #BATCH_SIZE}. Avec {@code reWriteBatchedInserts} (voir application.yml),
+     * le pilote PostgreSQL transforme chaque lot en un seul {@code INSERT … VALUES (…), (…)}.
+     */
+    private void batch(String sql, List<Object[]> rows) {
+        for (int from = 0; from < rows.size(); from += BATCH_SIZE) {
+            jdbc.batchUpdate(sql, rows.subList(from, Math.min(from + BATCH_SIZE, rows.size())));
+        }
     }
 
     private static GameType gameType(GameRow game) {
@@ -252,7 +272,7 @@ public class NbaDatabaseImporter {
                     homeWon ? home : away, homeWon ? away : home,
                     json(g.homePeriods()), json(g.awayPeriods()), overtime > 0, overtime > 0 ? overtime : null});
         }
-        jdbc.batchUpdate("""
+        batch("""
                 INSERT INTO game_results (game_id, home_team_score, away_team_score, score_difference, winner_id, loser_id,
                                           home_team_quarter_scores_json, away_team_quarter_scores_json, overtime,
                                           overtime_periods, recorded_at)
@@ -296,7 +316,7 @@ public class NbaDatabaseImporter {
                         line.oreb(), line.dreb(), line.reb(), line.ast(), line.stl(), line.blk(), line.tov(), line.pf()});
             });
         });
-        jdbc.batchUpdate("""
+        batch("""
                 INSERT INTO team_game_stats (team_id, game_id, game_result_id, points,
                     field_goals_made, field_goals_attempted, field_goal_percentage,
                     three_points_made, three_points_attempted, three_point_percentage,
@@ -330,7 +350,7 @@ public class NbaDatabaseImporter {
                 .collect(Collectors.toMap(s -> s.seasonYear() + "/" + s.teamId(), s -> s, (a, b) -> a));
         Map<String, List<GameRow>> bySeason = games.stream().collect(Collectors.groupingBy(GameRow::seasonYear));
         List<Object[]> rows = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         bySeason.forEach((seasonYear, seasonGames) -> {
             Long seasonId = seasonIds.get(seasonYear);
             if (seasonId == null) return;
@@ -347,7 +367,7 @@ public class NbaDatabaseImporter {
                         t.currentStreak(), t.longestWinStreak(), t.longestLoseStreak(), t.last10GamesJson(), now});
             }
         });
-        jdbc.batchUpdate("""
+        batch("""
                 INSERT INTO team_stats (team_id, season_id, wins, losses, win_percentage, conference_rank, division_rank,
                     home_wins, home_losses, away_wins, away_losses, points_per_game, points_allowed_per_game, points_differential,
                     field_goal_percentage, three_point_percentage, free_throw_percentage, rebounds_per_game, assists_per_game,

@@ -21,6 +21,10 @@ spring:
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
+      data-source-properties:
+        # Le pilote réécrit chaque lot d'INSERT en un seul INSERT multi-lignes : bien moins d'allers-retours
+        # pendant l'import des données NBA.
+        reWriteBatchedInserts: true
 
   jpa:
     # Le schéma appartient à Liquibase ; Hibernate se contente de le vérifier.
