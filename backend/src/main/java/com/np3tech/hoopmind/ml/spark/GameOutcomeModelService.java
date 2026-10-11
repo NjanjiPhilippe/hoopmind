@@ -5,8 +5,7 @@ import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.ml.entity.PredictionModelMetrics;
 import com.np3tech.hoopmind.ml.repository.PredictionModelMetricsRepository;
 import com.np3tech.hoopmind.ml.spark.GameOutcomeTrainer.Evaluation;
-import com.np3tech.hoopmind.nba.entity.Season;
-import com.np3tech.hoopmind.nba.repository.SeasonRepository;
+import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,7 @@ public class GameOutcomeModelService implements GameOutcomeModel {
     public static final String MODEL_NAME = "game-outcome-logistic-regression";
 
     private final TeamGameLoader loader;
-    private final SeasonRepository seasonRepository;
+    private final GameHistory history;
     private final PredictionModelMetricsRepository metricsRepository;
     private final JsonMapper jsonMapper;
 
@@ -101,9 +100,9 @@ public class GameOutcomeModelService implements GameOutcomeModel {
     /** Probabilité de victoire de l'équipe à domicile, d'après la forme actuelle des deux équipes dans la saison. */
     public double homeWinProbability(Long seasonId, Long homeTeamId, Long awayTeamId) {
         PipelineModel model = model();
-        Season season = seasonRepository.findById(seasonId)
+        int seasonYear = history.seasonYear(seasonId)
                 .orElseThrow(() -> new AppException("Saison introuvable : " + seasonId, HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND"));
-        Dataset<Row> form = GameFeatureBuilder.currentForm(loader.teamGames(List.of(season.getYear())));
+        Dataset<Row> form = GameFeatureBuilder.currentForm(loader.teamGames(List.of(seasonYear)));
         Dataset<Row> home = form.filter(col("team_id").equalTo(homeTeamId));
         Dataset<Row> away = form.filter(col("team_id").equalTo(awayTeamId));
         if (home.isEmpty() || away.isEmpty()) {
