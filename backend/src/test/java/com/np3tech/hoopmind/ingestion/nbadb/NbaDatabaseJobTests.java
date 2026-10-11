@@ -7,6 +7,7 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.Phase;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import com.np3tech.hoopmind.shared.exception.AppException;
+import com.np3tech.hoopmind.shared.job.JobService;
 import com.np3tech.hoopmind.shared.lock.DataOperationLock;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,12 @@ class NbaDatabaseJobTests {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    JobService jobService;
+
+    @Autowired
+    DataOperationLock lock;
+
     @Test
     void downloadsFromKaggleThenImportsInTheBackground() throws Exception {
         Path published = directory.resolve("kaggle/nba.sqlite");
@@ -65,11 +72,10 @@ class NbaDatabaseJobTests {
             NbaDatabaseImportProperties properties = new NbaDatabaseImportProperties(target.toString(), 1, false);
             KaggleProperties credentials = new KaggleProperties("saiko", "secret", null, null,
                     "http://127.0.0.1:" + kaggle.getAddress().getPort() + "/api/v1");
-            DataOperationLock lock = new DataOperationLock();
             List<Object> events = new CopyOnWriteArrayList<>();
             NbaDatabaseJobService jobs = new NbaDatabaseJobService(
                     new NbaDatabaseImporter(properties, teams, seasons, jdbc), new KaggleDownloader(credentials),
-                    properties, credentials, lock, events::add);
+                    properties, credentials, jobService, events::add);
 
             assertThat(jobs.status().file().present()).isFalse();
             assertThat(jobs.start(1, true).phase()).isEqualTo(Phase.DOWNLOADING);
@@ -80,8 +86,7 @@ class NbaDatabaseJobTests {
             assertThatThrownBy(() -> lock.acquire(DataOperationLock.Operation.MODEL_TRAINING))
                     .isInstanceOf(AppException.class);
 
-            JobStatus done = waitForEnd(jobs);
-            assertThat(lock.current()).as("verrou rendu à la fin du job").isEmpty();
+            JobStatus done = waitForEnd(jobs, lock);
             // Lancé hors requête HTTP : aucun administrateur connu, le journal d'audit l'attribuera au système.
             assertThat(events).containsExactly(new DataImportEvent.NbaDatabaseImported(null, true, List.of("2024-25"),
                     done.report().games()));
@@ -96,11 +101,11 @@ class NbaDatabaseJobTests {
         }
     }
 
-    private static JobStatus waitForEnd(NbaDatabaseJobService jobs) throws InterruptedException {
+    private static JobStatus waitForEnd(NbaDatabaseJobService jobs, DataOperationLock lock) throws InterruptedException {
         Instant deadline = Instant.now().plus(Duration.ofSeconds(30));
         while (Instant.now().isBefore(deadline)) {
             JobStatus job = jobs.status().job();
-            if (job.phase() == Phase.SUCCEEDED || job.phase() == Phase.FAILED) {
+            if ((job.phase() == Phase.SUCCEEDED || job.phase() == Phase.FAILED) && lock.current().isEmpty()) {
                 return job;
             }
             Thread.sleep(100);
