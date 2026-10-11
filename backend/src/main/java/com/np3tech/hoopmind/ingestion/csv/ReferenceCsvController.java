@@ -4,6 +4,8 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaImportException;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.DatasetSummary;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.FileReport;
 import com.np3tech.hoopmind.ingestion.csv.ReferenceCsvImporter.Upload;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock.Permit;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +33,7 @@ import java.util.List;
 class ReferenceCsvController {
 
     private final ReferenceCsvImporter importer;
+    private final DataOperationLock lock;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(operationId = "importReferenceCsv", summary = "Importer des CSV de l'archive NBA Stats (Sumitro Datta)",
@@ -41,7 +44,7 @@ class ReferenceCsvController {
             throw new NbaImportException("Aucun fichier reçu.");
         }
         List<InputStream> opened = new ArrayList<>();
-        try {
+        try (Permit ignored = lock.acquire(DataOperationLock.Operation.CSV_IMPORT)) {
             List<Upload> uploads = new ArrayList<>();
             for (MultipartFile file : files) {
                 InputStream in = file.getInputStream();

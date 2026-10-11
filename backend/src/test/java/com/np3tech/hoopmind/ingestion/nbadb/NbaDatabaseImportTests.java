@@ -163,15 +163,24 @@ class NbaDatabaseImportTests {
 
     @Test
     void onlyAdministratorsCanStartAnImport() {
-        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database")
+        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database/jobs")
                 .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer()))
                 .hasStatus(403);
 
         // Le fichier par défaut (data/nba.sqlite) n'existe pas pendant les tests : erreur explicite, pas d'erreur 500.
-        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database").param("seasons", "2")
+        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database/jobs").param("seasons", "2")
                 .header(HttpHeaders.AUTHORIZATION, TestAccounts.admin(mvc).bearer()))
                 .hasStatus(422)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
+    void theImportCanOnlyBeStartedInTheBackground() {
+        // L'ancien import synchrone contournait le verrou des données : il n'existe plus.
+        assertThat(mvc.post().uri("/api/v1/admin/imports/nba-database")
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.admin(mvc).bearer()))
+                .hasStatus4xxClientError()
+                .satisfies(result -> assertThat(result.getResponse().getStatus()).isIn(404, 405));
     }
 
     @Test

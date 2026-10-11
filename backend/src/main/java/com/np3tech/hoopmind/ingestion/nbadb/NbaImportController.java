@@ -1,6 +1,5 @@
 package com.np3tech.hoopmind.ingestion.nbadb;
 
-import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.JobStatus;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.NbaDatabaseStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,20 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Import des données")
 @SecurityRequirement(name = "bearerAuth")
+/**
+ * L'import ne se lance qu'en arrière-plan, via {@link NbaDatabaseJobService} : il prend le verrou des données,
+ * ne bloque pas un fil HTTP pendant plusieurs minutes et son avancement est visible sur la page Données.
+ */
 class NbaImportController {
 
-    private final NbaDatabaseImporter importer;
     private final NbaDatabaseJobService jobs;
-
-    @PostMapping("/nba-database")
-    @Operation(operationId = "importNbaDatabase", summary = "Importer la base NBA (Wyatt Walsh)",
-            description = "Lit le fichier nba.sqlite configuré (NBA_DATABASE_PATH) et importe équipes, saisons, matchs, "
-                    + "résultats, statistiques par match et bilans de saison. Rejouable sans doublon.")
-    ImportReport importNbaDatabase(
-            @Parameter(description = "Nombre de saisons à importer, en partant de la plus récente (réglage par défaut sinon)")
-            @RequestParam(required = false) Integer seasons) {
-        return importer.importDatabase(seasons);
-    }
 
     @GetMapping("/nba-database/status")
     @Operation(operationId = "getNbaDatabaseStatus", summary = "État de la base NBA (Wyatt Walsh)",

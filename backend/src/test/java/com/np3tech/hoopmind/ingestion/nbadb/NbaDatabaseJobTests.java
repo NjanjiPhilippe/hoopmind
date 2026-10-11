@@ -6,6 +6,7 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.Phase;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import com.np3tech.hoopmind.shared.exception.AppException;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -61,17 +62,22 @@ class NbaDatabaseJobTests {
             NbaDatabaseImportProperties properties = new NbaDatabaseImportProperties(target.toString(), 1, false);
             KaggleProperties credentials = new KaggleProperties("saiko", "secret", null, null,
                     "http://127.0.0.1:" + kaggle.getAddress().getPort() + "/api/v1");
+            DataOperationLock lock = new DataOperationLock();
             NbaDatabaseJobService jobs = new NbaDatabaseJobService(
                     new NbaDatabaseImporter(properties, teams, seasons, jdbc), new KaggleDownloader(credentials),
-                    properties, credentials);
+                    properties, credentials, lock);
 
             assertThat(jobs.status().file().present()).isFalse();
             assertThat(jobs.start(1, true).phase()).isEqualTo(Phase.DOWNLOADING);
             assertThatThrownBy(() -> jobs.start(1, true))
                     .isInstanceOf(AppException.class)
-                    .hasMessageContaining("déjà en cours");
+                    .hasMessageContaining("import de la base NBA est en cours");
+            // Le même verrou bloque les autres opérations sur les données (CSV, entraînement).
+            assertThatThrownBy(() -> lock.acquire(DataOperationLock.Operation.MODEL_TRAINING))
+                    .isInstanceOf(AppException.class);
 
             JobStatus done = waitForEnd(jobs);
+            assertThat(lock.current()).as("verrou rendu à la fin du job").isEmpty();
             assertThat(done.phase()).as(done.error()).isEqualTo(Phase.SUCCEEDED);
             assertThat(done.downloadedBytes()).isEqualTo(body.length);
             assertThat(done.report().seasons()).containsExactly("2024-25");

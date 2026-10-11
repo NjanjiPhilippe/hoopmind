@@ -2,9 +2,10 @@ package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
 import com.np3tech.hoopmind.shared.exception.AppException;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock.Permit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -16,7 +17,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Lance l'import de la base Walsh en arrière-plan, éventuellement précédé de son téléchargement depuis Kaggle :
  * l'opération dure plusieurs minutes, l'interface suit son avancement au lieu d'attendre la réponse.
- * Une seule opération à la fois ; son état est gardé en mémoire jusqu'à la suivante.
+ * Une seule opération sur les données à la fois ({@link DataOperationLock}) ; l'état du dernier import est gardé
+ * en mémoire jusqu'au suivant.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,10 +30,6 @@ public class NbaDatabaseJobService {
     /** État d'une opération, tel qu'il est montré à l'administrateur. */
     public record JobStatus(Phase phase, boolean download, int seasons, Instant startedAt, Instant finishedAt,
                             Long downloadedBytes, Long totalBytes, ImportReport report, String error) {
-
-        boolean running() {
-            return phase == Phase.DOWNLOADING || phase == Phase.IMPORTING;
-        }
     }
 
     /** Le fichier de la base Walsh présent sur le serveur. */
@@ -47,6 +45,7 @@ public class NbaDatabaseJobService {
     private final KaggleDownloader downloader;
     private final NbaDatabaseImportProperties properties;
     private final KaggleProperties kaggle;
+    private final DataOperationLock lock;
 
     private final AtomicReference<JobStatus> current = new AtomicReference<>();
 
@@ -71,18 +70,21 @@ public class NbaDatabaseJobService {
         if (!download && !file().present()) {
             throw new NbaImportException("Le fichier " + properties.path() + " est absent : téléchargez d'abord la base.");
         }
+        Permit permit = lock.acquire(DataOperationLock.Operation.NBA_DATABASE_IMPORT);
         JobStatus started = new JobStatus(download ? Phase.DOWNLOADING : Phase.IMPORTING, download, seasonCount,
                 Instant.now(), null, null, null, null, null);
-        JobStatus previous = current.get();
-        if ((previous != null && previous.running()) || !current.compareAndSet(previous, started)) {
-            throw new AppException("Un import est déjà en cours.", HttpStatus.CONFLICT, "IMPORT_ALREADY_RUNNING");
+        current.set(started);
+        try {
+            Thread.ofVirtual().name("nba-database-import").start(() -> run(started, permit));
+        } catch (RuntimeException e) {
+            permit.close();
+            throw e;
         }
-        Thread.ofVirtual().name("nba-database-import").start(() -> run(started));
         return started;
     }
 
-    private void run(JobStatus job) {
-        try {
+    private void run(JobStatus job, Permit permit) {
+        try (permit) {
             if (job.download()) {
                 downloader.download(Path.of(properties.path()), (done, total) -> current.updateAndGet(s ->
                         new JobStatus(s.phase(), s.download(), s.seasons(), s.startedAt(), null, done,

@@ -3,6 +3,8 @@ package com.np3tech.hoopmind.ml.web;
 import com.np3tech.hoopmind.ml.GameOutcomeModel;
 import com.np3tech.hoopmind.ml.TrainingReport;
 import com.np3tech.hoopmind.shared.exception.AppException;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock;
+import com.np3tech.hoopmind.shared.lock.DataOperationLock.Permit;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 class GameOutcomeModelController {
 
     private final ObjectProvider<GameOutcomeModel> model;
+    private final DataOperationLock lock;
 
-    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model) {
+    GameOutcomeModelController(ObjectProvider<GameOutcomeModel> model, DataOperationLock lock) {
         this.model = model;
+        this.lock = lock;
     }
 
     @GetMapping("/model-metrics")
@@ -48,7 +52,10 @@ class GameOutcomeModelController {
     TrainingReport trainGameOutcomeModel(
             @Parameter(description = "Nombre de saisons à utiliser, les plus récentes (réglage ML_TRAINING_SEASONS sinon)")
             @RequestParam(required = false) Integer seasons) {
-        return model().train(seasons);
+        GameOutcomeModel engine = model();
+        try (Permit ignored = lock.acquire(DataOperationLock.Operation.MODEL_TRAINING)) {
+            return engine.train(seasons);
+        }
     }
 
     private GameOutcomeModel model() {

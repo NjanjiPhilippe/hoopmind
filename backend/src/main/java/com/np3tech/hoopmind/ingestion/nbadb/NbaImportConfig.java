@@ -10,10 +10,13 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties({NbaDatabaseImportProperties.class, KaggleProperties.class})
 class NbaImportConfig {
 
-    /** Import au démarrage, pratique pour une démo en conteneurs ({@code NBA_IMPORT_ON_STARTUP=true}). */
+    /**
+     * Import au démarrage, pratique pour une démo en conteneurs ({@code NBA_IMPORT_ON_STARTUP=true}). Il passe par
+     * le job comme un import lancé depuis la page Données : même verrou, même suivi, et l'API répond pendant l'import.
+     */
     @Bean
     @ConditionalOnProperty(name = "hoopmind.import.nba-database.on-startup", havingValue = "true")
-    ApplicationRunner importNbaDatabaseOnStartup(NbaDatabaseImporter importer) {
-        return args -> importer.importDatabase(null);
+    ApplicationRunner importNbaDatabaseOnStartup(NbaDatabaseJobService jobs) {
+        return args -> jobs.start(null, false);
     }
 }
