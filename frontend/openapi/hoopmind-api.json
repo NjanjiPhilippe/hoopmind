@@ -2378,6 +2378,85 @@
         ]
       }
     },
+    "/api/v1/spark/ml/predict/game/explanation": {
+      "get": {
+        "tags": [
+          "Spark Analytics"
+        ],
+        "summary": "Prédire le vainqueur d'un match et expliquer pourquoi",
+        "description": "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true). 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
+        "operationId": "explainGameOutcome",
+        "parameters": [
+          {
+            "name": "seasonId",
+            "in": "query",
+            "description": "ID de la saison",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "homeTeamId",
+            "in": "query",
+            "description": "ID de l'équipe à domicile",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "awayTeamId",
+            "in": "query",
+            "description": "ID de l'équipe à l'extérieur",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "Jour du match (aujourd'hui par défaut)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "playoff",
+            "in": "query",
+            "description": "Match de playoffs",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainedPrediction"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/spark/ml/model-metrics": {
       "get": {
         "tags": [
@@ -5752,6 +5831,69 @@
           },
           "model": {
             "type": "string"
+          }
+        }
+      },
+      "ExplainedPrediction": {
+        "type": "object",
+        "properties": {
+          "homeTeam": {
+            "type": "string"
+          },
+          "awayTeam": {
+            "type": "string"
+          },
+          "prediction": {
+            "$ref": "#/components/schemas/GameOutcomePrediction"
+          },
+          "factors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PredictionFactor"
+            }
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Explanation"
+          },
+          "cached": {
+            "type": "boolean"
+          },
+          "fallback": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Explanation": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      },
+      "PredictionFactor": {
+        "type": "object",
+        "properties": {
+          "feature": {
+            "type": "string"
+          },
+          "homeValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "awayValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "contribution": {
+            "type": "number",
+            "format": "double"
           }
         }
       },

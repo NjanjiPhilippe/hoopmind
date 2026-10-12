@@ -5,8 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 
 import { Api } from '../../core/api/generated/api';
 import { getModelMetrics } from '../../core/api/generated/fn/spark-analytics/get-model-metrics';
-import { predictGameOutcome } from '../../core/api/generated/fn/spark-analytics/predict-game-outcome';
-import { GameOutcomePrediction } from '../../core/api/generated/models/game-outcome-prediction';
+import { explainGameOutcome } from '../../core/api/generated/fn/spark-analytics/explain-game-outcome';
+import { ExplainedPrediction } from '../../core/api/generated/models/explained-prediction';
 import { TrainingReport } from '../../core/api/generated/models/training-report';
 import { AuthService } from '../../core/auth/auth.service';
 import { toProblem } from '../../core/http/problem';
@@ -14,17 +14,22 @@ import { NbaCatalog, idParam, seasonOrLatest, teamName } from '../../core/nba/nb
 import { defaultPredictionDate } from '../../core/nba/nba-format';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { FactorRow, explanationSource, factorRows } from './prediction-factors';
 
 interface Prediction {
   homeTeamId: number;
   awayTeamId: number;
   date: string;
   playoff: boolean;
-  result: GameOutcomePrediction;
+  result: ExplainedPrediction;
+  factors: FactorRow[];
+  source: string;
 }
 
 /**
  * Prédire le vainqueur d'un match : deux équipes, une date, et le modèle calcule la forme de chacune avant ce jour.
+ * La prédiction arrive avec le poids de chaque facteur et une explication en français (rédigée par un LLM si le
+ * serveur en a un, sinon automatiquement).
  * Les paramètres de la page sont dans l'URL (lien « Prédire » de la liste des matchs, partage d'une prédiction).
  */
 @Component({
@@ -111,8 +116,12 @@ export class PredictComponent {
     this.predicting.set(true);
     this.error.set(null);
     try {
-      const result = await this.api.invoke(predictGameOutcome, request);
-      this.prediction.set({ homeTeamId: request.homeTeamId, awayTeamId: request.awayTeamId, date: request.date, playoff: request.playoff, result });
+      const result = await this.api.invoke(explainGameOutcome, request);
+      this.prediction.set({
+        homeTeamId: request.homeTeamId, awayTeamId: request.awayTeamId, date: request.date, playoff: request.playoff, result,
+        factors: factorRows(result.factors, request.playoff),
+        source: explanationSource(result),
+      });
       // L'URL reflète la prédiction affichée : elle se partage et survit au rechargement.
       void this.router.navigate([], {
         queryParams: { season: request.seasonId, home: request.homeTeamId, away: request.awayTeamId, date: request.date, playoff: request.playoff || null },

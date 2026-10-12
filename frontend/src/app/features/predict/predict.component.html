@@ -88,11 +88,11 @@
       @if (prediction(); as p) {
         @let home = team(p.homeTeamId);
         @let away = team(p.awayTeamId);
-        @let homeWins = p.result.homeWinProbability! >= 0.5;
+        @let homeWins = p.result.prediction!.homeWinProbability! >= 0.5;
         <section class="card space-y-4" aria-live="polite" aria-labelledby="prediction-title">
           <h2 id="prediction-title" class="text-lg font-bold">
             {{ teamName(homeWins ? home : away) }} favori
-            <span class="font-normal text-gray-500">({{ (homeWins ? p.result.homeWinProbability : p.result.awayWinProbability) | percent: '1.0-0' }})</span>
+            <span class="font-normal text-gray-500">({{ (homeWins ? p.result.prediction!.homeWinProbability : p.result.prediction!.awayWinProbability) | percent: '1.0-0' }})</span>
           </h2>
 
           <div>
@@ -101,12 +101,12 @@
               <span>extérieur · {{ away?.abbreviation }}</span>
             </div>
             <div class="mt-1 flex h-8 overflow-hidden rounded-lg text-sm font-semibold text-white" role="img"
-                 [attr.aria-label]="teamName(home) + ' ' + (p.result.homeWinProbability | percent: '1.0-0') + ', ' + teamName(away) + ' ' + (p.result.awayWinProbability | percent: '1.0-0')">
-              <div class="flex items-center bg-primary-600 pl-3" [style.width.%]="p.result.homeWinProbability! * 100">
-                {{ p.result.homeWinProbability | percent: '1.0-0' }}
+                 [attr.aria-label]="teamName(home) + ' ' + (p.result.prediction!.homeWinProbability | percent: '1.0-0') + ', ' + teamName(away) + ' ' + (p.result.prediction!.awayWinProbability | percent: '1.0-0')">
+              <div class="flex items-center bg-primary-600 pl-3" [style.width.%]="p.result.prediction!.homeWinProbability! * 100">
+                {{ p.result.prediction!.homeWinProbability | percent: '1.0-0' }}
               </div>
               <div class="flex flex-1 items-center justify-end bg-gray-500 pr-3">
-                {{ p.result.awayWinProbability | percent: '1.0-0' }}
+                {{ p.result.prediction!.awayWinProbability | percent: '1.0-0' }}
               </div>
             </div>
           </div>
@@ -114,6 +114,44 @@
           <p class="text-sm text-gray-600">
             Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de playoffs}.
           </p>
+
+          @if (p.result.explanation?.text; as text) {
+            <div class="space-y-1 rounded-lg border border-primary-100 bg-primary-50 p-4">
+              <h3 class="text-sm font-semibold text-primary-900">Pourquoi ?</h3>
+              <p class="text-gray-800">{{ text }}</p>
+              <p class="text-xs text-gray-500">{{ p.source }}</p>
+            </div>
+          }
+
+          @if (p.factors.length) {
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900">Ce qui a pesé dans la prédiction</h3>
+              <p class="text-xs text-gray-500">Du facteur le plus influent au moins influent. La barre penche vers l'équipe qu'il favorise.</p>
+              <ul class="mt-2 divide-y divide-gray-100">
+                @for (factor of p.factors; track factor.feature) {
+                  <li class="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 py-2 text-sm sm:grid-cols-[12rem_1fr_9rem]">
+                    <span class="font-medium text-gray-800">{{ factor.label }}</span>
+                    <span class="text-right text-gray-600 sm:order-last">
+                      {{ home?.abbreviation }} {{ factor.home }} · {{ away?.abbreviation }} {{ factor.away }}
+                    </span>
+                    <div class="col-span-2 grid grid-cols-2 sm:col-span-1" role="img"
+                         [attr.aria-label]="factor.label + ' : en faveur de ' + teamName(factor.favorsHome ? home : away)">
+                      <div class="flex justify-end border-r border-gray-300 pr-0.5">
+                        @if (factor.favorsHome) {
+                          <div class="h-2.5 rounded-l bg-primary-600" [style.width.%]="factor.weight * 100"></div>
+                        }
+                      </div>
+                      <div class="flex pl-0.5">
+                        @if (!factor.favorsHome) {
+                          <div class="h-2.5 rounded-r bg-gray-500" [style.width.%]="factor.weight * 100"></div>
+                        }
+                      </div>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
 
           @if (currentValue(model); as report) {
             <p class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
