@@ -10,6 +10,11 @@ export interface FactorRow {
   /** Part du facteur le plus influent, de 0 à 1 (largeur de la barre). */
   weight: number;
   favorsHome: boolean;
+  /**
+   * Le facteur favorise l'équipe dont les valeurs sont moins bonnes : le modèle compense une variable par une autre
+   * qui mesure presque la même chose (bilan et net rating). Affiché comme tel, jamais comme un avantage.
+   */
+  correction: boolean;
 }
 
 const LABELS: Record<string, string> = {
@@ -56,6 +61,7 @@ export function factorRows(factors: PredictionFactor[] | undefined, playoff: boo
   return shown.map(factor => {
     const feature = factor.feature ?? '';
     const contribution = factor.contribution ?? 0;
+    const difference = (factor.homeValue ?? 0) - (factor.awayValue ?? 0);
     return {
       feature,
       label: factorLabel(feature),
@@ -63,6 +69,8 @@ export function factorRows(factors: PredictionFactor[] | undefined, playoff: boo
       away: factorValue(feature, factor.awayValue ?? 0),
       weight: strongest === 0 ? 0 : Math.abs(contribution) / strongest,
       favorsHome: contribution >= 0,
+      correction: feature !== 'is_playoff' && difference !== 0 && contribution !== 0
+        && Math.sign(difference) !== Math.sign(contribution),
     };
   });
 }

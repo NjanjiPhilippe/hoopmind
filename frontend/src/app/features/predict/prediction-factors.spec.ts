@@ -20,9 +20,16 @@ describe('prediction-factors', () => {
 
     expect(rows.map(row => row.feature)).toEqual(['net_rating_diff', 'rest_days_diff']);
     expect(rows[0]).toMatchObject({ label: 'Net rating (pour 100 possessions)', home: '+9,4', away: '+1,2', weight: 1, favorsHome: true });
-    expect(rows[1]).toMatchObject({ weight: 0.5, favorsHome: false });
+    expect(rows[1]).toMatchObject({ weight: 0.5, favorsHome: false, correction: false });
+    expect(rows[0].correction).toBe(false);
     expect(factorRows(factors, true).map(row => row.feature)).toContain('is_playoff');
     expect(factorRows(undefined, false)).toEqual([]);
+  });
+
+  it('flags a factor that favors the team with the worse values as a model correction', () => {
+    const [row] = factorRows([{ feature: 'win_pct_diff', homeValue: 0.74, awayValue: 0.07, contribution: -0.38 }], false);
+
+    expect(row).toMatchObject({ favorsHome: false, correction: true });
   });
 
   it('says who wrote the explanation', () => {

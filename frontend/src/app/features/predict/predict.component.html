@@ -126,11 +126,22 @@
           @if (p.factors.length) {
             <div>
               <h3 class="text-sm font-semibold text-gray-900">Ce qui a pesé dans la prédiction</h3>
-              <p class="text-xs text-gray-500">Du facteur le plus influent au moins influent. La barre penche vers l'équipe qu'il favorise.</p>
+              <p class="text-xs text-gray-500">
+                Du facteur le plus influent au moins influent. La barre penche vers l'équipe qu'il favorise.
+                Une « correction du modèle » n'est pas un avantage réel : le modèle compense ce facteur par un autre qui mesure presque la même chose.
+              </p>
               <ul class="mt-2 divide-y divide-gray-100">
                 @for (factor of p.factors; track factor.feature) {
                   <li class="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 py-2 text-sm sm:grid-cols-[12rem_1fr_9rem]">
-                    <span class="font-medium text-gray-800">{{ factor.label }}</span>
+                    <span class="font-medium text-gray-800">
+                      {{ factor.label }}
+                      @if (factor.correction) {
+                        <span class="block text-xs font-normal text-gray-500"
+                              title="Le modèle compense ce facteur par un autre qui mesure presque la même chose (bilan et net rating) : ce n'est pas un avantage réel.">
+                          correction du modèle
+                        </span>
+                      }
+                    </span>
                     <span class="text-right text-gray-600 sm:order-last">
                       {{ home?.abbreviation }} {{ factor.home }} · {{ away?.abbreviation }} {{ factor.away }}
                     </span>
@@ -138,12 +149,12 @@
                          [attr.aria-label]="factor.label + ' : en faveur de ' + teamName(factor.favorsHome ? home : away)">
                       <div class="flex justify-end border-r border-gray-300 pr-0.5">
                         @if (factor.favorsHome) {
-                          <div class="h-2.5 rounded-l bg-primary-600" [style.width.%]="factor.weight * 100"></div>
+                          <div class="h-2.5 rounded-l bg-primary-600" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
                         }
                       </div>
                       <div class="flex pl-0.5">
                         @if (!factor.favorsHome) {
-                          <div class="h-2.5 rounded-r bg-gray-500" [style.width.%]="factor.weight * 100"></div>
+                          <div class="h-2.5 rounded-r bg-gray-500" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
                         }
                       </div>
                     </div>
