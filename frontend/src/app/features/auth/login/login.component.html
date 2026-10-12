@@ -1,5 +1,9 @@
 <app-auth-layout heading="Connexion" subheading="Accédez à vos prédictions NBA">
-  @if (error(); as message) {
+  @if (blocked()) {
+    <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="alert">
+      Trop de tentatives de connexion. Par sécurité, réessayez dans <span class="font-semibold tabular-nums">{{ remainingSeconds() }} s</span>.
+    </div>
+  } @else if (error(); as message) {
     <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600" role="alert">{{ message }}</div>
   }
 
@@ -14,15 +18,17 @@
 
     <div>
       <label for="password" class="mb-2 block text-sm font-medium text-gray-700">Mot de passe</label>
-      <input id="password" type="password" formControlName="password" class="input-field" autocomplete="current-password" />
+      <app-password-input inputId="password" [control]="form.controls.password" autocomplete="current-password" />
       @if (form.controls.password.invalid && form.controls.password.touched) {
         <p class="mt-1 text-sm text-red-600">Champ requis</p>
       }
     </div>
 
-    <button type="submit" [disabled]="submitting()" class="btn-primary w-full py-3 text-lg">
+    <button type="submit" [disabled]="submitting() || blocked()" class="btn-primary w-full py-3 text-lg">
       @if (submitting()) {
         <span class="spinner h-5 w-5 border-2"></span>
+      } @else if (blocked()) {
+        Réessayer dans {{ remainingSeconds() }} s
       } @else {
         Se connecter
       }

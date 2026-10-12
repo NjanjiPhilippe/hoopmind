@@ -11,6 +11,7 @@ import { setUserStatus } from '../../../core/api/generated/fn/administration-des
 import { UserProfile } from '../../../core/api/generated/models/user-profile';
 import { AuthService } from '../../../core/auth/auth.service';
 import { toProblem } from '../../../core/http/problem';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 
 const PAGE_SIZE = 20;
@@ -33,8 +34,8 @@ export class AdminUsersComponent {
     params: () => ({ search: this.search() || undefined, page: this.page(), size: PAGE_SIZE }),
     loader: ({ params }) => this.api.invoke(listUsers, params),
   });
-  protected readonly rows = computed(() => this.users.value()?.content ?? []);
-  protected readonly pageInfo = computed(() => this.users.value()?.page);
+  protected readonly rows = computed(() => currentValue(this.users)?.content ?? []);
+  protected readonly pageInfo = computed(() => currentValue(this.users)?.page);
 
   protected readonly busyUserId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);

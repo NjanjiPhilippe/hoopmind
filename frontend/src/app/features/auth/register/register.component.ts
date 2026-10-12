@@ -5,13 +5,14 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { problemCode, toProblem } from '../../../core/http/problem';
 import { AuthLayoutComponent } from '../auth-layout.component';
+import { PasswordInputComponent } from '../../../shared/components/password-input/password-input.component';
 
 /** Mêmes règles que le backend (RegisterRequest). */
 export const USERNAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 @Component({
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, AuthLayoutComponent],
+  imports: [ReactiveFormsModule, RouterLink, AuthLayoutComponent, PasswordInputComponent],
   templateUrl: './register.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

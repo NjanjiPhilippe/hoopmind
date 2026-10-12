@@ -20,8 +20,6 @@
   --color-nba-red: #c8102e;
   --color-nba-orange: #ff6900;
 
-  --animate-fade-in: fadeIn 0.5s ease-in-out;
-  --animate-slide-up: slideUp 0.4s ease-out;
 }
 
 body {
@@ -171,48 +169,6 @@ body {
 }
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-.skeleton {
-  animation: shimmer 2s infinite linear;
-  background: linear-gradient(
-    to right,
-    #f6f7f8 0%,
-    #edeef1 20%,
-    #f6f7f8 40%,
-    #f6f7f8 100%
-  );
-  background-size: 1000px 100%;
-}
-
 /* Loading spinner */
 .spinner {
   animation: spin 1s linear infinite;
@@ -225,47 +181,4 @@ body {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* Responsive text */
-.text-responsive {
-  font-size: 0.875rem;
-}
-
-@media (min-width: 768px) {
-  .text-responsive {
-    font-size: 1rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .text-responsive {
-    font-size: 1.125rem;
-  }
-}
-
-/* NBA Team Colors */
-.team-lakers {
-  background-color: #552583;
-  color: white;
-}
-
-.team-warriors {
-  background-color: #1D428A;
-  color: white;
-}
-
-.team-celtics {
-  background-color: #007A33;
-  color: white;
-}
-
-.team-heat {
-  background-color: #98002E;
-  color: white;
-}
-
-.team-nets {
-  background-color: black;
-  color: white;
 }

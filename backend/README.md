@@ -37,9 +37,10 @@ Sans interface, les mêmes opérations existent dans l'API (jeton administrateur
 
 ```bash
 scripts/download-nba-database.sh         # ou téléchargement manuel de data/nba.sqlite
-curl -X POST "localhost:8083/api/v1/admin/imports/nba-database?seasons=10" -H "Authorization: Bearer $TOKEN"
+curl -X POST "localhost:8083/api/v1/admin/imports/nba-database/jobs?seasons=10" -H "Authorization: Bearer $TOKEN"
 curl -X POST "localhost:8083/api/v1/admin/imports/csv" -F "files=@archive.zip" -H "Authorization: Bearer $TOKEN"
-curl -X POST "localhost:8083/api/v1/spark/ml/train/game-outcome?seasons=5" -H "Authorization: Bearer $TOKEN"
+curl -X POST "localhost:8083/api/v1/spark/ml/train/game-outcome/jobs?seasons=5" -H "Authorization: Bearer $TOKEN"
+curl "localhost:8083/api/v1/spark/ml/train/game-outcome/status" -H "Authorization: Bearer $TOKEN"
 ```
 
 `NBA_IMPORT_ON_STARTUP=true` lance l'import au démarrage. Chaque import est rejouable : il met à jour les lignes existantes sans créer de doublon.
@@ -119,11 +120,10 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | PUT | `/api/v1/admin/users/{id}/status`, `/roles` | ADMIN |
 | GET | `/api/v1/admin/audit-events?action=&outcome=&userId=&user=&from=&to=` | ADMIN |
 | GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats`… | public |
-| POST | `/api/v1/admin/imports/nba-database?seasons=` (synchrone) | ADMIN |
 | GET | `/api/v1/admin/imports/nba-database/status` | ADMIN |
 | POST | `/api/v1/admin/imports/nba-database/jobs?seasons=&download=` (arrière-plan) | ADMIN |
 | POST | `/api/v1/admin/imports/csv` (multipart `files`), GET `/csv/datasets` | ADMIN |
-| POST | `/api/v1/spark/ml/train/game-outcome?seasons=` | ADMIN |
+| POST | `/api/v1/spark/ml/train/game-outcome/jobs?seasons=` (arrière-plan), GET `/train/game-outcome/status` | ADMIN |
 | GET | `/api/v1/spark/ml/model-metrics`, `/ml/predict/game`, `/ml/predict/game/explanation` | connecté |
 | * | `/api/v1/spark/**` | connecté (entraînement : ADMIN) |
 

@@ -14,7 +14,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,8 +33,6 @@ public class ModelTrainingJobs {
     public record TrainingJobStatus(UUID id, Phase phase, Integer seasons, Instant startedAt, Instant finishedAt,
                                     TrainingReport report, String error) {
     }
-
-    private static final Duration SYNCHRONOUS_TIMEOUT = Duration.ofMinutes(10);
 
     private final ObjectProvider<GameOutcomeModel> model;
     private final JobService jobs;
@@ -62,28 +59,6 @@ public class ModelTrainingJobs {
 
     public Optional<TrainingJobStatus> latest() {
         return jobs.latest(JobType.MODEL_TRAINING, TrainingReport.class).map(ModelTrainingJobs::toStatus);
-    }
-
-    /**
-     * Ancien comportement de {@code POST /train/game-outcome} : lance le job et attend sa fin. Gardé tant que
-     * l'interface n'a pas basculé sur le suivi du job ; il passe par le même verrou, la même trace et le même audit.
-     */
-    public TrainingReport trainAndWait(Integer seasons) {
-        UUID id = start(seasons).id();
-        Instant deadline = Instant.now().plus(SYNCHRONOUS_TIMEOUT);
-        while (Instant.now().isBefore(deadline)) {
-            TrainingJobStatus status = jobs.find(id, TrainingReport.class).map(ModelTrainingJobs::toStatus).orElseThrow();
-            switch (status.phase()) {
-                case SUCCEEDED -> {
-                    return status.report();
-                }
-                case FAILED, INTERRUPTED -> throw new AppException(status.error(), HttpStatus.UNPROCESSABLE_CONTENT,
-                        "MODEL_TRAINING_FAILED");
-                case TRAINING -> sleep();
-            }
-        }
-        throw new AppException("L'entraînement continue en arrière-plan : suivez-le sur la page du modèle.",
-                HttpStatus.SERVICE_UNAVAILABLE, "MODEL_TRAINING_RUNNING");
     }
 
     private TrainingReport train(GameOutcomeModel engine, Integer seasons, CurrentUser requestedBy) {
@@ -123,14 +98,5 @@ public class ModelTrainingJobs {
                     new TrainingJobStatus(job.id(), Phase.INTERRUPTED, seasons, job.createdAt(),
                             interrupted.detectedAt(), null, "Le serveur s'est arrêté pendant l'entraînement : relancez-le.");
         };
-    }
-
-    private static void sleep() {
-        try {
-            Thread.sleep(250);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new AppException("Attente interrompue.", HttpStatus.SERVICE_UNAVAILABLE, "MODEL_TRAINING_RUNNING");
-        }
     }
 }
