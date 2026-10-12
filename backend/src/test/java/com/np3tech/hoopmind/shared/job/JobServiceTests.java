@@ -39,24 +39,31 @@ class JobServiceTests {
 
     @Test
     void runsInTheBackgroundAndKeepsTheResult() throws Exception {
+        CountDownLatch progressReported = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         Job<Result> started = jobs.start(JobType.MODEL_TRAINING, new Job.Requester(1L, "admin"), Map.of("seasons", "3"),
                 "TRAINING", context -> {
                     context.progress(1L, 2L);
+                    progressReported.countDown();
                     await(release);
                     return new Result(42);
                 });
 
-        assertThat(started.state()).isInstanceOf(JobState.Running.class);
-        assertThat(jobs.find(started.id(), Result.class)).hasValueSatisfying(job -> {
-            assertThat(job.state()).isEqualTo(new JobState.Running<Result>("TRAINING", 1L, 2L));
-            assertThat(job.requestedBy()).isEqualTo(new Job.Requester(1L, "admin"));
-            assertThat(job.parameters()).containsEntry("seasons", "3");
-        });
-        assertThatThrownBy(() -> jobs.start(JobType.NBA_DATABASE_IMPORT, null, Map.of(), "IMPORTING", c -> null))
-                .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
-
-        release.countDown();
+        // Le job tourne sur un autre fil : on attend qu'il ait signalé son avancement avant de le lire, et on le
+        // libère quoi qu'il arrive, sinon il garde le verrou des données et fait échouer les tests suivants (409).
+        try {
+            assertThat(started.state()).isInstanceOf(JobState.Running.class);
+            assertThat(progressReported.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(jobs.find(started.id(), Result.class)).hasValueSatisfying(job -> {
+                assertThat(job.state()).isEqualTo(new JobState.Running<Result>("TRAINING", 1L, 2L));
+                assertThat(job.requestedBy()).isEqualTo(new Job.Requester(1L, "admin"));
+                assertThat(job.parameters()).containsEntry("seasons", "3");
+            });
+            assertThatThrownBy(() -> jobs.start(JobType.NBA_DATABASE_IMPORT, null, Map.of(), "IMPORTING", c -> null))
+                    .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        } finally {
+            release.countDown();
+        }
         Job<Result> done = waitForEnd(started.id());
         assertThat(done.state()).isInstanceOfSatisfying(Succeeded.class,
                 succeeded -> assertThat(succeeded.result()).isEqualTo(new Result(42)));
