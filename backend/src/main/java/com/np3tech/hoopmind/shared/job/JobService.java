@@ -136,7 +136,9 @@ public class JobService {
             jdbc.sql("UPDATE background_jobs SET state = 'SUCCEEDED', finished_at = ?, result = CAST(? AS JSONB) WHERE id = ?")
                     .params(Timestamp.from(clock.instant()), json.writeValueAsString(result), id)
                     .update();
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            // Exception et pas seulement RuntimeException : Spark (Scala) lève des exceptions vérifiées sans les
+            // déclarer. Sans ce filet, le job restait « en cours » jusqu'au redémarrage du serveur.
             log.error("Échec du job {} {}", type, id, e);
             fail(id, e);
         } finally {
@@ -144,7 +146,7 @@ public class JobService {
         }
     }
 
-    private void fail(UUID id, RuntimeException error) {
+    private void fail(UUID id, Exception error) {
         jdbc.sql("UPDATE background_jobs SET state = 'FAILED', finished_at = ?, error = ? WHERE id = ?")
                 .params(Timestamp.from(clock.instant()), truncate(userMessage(error)), id)
                 .update();
