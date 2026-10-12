@@ -1,0 +1,95 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header class="space-y-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Matchs</h1>
+        <p class="mt-1 text-gray-600">Résultats de la saison et matchs à venir. Chaque match peut être prédit à sa date.</p>
+      </div>
+      @if (catalog.seasons().length > 0) {
+        <div class="flex flex-wrap gap-4">
+          <div>
+            <label for="season" class="mb-1 block text-sm font-medium text-gray-700">Saison</label>
+            <select id="season" class="input-field" (change)="onFilter({ season: $any($event.target).value })">
+              @for (season of catalog.seasons(); track season.id) {
+                <option [value]="season.id" [selected]="season.id === seasonId()">{{ season.name }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="team" class="mb-1 block text-sm font-medium text-gray-700">Équipe</label>
+            <select id="team" class="input-field" (change)="onFilter({ team: $any($event.target).value })">
+              <option value="" [selected]="teamId() === null">Toutes les équipes</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id" [selected]="team.id === teamId()">{{ teamName(team) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      }
+    </header>
+
+    @if (catalog.loading() || games.isLoading()) {
+      <p class="text-sm text-gray-500">Chargement des matchs…</p>
+    } @else if (catalog.failed() || games.error()) {
+      <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">Les matchs sont indisponibles. Réessayez dans un instant.</p>
+    } @else if (filtered().length === 0) {
+      <section class="card text-center">
+        @if (catalog.empty()) {
+          <p class="font-medium">Aucun match n'a encore été importé.</p>
+          @if (auth.isAdmin()) {
+            <a routerLink="/admin/data" class="btn-primary mt-4 inline-block">Importer les données NBA</a>
+          }
+        } @else {
+          <p class="font-medium">Aucun match pour ce choix.</p>
+        }
+      </section>
+    } @else {
+      <p class="text-sm text-gray-500" aria-live="polite">{{ filtered().length }} match(s)</p>
+      <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow">
+        @for (game of visible(); track game.id) {
+          <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3 px-4 py-3 text-sm sm:grid-cols-[7rem_1fr_auto]">
+            <div class="text-gray-500">
+              <div>{{ game.scheduledDate | date: 'd MMM y' }}</div>
+              @if (gameTypeLabel(game.gameType); as type) {
+                <span class="badge badge-info mt-1">{{ type }}</span>
+              }
+            </div>
+            <div class="space-y-1">
+              <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'away')">
+                <span><span class="sm:hidden">{{ game.awayTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.awayTeam) }}</span></span>
+                <span class="tabular-nums">{{ game.result?.awayTeamScore }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'home')">
+                <span>
+                  <span class="text-gray-400" aria-hidden="true">&#64; </span>
+                  <span class="sr-only">à domicile : </span>
+                  <span class="sm:hidden">{{ game.homeTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.homeTeam) }}</span>
+                </span>
+                <span class="tabular-nums">{{ game.result?.homeTeamScore }}</span>
+              </div>
+            </div>
+            <div class="text-right">
+              @if (game.result) {
+                <span class="text-xs text-gray-500">Final@if (game.result.overtime) { (prol.)}</span>
+              } @else {
+                <span class="block text-xs text-gray-500">À venir</span>
+              }
+              <a class="mt-1 block text-sm font-medium text-primary-600 hover:underline" routerLink="/predict" [queryParams]="predictParams(game)">
+                Prédire
+              </a>
+            </div>
+          </li>
+        }
+      </ul>
+      @if (visible().length < filtered().length) {
+        <div class="text-center">
+          <button type="button" class="btn-secondary" (click)="showMore()">
+            Afficher plus ({{ filtered().length - visible().length }} restants)
+          </button>
+        </div>
+      }
+    }
+  </main>
+</div>

@@ -39,10 +39,10 @@ describe('auth guards', () => {
     expect(run(authGuard)).toBe(true);
   });
 
-  it('refuse l\'administration à un simple utilisateur', async () => {
+  it('montre « Accès refusé » à un simple utilisateur qui ouvre l\'administration', async () => {
     await loginAs(['ROLE_USER']);
 
-    expect((run(adminGuard) as UrlTree).toString()).toBe('/');
+    expect((run(adminGuard) as UrlTree).toString()).toBe('/forbidden');
   });
 
   it('ouvre l\'administration à un administrateur', async () => {
@@ -54,6 +54,6 @@ describe('auth guards', () => {
   it('renvoie un utilisateur connecté hors des pages de connexion', async () => {
     await loginAs(['ROLE_USER']);
 
-    expect((run(guestGuard) as UrlTree).toString()).toBe('/account');
+    expect((run(guestGuard) as UrlTree).toString()).toBe('/dashboard');
   });
 });

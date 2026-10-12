@@ -1,0 +1,129 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header>
+      <h1 class="text-3xl font-bold text-gray-900">Prédire un match</h1>
+      <p class="mt-1 text-gray-600">
+        Choisissez deux équipes et un jour : le modèle compare leur forme sur les matchs joués avant ce jour et donne la probabilité de victoire de chacune.
+      </p>
+    </header>
+
+    @if (catalog.loading()) {
+      <p class="text-sm text-gray-500">Chargement des équipes…</p>
+    } @else if (catalog.failed()) {
+      <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">Les équipes et les saisons sont indisponibles. Réessayez dans un instant.</p>
+    } @else if (catalog.empty()) {
+      <section class="card text-center">
+        <p class="font-medium">Aucun match n'a encore été importé.</p>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin/data" class="btn-primary mt-4 inline-block">Importer les données NBA</a>
+        } @else {
+          <p class="mt-1 text-sm text-gray-500">Un administrateur doit d'abord importer les données NBA.</p>
+        }
+      </section>
+    } @else {
+      <form class="card space-y-5" (submit)="$event.preventDefault(); predict()" novalidate>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+          <div>
+            <label for="home-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à domicile</label>
+            <select id="home-team" class="input-field" (change)="onTeam('home', $any($event.target).value)">
+              <option value="" [selected]="homeTeamId() === null" disabled>Choisir une équipe</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id" [selected]="team.id === homeTeamId()">{{ teamName(team) }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="btn-secondary justify-self-center px-3" (click)="swap()" aria-label="Inverser domicile et extérieur" title="Inverser domicile et extérieur">⇄</button>
+          <div>
+            <label for="away-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à l'extérieur</label>
+            <select id="away-team" class="input-field" (change)="onTeam('away', $any($event.target).value)"
+                    [attr.aria-invalid]="sameTeam()" aria-describedby="same-team-error">
+              <option value="" [selected]="awayTeamId() === null" disabled>Choisir une équipe</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id" [selected]="team.id === awayTeamId()">{{ teamName(team) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        @if (sameTeam()) {
+          <p id="same-team-error" class="text-sm text-red-600">Choisissez deux équipes différentes.</p>
+        }
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <label for="season" class="mb-1 block text-sm font-medium text-gray-700">Saison</label>
+            <select id="season" class="input-field" (change)="onSeason($any($event.target).value)">
+              @for (season of catalog.seasons(); track season.id) {
+                <option [value]="season.id" [selected]="season.id === seasonId()">{{ season.name }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="day" class="mb-1 block text-sm font-medium text-gray-700">Jour du match</label>
+            <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value); prediction.set(null)" />
+          </div>
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 sm:mt-7">
+            <input type="checkbox" class="h-4 w-4" [checked]="isPlayoff()" (change)="isPlayoff.set($any($event.target).checked); prediction.set(null)" />
+            Match de playoffs
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="!canPredict() || predicting()">
+          {{ predicting() ? 'Calcul…' : 'Prédire le vainqueur' }}
+        </button>
+      </form>
+
+      @if (error(); as error) {
+        <div class="rounded-lg border p-4 text-sm" role="alert"
+             [class.border-amber-200]="error.notTrained" [class.bg-amber-50]="error.notTrained" [class.text-amber-800]="error.notTrained"
+             [class.border-red-200]="!error.notTrained" [class.bg-red-50]="!error.notTrained" [class.text-red-600]="!error.notTrained">
+          {{ error.text }}
+          @if (error.notTrained && auth.isAdmin()) {
+            <a routerLink="/admin/data" class="ml-1 font-medium underline">Entraîner le modèle</a>
+          }
+        </div>
+      }
+
+      @if (prediction(); as p) {
+        @let home = team(p.homeTeamId);
+        @let away = team(p.awayTeamId);
+        @let homeWins = p.result.homeWinProbability! >= 0.5;
+        <section class="card space-y-4" aria-live="polite" aria-labelledby="prediction-title">
+          <h2 id="prediction-title" class="text-lg font-bold">
+            {{ teamName(homeWins ? home : away) }} favori
+            <span class="font-normal text-gray-500">({{ (homeWins ? p.result.homeWinProbability : p.result.awayWinProbability) | percent: '1.0-0' }})</span>
+          </h2>
+
+          <div>
+            <div class="flex justify-between text-sm font-medium">
+              <span>{{ home?.abbreviation }} · domicile</span>
+              <span>extérieur · {{ away?.abbreviation }}</span>
+            </div>
+            <div class="mt-1 flex h-8 overflow-hidden rounded-lg text-sm font-semibold text-white" role="img"
+                 [attr.aria-label]="teamName(home) + ' ' + (p.result.homeWinProbability | percent: '1.0-0') + ', ' + teamName(away) + ' ' + (p.result.awayWinProbability | percent: '1.0-0')">
+              <div class="flex items-center bg-primary-600 pl-3" [style.width.%]="p.result.homeWinProbability! * 100">
+                {{ p.result.homeWinProbability | percent: '1.0-0' }}
+              </div>
+              <div class="flex flex-1 items-center justify-end bg-gray-500 pr-3">
+                {{ p.result.awayWinProbability | percent: '1.0-0' }}
+              </div>
+            </div>
+          </div>
+
+          <p class="text-sm text-gray-600">
+            Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de playoffs}.
+          </p>
+
+          @if (currentValue(model); as report) {
+            <p class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+              Ce modèle a prédit le bon vainqueur dans {{ report.accuracy | percent: '1.0-0' }} des {{ report.testGames | number }} matchs de la saison {{ report.testSeason }},
+              contre {{ report.betterRecordBaseline | percent: '1.0-0' }} pour la règle « le meilleur bilan gagne ».
+              Une probabilité proche de 50 % signifie que le match est indécis.
+            </p>
+          }
+        </section>
+      }
+    }
+  </main>
+</div>

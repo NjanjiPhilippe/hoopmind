@@ -5,6 +5,7 @@ import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guards';
 export const routes: Routes = [
   {
     path: '',
+    title: 'HoopMind',
     loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent),
   },
   {
@@ -24,36 +25,38 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
+    title: 'Accueil · HoopMind',
     canActivate: [authGuard],
     loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
   },
   {
-    path: 'teams',
+    path: 'predict',
+    title: 'Prédire un match · HoopMind',
     canActivate: [authGuard],
-    loadChildren: () => import('./features/teams/teams.routes').then(m => m.TEAMS_ROUTES),
+    loadComponent: () => import('./features/predict/predict.component').then(m => m.PredictComponent),
   },
   {
-    path: 'players',
+    path: 'standings',
+    title: 'Classement · HoopMind',
     canActivate: [authGuard],
-    loadChildren: () => import('./features/players/players.routes').then(m => m.PLAYERS_ROUTES),
+    loadComponent: () => import('./features/standings/standings.component').then(m => m.StandingsComponent),
   },
   {
-    path: 'matches',
+    path: 'games',
+    title: 'Matchs · HoopMind',
     canActivate: [authGuard],
-    loadChildren: () => import('./features/matches/matches.routes').then(m => m.MATCHES_ROUTES),
+    loadComponent: () => import('./features/games/games.component').then(m => m.GamesComponent),
   },
   {
-    path: 'predictions',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/predictions/predictions.routes').then(m => m.PREDICTIONS_ROUTES),
-  },
-  {
-    path: 'statistics',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/statistics/statistics.component').then(m => m.StatisticsComponent),
+    path: 'forbidden',
+    title: 'Accès refusé · HoopMind',
+    data: { kind: 'forbidden' },
+    loadComponent: () => import('./features/errors/error-page.component').then(m => m.ErrorPageComponent),
   },
   {
     path: '**',
-    redirectTo: '',
+    title: 'Page introuvable · HoopMind',
+    data: { kind: 'not-found' },
+    loadComponent: () => import('./features/errors/error-page.component').then(m => m.ErrorPageComponent),
   },
 ];

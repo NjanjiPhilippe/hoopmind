@@ -32,7 +32,7 @@
           <label for="favoriteTeam" class="mb-2 block text-sm font-medium text-gray-700">Équipe favorite</label>
           <select id="favoriteTeam" formControlName="favoriteTeamId" class="input-field">
             <option [ngValue]="null">Aucune</option>
-            @for (team of teams.value() ?? []; track team.id) {
+            @for (team of currentValue(teams) ?? []; track team.id) {
               <option [ngValue]="team.id">{{ team.city }} {{ team.name }}</option>
             }
           </select>
@@ -57,13 +57,22 @@
       <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="space-y-4" novalidate>
         <div>
           <label for="currentPassword" class="mb-2 block text-sm font-medium text-gray-700">Mot de passe actuel</label>
-          <input id="currentPassword" type="password" formControlName="currentPassword" class="input-field" autocomplete="current-password" />
+          <app-password-input inputId="currentPassword" [control]="passwordForm.controls.currentPassword" autocomplete="current-password" />
         </div>
         <div>
           <label for="newPassword" class="mb-2 block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
-          <input id="newPassword" type="password" formControlName="newPassword" class="input-field" autocomplete="new-password" />
-          @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
-            <p class="mt-1 text-sm text-red-600">Au moins 8 caractères</p>
+          <app-password-input inputId="newPassword" [control]="passwordForm.controls.newPassword" autocomplete="new-password" describedBy="new-password-rules" />
+          <p id="new-password-rules" class="mt-1 text-sm"
+             [class.text-red-600]="passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid"
+             [class.text-gray-500]="!(passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid)">
+            Au moins 8 caractères.
+          </p>
+        </div>
+        <div>
+          <label for="confirmPassword" class="mb-2 block text-sm font-medium text-gray-700">Confirmer le nouveau mot de passe</label>
+          <app-password-input inputId="confirmPassword" [control]="passwordForm.controls.confirmPassword" autocomplete="new-password" describedBy="confirm-password-error" />
+          @if (passwordForm.controls.confirmPassword.touched && passwordForm.hasError('mismatch')) {
+            <p id="confirm-password-error" class="mt-1 text-sm text-red-600">Les deux mots de passe ne correspondent pas</p>
           }
         </div>
         <div class="flex items-center gap-4">

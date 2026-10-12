@@ -26,18 +26,25 @@ src/app/
 ├── core/
 │   ├── api/generated/   client HTTP généré depuis l'OpenAPI du backend (non versionné)
 │   ├── auth/            session, intercepteur, guards
-│   └── http/            lecture des erreurs RFC 9457
+│   ├── http/            lecture des erreurs RFC 9457 et du délai Retry-After
+│   ├── nba/             saisons et équipes partagées par les pages, formats
+│   └── util/            lecture sûre des ressources, suivi des jobs
 ├── shared/components/   composants d'interface réutilisables
 └── features/            une fonctionnalité par dossier, chargée à la demande
     ├── auth/            connexion, inscription
     ├── account/         profil et mot de passe
-    ├── admin/           tableau de bord, gestion des utilisateurs, journal d'audit
-    └── ...              pages NBA (équipes, joueurs, matchs, prédictions, statistiques)
+    ├── admin/           tableau de bord, utilisateurs, données et modèle, journal d'audit
+    ├── dashboard/       accueil connecté
+    ├── predict/         prédiction d'un match
+    ├── standings/       classement
+    ├── games/           matchs
+    └── errors/          pages 403 et 404
 ```
 
 - **Composants standalone, organisés par fonctionnalité** et chargés à la demande par le routeur.
-- **Signals** pour l'état (session, formulaires, listes avec `resource`), composants `OnPush`.
-  Zone.js reste actif tant que les pages NBA existantes n'ont pas été converties ; le nouveau code est prêt pour le mode zoneless.
+- **Signals** pour l'état (session, formulaires, listes avec `resource`), composants `OnPush`, **sans zone.js**
+  (`provideZonelessChangeDetection`) : tout état affiché doit vivre dans un signal.
+- **Décisions** : chaque choix du chantier frontend est expliqué dans [`docs/adr`](docs/adr/README.md).
 - **Client API généré** (ng-openapi-gen) : les types et les routes viennent du backend, ce qui évite qu'ils divergent.
 - **Session** : le jeton d'accès reste en mémoire, jamais dans le `localStorage`. Le jeton de rafraîchissement est un cookie `HttpOnly`
   posé par le backend ; au chargement, l'application rouvre la session avec lui. Sur une réponse 401, l'intercepteur renouvelle

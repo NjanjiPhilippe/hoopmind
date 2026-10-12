@@ -1,11 +1,13 @@
 package com.np3tech.hoopmind.nba.service.impl;
 
 import com.np3tech.hoopmind.nba.entity.Game;
+import com.np3tech.hoopmind.nba.entity.GameResult;
 import com.np3tech.hoopmind.nba.entity.Season;
 import com.np3tech.hoopmind.nba.entity.Team;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import com.np3tech.hoopmind.nba.repository.GameRepository;
+import com.np3tech.hoopmind.nba.repository.GameResultRepository;
 import com.np3tech.hoopmind.nba.service.GameService;
 import com.np3tech.hoopmind.nba.service.SeasonService;
 import com.np3tech.hoopmind.nba.service.TeamService;
@@ -16,7 +18,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +31,7 @@ import java.util.List;
 public class GameServiceImpl implements GameService {
 
     private final GameRepository gameRepository;
+    private final GameResultRepository gameResultRepository;
     private final TeamService teamService;
     private final SeasonService seasonService;
 
@@ -160,5 +167,15 @@ public class GameServiceImpl implements GameService {
                     "INVALID_GAME_DATA"
             );
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, GameResult> getResults(Collection<Game> games) {
+        if (games.isEmpty()) {
+            return Map.of();
+        }
+        return gameResultRepository.findByGameIdIn(games.stream().map(Game::getId).toList()).stream()
+                .collect(Collectors.toMap(result -> result.getGame().getId(), Function.identity()));
     }
 }

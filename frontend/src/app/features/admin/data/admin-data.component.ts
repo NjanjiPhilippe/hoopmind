@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, linkedSignal, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, resource, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { Api } from '../../../core/api/generated/api';
@@ -8,16 +8,34 @@ import { importReferenceCsv } from '../../../core/api/generated/fn/import-des-do
 import { listReferenceDatasets } from '../../../core/api/generated/fn/import-des-donnees/list-reference-datasets';
 import { startNbaDatabaseImport } from '../../../core/api/generated/fn/import-des-donnees/start-nba-database-import';
 import { getModelMetrics } from '../../../core/api/generated/fn/spark-analytics/get-model-metrics';
-import { trainGameOutcomeModel } from '../../../core/api/generated/fn/spark-analytics/train-game-outcome-model';
+import { getGameOutcomeTrainingStatus } from '../../../core/api/generated/fn/spark-analytics/get-game-outcome-training-status';
+import { startGameOutcomeTraining } from '../../../core/api/generated/fn/spark-analytics/start-game-outcome-training';
 import { FileReport } from '../../../core/api/generated/models/file-report';
 import { TrainingReport } from '../../../core/api/generated/models/training-report';
 import { toProblem } from '../../../core/http/problem';
+import { pollWhile } from '../../../core/util/poll';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
-import { downloadPercent, featureLabel, formatBytes, isRunning, phaseLabel } from './data-labels';
+import {
+  downloadPercent,
+  featureLabel,
+  formatBytes,
+  formatDuration,
+  gainOverBaseline,
+  isRunning,
+  isTraining,
+  phaseLabel,
+  trainingPhaseLabel,
+  validSeasons,
+} from './data-labels';
 
-/** Fréquence de suivi d'un import en arrière-plan. */
+/** Fréquence de suivi d'un import ou d'un entraînement en arrière-plan. */
 const POLL_MS = 2000;
 const DEFAULT_TRAINING_SEASONS = 5;
+/** Limites du serveur pour l'entraînement (GameOutcomeModelService). */
+const MAX_TRAINING_SEASONS = 30;
+/** Limite du serveur pour l'import, tant que l'état de la base n'est pas chargé. */
+const MAX_IMPORT_SEASONS = 80;
 
 /**
  * Page « Données » de l'administration : import de la base de Wyatt Walsh (téléchargée par le serveur depuis Kaggle),
@@ -30,55 +48,73 @@ const DEFAULT_TRAINING_SEASONS = 5;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminDataComponent {
+  protected readonly currentValue = currentValue;
   private readonly api = inject(Api);
 
   protected readonly featureLabel = featureLabel;
   protected readonly formatBytes = formatBytes;
   protected readonly phaseLabel = phaseLabel;
+  protected readonly trainingPhaseLabel = trainingPhaseLabel;
+  protected readonly formatDuration = formatDuration;
+  protected readonly maxTrainingSeasons = MAX_TRAINING_SEASONS;
 
   // Base de Wyatt Walsh
   protected readonly nbaStatus = resource({ loader: () => this.api.invoke(getNbaDatabaseStatus) });
-  protected readonly job = computed(() => this.nbaStatus.value()?.job ?? null);
+  protected readonly job = computed(() => currentValue(this.nbaStatus)?.job ?? null);
   protected readonly jobRunning = computed(() => isRunning(this.job()));
   protected readonly downloadPercent = computed(() => downloadPercent(this.job()));
-  protected readonly importSeasons = linkedSignal(() => this.nbaStatus.value()?.defaultSeasons ?? 10);
+  protected readonly importSeasons = linkedSignal(() => currentValue(this.nbaStatus)?.defaultSeasons ?? 10);
+  protected readonly maxImportSeasons = computed(() => currentValue(this.nbaStatus)?.maxSeasons ?? MAX_IMPORT_SEASONS);
+  protected readonly importSeasonsValid = computed(() => validSeasons(this.importSeasons(), this.maxImportSeasons()));
   protected readonly nbaError = signal<string | null>(null);
   protected readonly starting = signal(false);
 
   // Archive CSV de Sumitro Datta
   protected readonly datasets = resource({ loader: () => this.api.invoke(listReferenceDatasets) });
-  protected readonly importedDatasets = computed(() => (this.datasets.value() ?? []).filter(d => (d.rows ?? 0) > 0).length);
+  protected readonly importedDatasets = computed(() => (currentValue(this.datasets) ?? []).filter(d => (d.rows ?? 0) > 0).length);
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly dragging = signal(false);
   protected readonly uploading = signal(false);
   protected readonly fileReports = signal<FileReport[] | null>(null);
   protected readonly csvError = signal<string | null>(null);
 
-  // Modèle de prédiction
+  // Modèle de prédiction : dernier modèle enregistré et dernier entraînement lancé en arrière-plan
   protected readonly model = resource({ loader: () => this.latestModel() });
+  protected readonly trainingJob = resource({ loader: () => this.api.invoke(getGameOutcomeTrainingStatus) });
+  protected readonly training = computed(() => isTraining(currentValue(this.trainingJob)));
   protected readonly trainingSeasons = signal(DEFAULT_TRAINING_SEASONS);
-  protected readonly training = signal(false);
+  protected readonly trainingSeasonsValid = computed(() => validSeasons(this.trainingSeasons(), MAX_TRAINING_SEASONS));
+  protected readonly startingTraining = signal(false);
   protected readonly modelError = signal<string | null>(null);
+  /** Le rapport du job qui vient de finir, sinon le dernier modèle enregistré. */
+  protected readonly report = computed(() => {
+    const job = currentValue(this.trainingJob);
+    return job?.phase === 'SUCCEEDED' && job.report ? job.report : currentValue(this.model);
+  });
+  protected readonly gain = computed(() => gainOverBaseline(this.report()));
+
+  /** Le serveur n'exécute qu'une opération sur les données à la fois : import et entraînement s'excluent. */
+  protected readonly dataBusy = computed(() => this.jobRunning() || this.training());
+
   protected readonly weights = computed(() => {
-    const weights = Object.entries(this.model.value()?.featureWeights ?? {});
+    const weights = Object.entries(this.report()?.featureWeights ?? {});
     const max = Math.max(...weights.map(([, w]) => Math.abs(w)), 1e-9);
-    return weights.map(([feature, weight]) => ({ feature, weight, width: (Math.abs(weight) / max) * 100 }));
+    // Du poids le plus fort au plus faible : la variable qui pèse le plus se lit en premier.
+    return weights
+      .map(([feature, weight]) => ({ feature, weight, width: (Math.abs(weight) / max) * 100 }))
+      .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
   });
 
   constructor() {
-    // Tant qu'un import tourne, son état est relu régulièrement.
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    effect(() => {
-      clearTimeout(timer);
-      // Chaque relecture produit un nouvel état : l'effet se relance tant que l'import n'est pas fini.
-      if (isRunning(this.nbaStatus.value()?.job)) {
-        timer = setTimeout(() => this.nbaStatus.reload(), POLL_MS);
-      }
-    });
-    inject(DestroyRef).onDestroy(() => clearTimeout(timer));
+    // Tant qu'un import ou un entraînement tourne, son état est relu régulièrement.
+    pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS);
+    pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS);
   }
 
   async startImport(download: boolean): Promise<void> {
+    if (!this.importSeasonsValid()) {
+      return;
+    }
     this.starting.set(true);
     this.nbaError.set(null);
     try {
@@ -91,11 +127,9 @@ export class AdminDataComponent {
     }
   }
 
+  /** La saisie est gardée telle quelle (même invalide) pour que le message d'erreur reste sous le champ. */
   onSeasons(value: string, target: 'import' | 'training'): void {
-    const seasons = Number.parseInt(value, 10);
-    if (Number.isFinite(seasons) && seasons > 0) {
-      (target === 'import' ? this.importSeasons : this.trainingSeasons).set(seasons);
-    }
+    (target === 'import' ? this.importSeasons : this.trainingSeasons).set(value === '' ? Number.NaN : Number(value));
   }
 
   onFilesSelected(input: HTMLInputElement): void {
@@ -137,16 +171,19 @@ export class AdminDataComponent {
     }
   }
 
+  /** Lance l'entraînement en arrière-plan ; la réponse (202) est le job, dont l'état est ensuite relu. */
   async train(): Promise<void> {
-    this.training.set(true);
+    if (!this.trainingSeasonsValid()) {
+      return;
+    }
+    this.startingTraining.set(true);
     this.modelError.set(null);
     try {
-      const report = await this.api.invoke(trainGameOutcomeModel, { seasons: this.trainingSeasons() });
-      this.model.set(report);
+      this.trainingJob.set(await this.api.invoke(startGameOutcomeTraining, { seasons: this.trainingSeasons() }));
     } catch (e) {
       this.modelError.set(toProblem(e).detail ?? 'Entraînement impossible');
     } finally {
-      this.training.set(false);
+      this.startingTraining.set(false);
     }
   }
 

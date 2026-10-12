@@ -1,33 +1,66 @@
-<nav class="sticky top-0 z-50 bg-white shadow-lg">
+<nav class="sticky top-0 z-50 bg-white shadow" aria-label="Navigation principale" (keydown.escape)="menuOpen.set(false)">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="flex h-16 justify-between">
-      <a routerLink="/" class="flex items-center gap-3">
-        <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 text-xl">🏀</span>
-        <span class="text-xl font-bold text-gray-900">HoopMind</span>
+    <div class="flex h-16 items-center justify-between gap-3">
+      <a [routerLink]="auth.isAuthenticated() ? '/dashboard' : '/'" class="flex shrink-0 items-center gap-2">
+        <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 text-lg" aria-hidden="true">🏀</span>
+        <span class="text-lg font-bold text-gray-900 sm:text-xl">HoopMind</span>
       </a>
 
       @if (auth.isAuthenticated()) {
-        <div class="hidden items-center gap-8 md:flex">
-          <a routerLink="/dashboard" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Dashboard</a>
-          <a routerLink="/teams" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Équipes</a>
-          <a routerLink="/matches" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Matchs</a>
-          <a routerLink="/predictions" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Prédictions</a>
-          <a routerLink="/statistics" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Statistiques</a>
+        <div class="hidden items-center gap-6 md:flex">
+          @for (link of links; track link.path) {
+            <a [routerLink]="link.path" routerLinkActive="text-primary-600" [routerLinkActiveOptions]="{ exact: !!link.exact }"
+               ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-600">{{ link.label }}</a>
+          }
           @if (auth.isAdmin()) {
-            <a routerLink="/admin" routerLinkActive="text-primary-600" class="font-medium text-gray-700 hover:text-primary-600">Admin</a>
+            <a routerLink="/admin" routerLinkActive="text-primary-600" ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-600">Admin</a>
           }
         </div>
       }
 
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         @if (auth.user(); as user) {
-          <a routerLink="/account" class="text-sm font-medium text-gray-700 hover:text-primary-600">{{ user.username }}</a>
-          <button type="button" (click)="logout()" class="btn-secondary text-sm">Déconnexion</button>
+          <a routerLink="/account" class="hidden text-sm font-medium text-gray-700 hover:text-primary-600 md:inline">{{ user.username }}</a>
+          <button type="button" (click)="logout()" class="btn-secondary hidden text-sm md:inline-flex">Déconnexion</button>
+          <button type="button" class="rounded-lg p-2 text-gray-700 hover:bg-gray-100 md:hidden" (click)="menuOpen.set(!menuOpen())"
+                  [attr.aria-expanded]="menuOpen()" aria-controls="mobile-menu" [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              @if (menuOpen()) {
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              } @else {
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              }
+            </svg>
+          </button>
         } @else {
-          <a routerLink="/auth/login" class="btn-outline text-sm">Connexion</a>
-          <a routerLink="/auth/register" class="btn-primary text-sm">Inscription</a>
+          <a routerLink="/auth/login" class="btn-outline px-3 py-2 text-sm">Connexion</a>
+          <a routerLink="/auth/register" class="btn-primary px-3 py-2 text-sm">Inscription</a>
         }
       </div>
     </div>
   </div>
+
+  @if (menuOpen() && auth.user(); as user) {
+    <div id="mobile-menu" class="border-t border-gray-100 px-4 pb-4 md:hidden">
+      <ul class="space-y-1 pt-2">
+        @for (link of links; track link.path) {
+          <li>
+            <a [routerLink]="link.path" routerLinkActive="bg-primary-50 text-primary-700" [routerLinkActiveOptions]="{ exact: !!link.exact }"
+               ariaCurrentWhenActive="page" class="block rounded-lg px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">{{ link.label }}</a>
+          </li>
+        }
+        @if (auth.isAdmin()) {
+          <li>
+            <a routerLink="/admin" routerLinkActive="bg-primary-50 text-primary-700" ariaCurrentWhenActive="page"
+               class="block rounded-lg px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Admin</a>
+          </li>
+        }
+        <li>
+          <a routerLink="/account" routerLinkActive="bg-primary-50 text-primary-700" ariaCurrentWhenActive="page"
+             class="block rounded-lg px-3 py-2 font-medium text-gray-700 hover:bg-gray-50">Mon compte ({{ user.username }})</a>
+        </li>
+      </ul>
+      <button type="button" (click)="logout()" class="btn-secondary mt-3 w-full text-sm">Déconnexion</button>
+    </div>
+  }
 </nav>

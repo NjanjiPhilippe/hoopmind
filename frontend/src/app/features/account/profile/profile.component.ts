@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, resource, signal } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 
 import { Api } from '../../../core/api/generated/api';
 import { changeMyPassword } from '../../../core/api/generated/fn/mon-compte/change-my-password';
@@ -7,15 +7,18 @@ import { updateMyProfile } from '../../../core/api/generated/fn/mon-compte/updat
 import { getAllTeams } from '../../../core/api/generated/fn/teams/get-all-teams';
 import { AuthService } from '../../../core/auth/auth.service';
 import { toProblem } from '../../../core/http/problem';
+import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
+import { PasswordInputComponent } from '../../../shared/components/password-input/password-input.component';
 
 @Component({
   selector: 'app-profile',
-  imports: [ReactiveFormsModule, NavbarComponent],
+  imports: [ReactiveFormsModule, NavbarComponent, PasswordInputComponent],
   templateUrl: './profile.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileComponent implements OnInit {
+  protected readonly currentValue = currentValue;
   private readonly api = inject(Api);
   private readonly fb = inject(NonNullableFormBuilder);
   protected readonly auth = inject(AuthService);
@@ -34,7 +37,8 @@ export class ProfileComponent implements OnInit {
   protected readonly passwordForm = this.fb.group({
     currentPassword: ['', Validators.required],
     newPassword: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(128)]],
-  });
+    confirmPassword: ['', Validators.required],
+  }, { validators: samePasswords });
   protected readonly savingPassword = signal(false);
   protected readonly passwordMessage = signal<{ ok: boolean; text: string } | null>(null);
 
@@ -78,7 +82,8 @@ export class ProfileComponent implements OnInit {
     this.passwordMessage.set(null);
     const { newPassword } = this.passwordForm.getRawValue();
     try {
-      await this.api.invoke(changeMyPassword, { body: this.passwordForm.getRawValue() });
+      const { currentPassword } = this.passwordForm.getRawValue();
+      await this.api.invoke(changeMyPassword, { body: { currentPassword, newPassword } });
       // Le backend ferme toutes les sessions : on en rouvre une avec le nouveau mot de passe.
       await this.auth.login({ login: this.auth.user()!.username, password: newPassword });
       this.passwordForm.reset();
@@ -89,4 +94,10 @@ export class ProfileComponent implements OnInit {
       this.savingPassword.set(false);
     }
   }
+}
+
+/** La confirmation doit reprendre le nouveau mot de passe : une faute de frappe ne doit pas verrouiller le compte. */
+export function samePasswords(group: AbstractControl): ValidationErrors | null {
+  const { newPassword, confirmPassword } = group.value as { newPassword?: string; confirmPassword?: string };
+  return confirmPassword && newPassword !== confirmPassword ? { mismatch: true } : null;
 }

@@ -10,17 +10,17 @@ export const authGuard: CanActivateFn = (_route, state) => {
     || inject(Router).createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
 };
 
-/** Page réservée aux administrateurs. */
+/** Page réservée aux administrateurs ; un utilisateur connecté sans ce rôle voit la page « Accès refusé ». */
 export const adminGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (!auth.isAuthenticated()) {
     return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
   }
-  return auth.isAdmin() || router.createUrlTree(['/']);
+  return auth.isAdmin() || router.createUrlTree(['/forbidden']);
 };
 
 /** Pages de connexion et d'inscription : inutiles une fois connecté. */
 export const guestGuard: CanActivateFn = () => {
-  return !inject(AuthService).isAuthenticated() || inject(Router).createUrlTree(['/account']);
+  return !inject(AuthService).isAuthenticated() || inject(Router).createUrlTree(['/dashboard']);
 };

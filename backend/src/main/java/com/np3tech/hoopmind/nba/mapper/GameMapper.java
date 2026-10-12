@@ -46,6 +46,11 @@ public class GameMapper {
     }
 
     public GameResponse toResponse(Game game) {
+        return toResponse(game, null);
+    }
+
+    /** @param result résultat du match s'il a été joué, sinon {@code null} */
+    public GameResponse toResponse(Game game, GameResult result) {
         GameResponse.GameResponseBuilder builder = GameResponse.builder()
                 .id(game.getId())
                 .homeTeam(toTeamSummary(game.getHomeTeam()))
@@ -60,6 +65,14 @@ public class GameMapper {
                 .status(game.getStatus())
                 .isNationalTv(game.getIsNationalTv())
                 .broadcastNetwork(game.getBroadcastNetwork());
+        if (result != null) {
+            builder.result(GameResultSummaryResponse.builder()
+                    .homeTeamScore(result.getHomeTeamScore())
+                    .awayTeamScore(result.getAwayTeamScore())
+                    .winner(toTeamSummary(result.getWinner()))
+                    .overtime(result.getOvertime())
+                    .build());
+        }
 
         return builder.build();
     }
