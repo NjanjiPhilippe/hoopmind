@@ -71,13 +71,13 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 | `auth` | Connexion, jetons, configuration Spring Security (API et Swagger). Dépend de `user`, jamais l'inverse. |
 | `nba` | Équipes, joueurs, saisons, matchs, statistiques, blessures. |
 | `audit` | Journal d'audit : qui a fait quoi, sur quel compte, avec quel résultat. Les autres modules publient un `AuditEvent`. |
-| `ml` | Prédictions et analyses. Le reste de l'application passe par le port `GameOutcomePredictor` ; l'implémentation Spark vit dans `ml.spark`. |
+| `ml` | Prédictions et analyses. Le reste de l'application passe par le port `GameOutcomePredictor` ; l'implémentation Spark vit dans `ml.spark`. L'explication par LLM passe par le port `PredictionExplainer` (`ml.explanation`). |
 | `shared` | Configuration commune, erreurs, e-mail. |
 
 **Choix assumés**
 
 - *Monolithe modulaire plutôt que microservices* : un seul déployable, des frontières vérifiées par les tests (Spring Modulith).
-- *Hexagonal ciblé* : un port uniquement là où il y a une vraie frontière technique (le moteur de prédiction, demain un LLM). Le reste est du Spring classique par fonctionnalité, plus simple à lire.
+- *Hexagonal ciblé* : un port uniquement là où il y a une vraie frontière technique (le moteur de prédiction, le LLM qui l'explique). Le reste est du Spring classique par fonctionnalité, plus simple à lire.
 - `nba` et `ml` sont déclarés « ouverts » : le code ML existant utilise directement les entités NBA. Ils seront refermés lors du chantier ML.
 - Le schéma appartient à Liquibase ; Hibernate se contente de le valider (`ddl-auto: validate`).
 - Toutes les erreurs suivent la RFC 9457 (`application/problem+json`).
@@ -124,7 +124,7 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | POST | `/api/v1/admin/imports/nba-database/jobs?seasons=&download=` (arrière-plan) | ADMIN |
 | POST | `/api/v1/admin/imports/csv` (multipart `files`), GET `/csv/datasets` | ADMIN |
 | POST | `/api/v1/spark/ml/train/game-outcome?seasons=` | ADMIN |
-| GET | `/api/v1/spark/ml/model-metrics`, `/ml/predict/game` | connecté |
+| GET | `/api/v1/spark/ml/model-metrics`, `/ml/predict/game`, `/ml/predict/game/explanation` | connecté |
 | * | `/api/v1/spark/**` | connecté (entraînement : ADMIN) |
 
 ## Données NBA
@@ -160,6 +160,48 @@ Une régression logistique Spark ML prédit la probabilité de victoire de l'éq
   sont enregistrées à chaque entraînement et servies par `GET /api/v1/spark/ml/model-metrics`.
 - Le modèle est enregistré dans `ML_MODEL_DIR` et rechargé au redémarrage.
 
+## Explication des prédictions par un LLM
+
+`GET /api/v1/spark/ml/predict/game/explanation` renvoie la prédiction, le poids de chaque facteur et une explication
+en français, par exemple : « Boston part favori, surtout grâce à son net rating (+9,4 contre +1,2)… En revanche,
+New York arrive plus reposé. »
+
+- **Le modèle calcule, le LLM rédige.** La régression logistique se décompose exactement en une contribution par
+  variable (`poids × valeur standardisée`). Le LLM ne reçoit que ces chiffres et a pour consigne de n'inventer
+  aucun fait : il met en mots, il ne prédit pas.
+- **Gratuit par défaut.** Un adaptateur « compatible OpenAI » couvre Google Gemini et Groq (offres gratuites),
+  Ollama (local, sans clé) et OpenAI. Un adaptateur Anthropic couvre Claude. Le choix se fait par configuration :
+
+  | Fournisseur | `LLM_PROVIDER` | `LLM_BASE_URL` | `LLM_MODEL` (exemple) |
+  |---|---|---|---|
+  | Google Gemini (gratuit, clé sur [AI Studio](https://aistudio.google.com/apikey)) | `openai-compatible` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` |
+  | Groq (gratuit) | `openai-compatible` | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+  | Ollama (local, sans clé) | `openai-compatible` | `http://localhost:11434/v1` | `llama3.2` |
+  | Claude (payant) | `anthropic` | *(par défaut)* | `claude-haiku-5-5` |
+  | Aucun | `none` *(par défaut)* | | |
+
+  La clé (`LLM_API_KEY`) vient uniquement de l'environnement. Les modèles disponibles et les quotas gratuits
+  changent souvent : vérifiez-les chez le fournisseur.
+- **Toujours une réponse.** Nouvelles tentatives sur les erreurs passagères (429, 5xx, réseau), 4 appels simultanés
+  au plus, cache des explications déjà générées, et, si le LLM ne répond pas, une explication rédigée sans lui
+  (`fallback: true`).
+
+### Pourquoi nos propres adaptateurs plutôt que Spring AI ?
+
+Spring AI aurait fonctionné, mais il se serait logé *dans* l'adaptateur : l'architecture hexagonale (un port
+`PredictionExplainer`, un adaptateur par famille d'API) était nécessaire de toute façon. Pour ce besoin (un appel,
+texte en entrée, texte en sortie, sans streaming ni outils), écrire l'appel HTTP nous-mêmes a semblé plus juste :
+
+- **moins de dépendances** à garder alignées avec Spring Boot 4.1, Spring 7 et Jackson 3 ;
+- **tout est visible** : le prompt exact, les en-têtes, le délai et la politique d'erreurs (retenter un 429, jamais un 401) ;
+- **testable sans framework** : les tests vérifient contre un faux serveur HTTP la requête réellement envoyée ;
+- **même approche que [ledger-ai](https://github.com/NjanjiPhilippe/ledger-ai)**, où les adaptateurs OpenAI et
+  Anthropic sont aussi écrits à la main derrière un port.
+
+La limite est assumée : nous maintenons nous-mêmes les formats d'API, et il n'y a ni streaming ni appel d'outils.
+Si un assistant conversationnel avec outils est ajouté, Spring AI (ou les SDK officiels) redeviendra le bon choix.
+Le détail, avec les alternatives, est dans l'[ADR 0015](docs/adr/0015-explication-par-llm.md).
+
 ## Versions
 
 Java 21 · Spring Boot 4.1.1 · Spring Security 7.1 · Hibernate 7.4 · Liquibase 5 · springdoc-openapi 3.1 · Spring Modulith 2.1 ·
@@ -192,3 +234,4 @@ En octobre 2026, avec l'aide de Claude (Anthropic) :
 - secrets sortis du dépôt, erreurs au format RFC 9457, tests d'intégration sur PostgreSQL, intégration continue.
 - import des données NBA de Wyatt Walsh et modèle de prédiction des matchs évalué sur une saison réservée ;
 - page « Données » : téléchargement de la base Walsh par le serveur depuis Kaggle, dépôt des CSV de Sumitro Datta reconnus automatiquement, entraînement du modèle.
+- explication des prédictions en français par un LLM (Gemini, Groq, Ollama, OpenAI ou Claude), derrière un port, sur le modèle des adaptateurs de ledger-ai.

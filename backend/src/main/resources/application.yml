@@ -87,6 +87,15 @@ hoopmind:
     training-seasons: ${ML_TRAINING_SEASONS:5}
     # Dossier où le modèle entraîné est enregistré (rechargé au redémarrage)
     model-dir: ${ML_MODEL_DIR:spark-models}
+    # Explication des prédictions en français par un LLM (voir backend/docs/adr/0015-explication-par-llm.md).
+    # « none » : explication rédigée sans LLM. « openai-compatible » : Gemini, Groq, Ollama, OpenAI…
+    # « anthropic » : Claude. La clé vient uniquement de l'environnement.
+    explanation:
+      provider: ${LLM_PROVIDER:none}
+      base-url: ${LLM_BASE_URL:}
+      api-key: ${LLM_API_KEY:}
+      model: ${LLM_MODEL:}
+      timeout: ${LLM_TIMEOUT:20s}
   # Journal d'audit : durée de conservation (purge chaque nuit).
   audit:
     retention: ${AUDIT_RETENTION:365d}

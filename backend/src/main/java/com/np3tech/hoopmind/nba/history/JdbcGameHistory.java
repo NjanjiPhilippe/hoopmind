@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -82,6 +84,22 @@ class JdbcGameHistory implements GameHistory {
     public Optional<Integer> seasonYear(long seasonId) {
         return jdbc.query("SELECT year FROM seasons WHERE id = ?", (rs, row) -> rs.getInt(1), seasonId)
                 .stream().findFirst();
+    }
+
+    @Override
+    public Map<Long, String> teamNames(Collection<Long> teamIds) {
+        if (teamIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, String> names = new HashMap<>();
+        jdbc.query(connection -> {
+            var statement = connection.prepareStatement("SELECT id, city, name FROM teams WHERE id = ANY (?)");
+            statement.setArray(1, connection.createArrayOf("bigint", teamIds.toArray()));
+            return statement;
+        }, rs -> {
+            names.put(rs.getLong("id"), rs.getString("city") + " " + rs.getString("name"));
+        });
+        return names;
     }
 
     private static GameRecord game(ResultSet rs) throws SQLException {
