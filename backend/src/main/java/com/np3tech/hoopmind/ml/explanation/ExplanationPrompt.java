@@ -28,6 +28,9 @@ public final class ExplanationPrompt {
             Règles :
             - N'utilise que les chiffres fournis. N'invente ni blessure, ni joueur, ni statistique.
             - Ne modifie pas la probabilité et ne la contredis pas.
+            - Un facteur marqué « correction du modèle » favorise une équipe alors que ses valeurs sont meilleures \
+            pour l'autre : le modèle compense une variable par une autre qui mesure presque la même chose. Ne le \
+            présente jamais comme un avantage ; ignore-le, ou dis seulement que le modèle en relativise l'effet.
             - Explique les deux ou trois facteurs les plus influents, dans le sens indiqué par leur contribution. \
             Si un facteur important va contre le favori, dis-le.
             - Écris 3 à 5 phrases, 120 mots au plus, en texte simple : pas de titre, pas de liste, pas de markdown.
@@ -65,7 +68,8 @@ public final class ExplanationPrompt {
                         .append(ExplanationFacts.value(factor.feature(), factor.awayValue()));
             }
             text.append(" ; contribution ").append(ExplanationFacts.signed(factor.contribution()))
-                    .append(" (en faveur de ").append(factor.contribution() >= 0 ? home : away).append(")\n");
+                    .append(" (en faveur de ").append(factor.contribution() >= 0 ? home : away)
+                    .append(ExplanationFacts.counterIntuitive(factor) ? ", correction du modèle" : "").append(")\n");
         }
         text.append("Base du modèle (avantage du terrain et équipes dans la moyenne) : ")
                 .append(ExplanationFacts.signed(analysis.intercept())).append('\n');

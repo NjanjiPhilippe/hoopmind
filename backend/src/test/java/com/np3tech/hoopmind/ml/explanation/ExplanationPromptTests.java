@@ -1,6 +1,10 @@
 package com.np3tech.hoopmind.ml.explanation;
 
+import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
+import com.np3tech.hoopmind.ml.PredictionFactor;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,6 +23,17 @@ class ExplanationPromptTests {
         assertThat(prompt.indexOf("Net rating")).as("le facteur le plus influent en premier")
                 .isLessThan(prompt.indexOf("Pourcentage de victoires"));
         assertThat(prompt.indexOf("Pourcentage de victoires")).isLessThan(prompt.indexOf("Jours de repos"));
+    }
+
+    @Test
+    void marksModelCorrections() {
+        GameOutcomeAnalysis analysis = new GameOutcomeAnalysis(Fixtures.analysis().prediction(), "v1", 0.1,
+                List.of(new PredictionFactor("win_pct_diff", 0.74, 0.07, -0.38)));
+
+        assertThat(ExplanationPrompt.user(new ExplanationRequest("Boston Celtics", "San Antonio Spurs", Fixtures.DAY,
+                false, analysis))).contains("(en faveur de San Antonio Spurs, correction du modèle)");
+        assertThat(ExplanationPrompt.user(Fixtures.request())).doesNotContain("correction du modèle)");
+        assertThat(ExplanationPrompt.system()).contains("Ne le présente jamais comme un avantage");
     }
 
     @Test

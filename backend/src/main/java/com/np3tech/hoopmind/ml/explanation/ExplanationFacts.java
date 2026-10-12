@@ -25,6 +25,20 @@ public final class ExplanationFacts {
                 .toList();
     }
 
+    /**
+     * Le facteur pousse vers une équipe alors que ses valeurs sont meilleures pour l'autre. C'est un effet de
+     * correction du modèle : quand deux variables mesurent presque la même chose (bilan et net rating), la régression
+     * en compense une par l'autre. Le présenter comme un avantage (« 74 % de victoires contre 7 %, en faveur de
+     * l'équipe à 7 % ») serait faux pour le lecteur.
+     */
+    public static boolean counterIntuitive(PredictionFactor factor) {
+        if (factor.feature().equals("is_playoff")) {
+            return false;
+        }
+        double difference = factor.homeValue() - factor.awayValue();
+        return difference != 0 && factor.contribution() != 0 && Math.signum(difference) != Math.signum(factor.contribution());
+    }
+
     public static String label(String feature) {
         return switch (feature) {
             case "win_pct_diff" -> "Pourcentage de victoires cette saison";

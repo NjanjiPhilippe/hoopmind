@@ -83,6 +83,21 @@ class JobServiceTests {
         });
     }
 
+    /** Spark (Scala) lève des exceptions vérifiées sans les déclarer : le job doit quand même finir en échec. */
+    @Test
+    void anUndeclaredCheckedExceptionStillFailsTheJob() throws Exception {
+        Job<Result> started = jobs.start(JobType.MODEL_TRAINING, null, Map.of(), "TRAINING",
+                context -> JobServiceTests.<RuntimeException, Result>sneakyThrow(new java.io.IOException("stage failure")));
+
+        Job<Result> done = waitForEnd(started.id());
+        assertThat(done.state()).isInstanceOf(Failed.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable, T> T sneakyThrow(Throwable error) throws E {
+        throw (E) error;
+    }
+
     @Test
     void jobsLeftRunningByAStoppedServerAreMarkedInterruptedAtStartup() {
         UUID orphan = UUID.randomUUID();

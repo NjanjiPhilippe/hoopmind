@@ -34,6 +34,7 @@ public final class TemplateExplanation {
         List<PredictionFactor> factors = ExplanationFacts.byInfluence(request.analysis().factors()).stream()
                 .filter(factor -> !factor.feature().equals("is_playoff") || request.playoff())
                 .filter(factor -> Math.abs(factor.contribution()) >= NEGLIGIBLE)
+                .filter(factor -> !ExplanationFacts.counterIntuitive(factor))
                 .limit(3)
                 .toList();
         boolean first = true;
