@@ -1,7 +1,9 @@
 package com.np3tech.hoopmind.ml.scoring;
 
+import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
+import com.np3tech.hoopmind.ml.PredictionFactor;
 import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.GameRecord;
 import com.np3tech.hoopmind.shared.exception.AppException;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,7 +31,7 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
     }
 
     @Override
-    public GameOutcomePrediction predict(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
+    public GameOutcomeAnalysis analyze(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
         ScoringCard card = cards.current().orElseThrow(() -> new AppException(
                 "Le modèle n'est pas encore entraîné (POST /api/v1/spark/ml/train/game-outcome/jobs).",
                 HttpStatus.CONFLICT, "MODEL_NOT_TRAINED"));
@@ -42,7 +45,27 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
             throw new AppException("Ces équipes n'ont pas encore joué de match dans cette saison avant cette date.",
                     HttpStatus.UNPROCESSABLE_CONTENT, "NO_TEAM_FORM");
         }
-        double probability = card.homeWinProbability(GameOutcomeFeatures.of(home, away, playoff));
-        return new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability, card.model());
+        double[] features = GameOutcomeFeatures.of(home, away, playoff);
+        double probability = card.homeWinProbability(features);
+        GameOutcomePrediction prediction =
+                new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability, card.model());
+        return new GameOutcomeAnalysis(prediction, card.version(), card.intercept(),
+                factors(home, away, playoff, card.contributions(features)));
+    }
+
+    /** Valeurs de chaque côté, dans l'ordre de {@link GameOutcomeFeatures#NAMES}. */
+    private static List<PredictionFactor> factors(TeamForm home, TeamForm away, boolean playoff, double[] contributions) {
+        double[][] sides = {
+                {home.winPct(), away.winPct()},
+                {home.last10WinPct(), away.last10WinPct()},
+                {home.netRating(), away.netRating()},
+                {home.restDays(), away.restDays()},
+                {playoff ? 1 : 0, playoff ? 1 : 0}
+        };
+        List<PredictionFactor> factors = new ArrayList<>();
+        for (int i = 0; i < GameOutcomeFeatures.NAMES.size(); i++) {
+            factors.add(new PredictionFactor(GameOutcomeFeatures.NAMES.get(i), sides[i][0], sides[i][1], contributions[i]));
+        }
+        return factors;
     }
 }

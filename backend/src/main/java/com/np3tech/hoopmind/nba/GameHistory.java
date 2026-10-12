@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.nba;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -22,4 +23,7 @@ public interface GameHistory {
 
     /** Année de début d'une saison, d'après son identifiant. */
     Optional<Integer> seasonYear(long seasonId);
+
+    /** Nom complet des équipes demandées (« Boston Celtics »), par identifiant ; les inconnues sont absentes. */
+    Map<Long, String> teamNames(Collection<Long> teamIds);
 }

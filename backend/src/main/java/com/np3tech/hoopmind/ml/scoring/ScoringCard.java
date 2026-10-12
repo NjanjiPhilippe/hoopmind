@@ -25,16 +25,28 @@ public record ScoringCard(String model, String version, List<String> features, d
 
     /** Probabilité de victoire de l'équipe à domicile, calculée comme le pipeline Spark (StandardScaler puis sigmoïde). */
     public double homeWinProbability(double[] features) {
+        double margin = intercept;
+        for (double contribution : contributions(features)) {
+            margin += contribution;
+        }
+        return 1 / (1 + Math.exp(-margin));
+    }
+
+    /**
+     * Part de chaque variable dans la marge (log-cote) : poids × valeur standardisée. Leur somme plus
+     * l'ordonnée à l'origine donne la marge, donc la probabilité. Positive : en faveur de l'équipe à domicile.
+     */
+    public double[] contributions(double[] features) {
         if (features.length != coefficients.length) {
             throw new IllegalArgumentException("Attendu " + coefficients.length + " variables, reçu " + features.length);
         }
-        double margin = intercept;
+        double[] contributions = new double[features.length];
         for (int i = 0; i < features.length; i++) {
             // Spark : une variable constante à l'entraînement (écart-type nul) vaut 0 après standardisation.
             double scaled = stds[i] == 0 ? 0 : (features[i] - means[i]) / stds[i];
-            margin += coefficients[i] * scaled;
+            contributions[i] = coefficients[i] * scaled;
         }
-        return 1 / (1 + Math.exp(-margin));
+        return contributions;
     }
 
     public boolean matches(List<String> expectedFeatures) {
