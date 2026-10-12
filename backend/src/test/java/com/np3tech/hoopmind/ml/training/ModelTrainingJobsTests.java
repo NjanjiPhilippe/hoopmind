@@ -84,6 +84,18 @@ class ModelTrainingJobsTests {
                 .bodyJson().extractingPath("$.code").isEqualTo("MODEL_NOT_TRAINED");
     }
 
+    @Test
+    void explanationsFollowTheSameRules() {
+        assertThat(mvc.get().uri("/api/v1/spark/ml/predict/game/explanation")
+                .param("seasonId", "1").param("homeTeamId", "1").param("awayTeamId", "2"))
+                .hasStatus(401);
+        assertThat(mvc.get().uri("/api/v1/spark/ml/predict/game/explanation")
+                .param("seasonId", "1").param("homeTeamId", "1").param("awayTeamId", "2")
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer()))
+                .hasStatus(409)
+                .bodyJson().extractingPath("$.code").isEqualTo("MODEL_NOT_TRAINED");
+    }
+
     private static TrainingJobStatus waitForEnd(ModelTrainingJobs trainings) throws InterruptedException {
         Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
         while (Instant.now().isBefore(deadline)) {

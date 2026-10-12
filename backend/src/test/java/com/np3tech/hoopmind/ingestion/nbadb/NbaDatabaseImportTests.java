@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.ingestion.nbadb;
 import com.np3tech.hoopmind.IntegrationTest;
 import com.np3tech.hoopmind.TestAccounts;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
+import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,6 +20,7 @@ import java.time.Clock;
 import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.BOS;
@@ -27,6 +29,7 @@ import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.NYK;
 import static com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseFixture.UNKNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 
 @IntegrationTest
 class NbaDatabaseImportTests {
@@ -44,6 +47,9 @@ class NbaDatabaseImportTests {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    GameHistory history;
 
     @Autowired
     TransactionTemplate transaction;
@@ -131,6 +137,10 @@ class NbaDatabaseImportTests {
         assertThat((BigDecimal) boston.get("offensive_rating")).isEqualByComparingTo("104.59");
         assertThat((BigDecimal) boston.get("defensive_rating")).isEqualByComparingTo("109.65");
         assertThat((BigDecimal) boston.get("pace")).isEqualByComparingTo("98.80");
+
+        // Noms complets reconstitués pour l'explication des prédictions ; une équipe inconnue est absente.
+        long bostonId = jdbc.queryForObject("SELECT id FROM teams WHERE abbreviation = 'BOS'", Long.class);
+        assertThat(history.teamNames(List.of(bostonId, -1L))).containsExactly(entry(bostonId, "Boston Celtics"));
     }
 
     @Test

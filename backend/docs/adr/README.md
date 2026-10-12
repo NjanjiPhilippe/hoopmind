@@ -1,7 +1,7 @@
 # Décisions d'architecture (ADR)
 
 Chaque fichier explique une décision : le problème constaté, ce qui a été choisi, les alternatives écartées,
-les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la revue des PR #1 à #3.
+les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la revue des PR #1 à #3, puis l'ordre des chantiers suivants.
 
 | N° | Décision | Statut |
 |----|----------|--------|
@@ -19,3 +19,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0012](0012-variables-du-modele.md) | Le modèle n'utilise que des écarts entre équipes | Acceptée |
 | [0013](0013-prediction-en-java.md) | Prédiction en Java, forme à la date du match, parité testée avec Spark | Acceptée |
 | [0014](0014-import-par-lots-et-coherence.md) | Import par lots réécrits, une seule transaction, horodatages et rôles | Acceptée |
+| [0015](0015-explication-par-llm.md) | Explication des prédictions par un LLM, avec nos propres adaptateurs plutôt que Spring AI | Acceptée |

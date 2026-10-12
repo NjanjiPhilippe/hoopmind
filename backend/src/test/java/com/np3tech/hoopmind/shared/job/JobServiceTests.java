@@ -39,24 +39,31 @@ class JobServiceTests {
 
     @Test
     void runsInTheBackgroundAndKeepsTheResult() throws Exception {
+        CountDownLatch progressReported = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         Job<Result> started = jobs.start(JobType.MODEL_TRAINING, new Job.Requester(1L, "admin"), Map.of("seasons", "3"),
                 "TRAINING", context -> {
                     context.progress(1L, 2L);
+                    progressReported.countDown();
                     await(release);
                     return new Result(42);
                 });
 
-        assertThat(started.state()).isInstanceOf(JobState.Running.class);
-        assertThat(jobs.find(started.id(), Result.class)).hasValueSatisfying(job -> {
-            assertThat(job.state()).isEqualTo(new JobState.Running<Result>("TRAINING", 1L, 2L));
-            assertThat(job.requestedBy()).isEqualTo(new Job.Requester(1L, "admin"));
-            assertThat(job.parameters()).containsEntry("seasons", "3");
-        });
-        assertThatThrownBy(() -> jobs.start(JobType.NBA_DATABASE_IMPORT, null, Map.of(), "IMPORTING", c -> null))
-                .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
-
-        release.countDown();
+        // Le job tourne sur un autre fil : on attend qu'il ait signalé son avancement avant de le lire, et on le
+        // libère quoi qu'il arrive, sinon il garde le verrou des données et fait échouer les tests suivants (409).
+        try {
+            assertThat(started.state()).isInstanceOf(JobState.Running.class);
+            assertThat(progressReported.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(jobs.find(started.id(), Result.class)).hasValueSatisfying(job -> {
+                assertThat(job.state()).isEqualTo(new JobState.Running<Result>("TRAINING", 1L, 2L));
+                assertThat(job.requestedBy()).isEqualTo(new Job.Requester(1L, "admin"));
+                assertThat(job.parameters()).containsEntry("seasons", "3");
+            });
+            assertThatThrownBy(() -> jobs.start(JobType.NBA_DATABASE_IMPORT, null, Map.of(), "IMPORTING", c -> null))
+                    .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT));
+        } finally {
+            release.countDown();
+        }
         Job<Result> done = waitForEnd(started.id());
         assertThat(done.state()).isInstanceOfSatisfying(Succeeded.class,
                 succeeded -> assertThat(succeeded.result()).isEqualTo(new Result(42)));
@@ -74,6 +81,21 @@ class JobServiceTests {
             assertThat(failed.step()).isEqualTo("SCORING");
             assertThat(failed.error()).doesNotContain("/srv").contains("journaux du serveur");
         });
+    }
+
+    /** Spark (Scala) lève des exceptions vérifiées sans les déclarer : le job doit quand même finir en échec. */
+    @Test
+    void anUndeclaredCheckedExceptionStillFailsTheJob() throws Exception {
+        Job<Result> started = jobs.start(JobType.MODEL_TRAINING, null, Map.of(), "TRAINING",
+                context -> JobServiceTests.<RuntimeException, Result>sneakyThrow(new java.io.IOException("stage failure")));
+
+        Job<Result> done = waitForEnd(started.id());
+        assertThat(done.state()).isInstanceOf(Failed.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable, T> T sneakyThrow(Throwable error) throws E {
+        throw (E) error;
     }
 
     @Test
