@@ -38,7 +38,7 @@ final class TeamSeasonAggregator {
     static List<TeamSeason> aggregate(List<GameRow> games, Map<String, Map<Long, TeamGameRow>> boxScore) {
         Map<Long, Accumulator> teams = new LinkedHashMap<>();
         games.stream()
-                .filter(game -> game.played() && !game.playoffs())
+                .filter(game -> game.played() && game.regularSeason())
                 .sorted(Comparator.comparing(GameRow::gameDate).thenComparing(GameRow::gameId))
                 .forEach(game -> {
                     Map<Long, TeamGameRow> lines = boxScore.getOrDefault(game.gameId(), Map.of());

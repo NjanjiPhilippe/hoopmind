@@ -1,3 +1,4 @@
+import { EoinMooreJobStatus } from '../../../core/api/generated/models/eoin-moore-job-status';
 import { JobStatus } from '../../../core/api/generated/models/job-status';
 import { StatsNbaJobStatus } from '../../../core/api/generated/models/stats-nba-job-status';
 import { TrainingJobStatus } from '../../../core/api/generated/models/training-job-status';
@@ -82,6 +83,32 @@ export function fetchPercent(job: StatsNbaJobStatus | null | undefined): number 
     return null;
   }
   return Math.min(100, Math.round((job.fetched / job.requests) * 100));
+}
+
+const EOIN_MOORE_PHASE_LABELS: Record<NonNullable<EoinMooreJobStatus['phase']>, string> = {
+  READING: 'Lecture des fichiers',
+  IMPORTING: 'Import en base',
+  SUCCEEDED: 'Import terminé',
+  FAILED: 'Échec',
+  INTERRUPTED: 'Interrompu (serveur redémarré)',
+};
+
+export function eoinMoorePhaseLabel(phase: EoinMooreJobStatus['phase']): string {
+  return phase ? EOIN_MOORE_PHASE_LABELS[phase] : '';
+}
+
+export function isEoinMooreRunning(job: EoinMooreJobStatus | null | undefined): boolean {
+  return job?.phase === 'READING' || job?.phase === 'IMPORTING';
+}
+
+/** 2023 donne « 2023-24 », comme les saisons affichées partout ailleurs. */
+export function seasonName(startYear: number): string {
+  return Number.isInteger(startYear) ? `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}` : '';
+}
+
+/** Une plage de saisons saisie est valide si elle va de {@code from} à {@code to} (années entières), {@code max} saisons au plus. */
+export function validSeasonRange(from: number, to: number, max: number): boolean {
+  return Number.isInteger(from) && Number.isInteger(to) && from >= 1946 && to >= from && to - from + 1 <= max;
 }
 
 export function isTraining(job: TrainingJobStatus | null | undefined): boolean {

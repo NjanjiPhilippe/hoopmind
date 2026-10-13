@@ -130,6 +130,10 @@ class AuditTranslator {
         return new AuditTarget(AuditTarget.DATASET, "stats-nba", "stats.nba.com (saisons récentes)");
     }
 
+    private static AuditTarget eoinMoore() {
+        return new AuditTarget(AuditTarget.DATASET, "eoin-moore", "Fichiers d'Eoin Moore (saisons récentes)");
+    }
+
     static AuditEvent translate(DataImportEvent event) {
         AuditActor actor = requester(event.requestedBy());
         AuditTarget walsh = new AuditTarget(AuditTarget.DATASET, "nba-database", "Base NBA (Wyatt Walsh)");
@@ -148,6 +152,14 @@ class AuditTranslator {
                     .withDetail("games", String.valueOf(imported.games()));
             case DataImportEvent.StatsNbaImportFailed failed ->
                     AuditEvent.failure(AuditAction.DATA_IMPORTED, actor, statsNba(), "IMPORT_FAILED")
+                            .withDetail("from", failed.fromSeason())
+                            .withDetail("to", failed.toSeason())
+                            .withDetail("error", shorten(failed.error()));
+            case DataImportEvent.EoinMooreImported imported -> AuditEvent.success(AuditAction.DATA_IMPORTED, actor, eoinMoore())
+                    .withDetail("seasons", String.join(",", imported.seasons()))
+                    .withDetail("games", String.valueOf(imported.games()));
+            case DataImportEvent.EoinMooreImportFailed failed ->
+                    AuditEvent.failure(AuditAction.DATA_IMPORTED, actor, eoinMoore(), "IMPORT_FAILED")
                             .withDetail("from", failed.fromSeason())
                             .withDetail("to", failed.toSeason())
                             .withDetail("error", shorten(failed.error()));

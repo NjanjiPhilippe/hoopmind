@@ -119,6 +119,86 @@
         </div>
       }
 
+      <!-- Saisons récentes : fichiers d'Eoin Moore (Kaggle), mêmes identifiants que la base Walsh -->
+      <div class="space-y-3 border-t border-gray-200 pt-4">
+        <div>
+          <h3 class="font-semibold">Saisons récentes (fichiers d'Eoin Moore)</h3>
+          <p class="text-sm text-gray-600">
+            La base de Walsh s'arrête à la saison 2022-23. Les saisons suivantes viennent du jeu Kaggle
+            « Historical NBA Data and Player Box Scores » d'Eoin Moore (mêmes identifiants de matchs et d'équipes) :
+            saison régulière, play-in et playoffs, avec les feuilles de match et les points par quart-temps.
+          </p>
+        </div>
+        @if (currentValue(eoinMoore); as eoin) {
+          <ul class="space-y-1 text-sm">
+            @for (file of [eoin.games, eoin.teamStatistics]; track $index) {
+              @if (file) {
+                <li>
+                  @if (file.present) {
+                    <span class="text-green-700">✓</span> {{ file.name }} <span class="text-gray-500">({{ formatBytes(file.sizeBytes ?? 0) }}, {{ file.modifiedAt | date: 'short' }})</span>
+                  } @else {
+                    <span class="text-amber-700">✗</span> {{ file.name }} <span class="text-gray-500">absent</span>
+                  }
+                </li>
+              }
+            }
+          </ul>
+          @if (!eoin.games?.present || !eoin.teamStatistics?.present) {
+            <p class="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+              Téléchargez Games.csv et TeamStatistics.csv sur Kaggle (eoinamoore/historical-nba-data-and-player-box-scores)
+              et déposez-les dans le dossier <code>{{ eoin.directory }}</code> du serveur (réglage EOINMOORE_DATA_DIR).
+            </p>
+          }
+          <div class="flex flex-wrap items-start gap-3">
+            <div>
+              <label for="eoin-from" class="block text-sm text-gray-500">De la saison</label>
+              <input id="eoin-from" type="number" min="1946" class="input-field mt-1 max-w-28"
+                     [class.border-red-500]="!eoinRangeValid()" [attr.aria-invalid]="!eoinRangeValid()" aria-describedby="eoin-range"
+                     [value]="eoinFrom()" (input)="onEoinYear($any($event.target).value, 'from')" [disabled]="dataBusy()" />
+            </div>
+            <div>
+              <label for="eoin-to" class="block text-sm text-gray-500">À la saison</label>
+              <input id="eoin-to" type="number" min="1946" class="input-field mt-1 max-w-28"
+                     [class.border-red-500]="!eoinRangeValid()" [attr.aria-invalid]="!eoinRangeValid()" aria-describedby="eoin-range"
+                     [value]="eoinTo()" (input)="onEoinYear($any($event.target).value, 'to')" [disabled]="dataBusy()" />
+            </div>
+            <button type="button" class="btn-secondary mt-6"
+                    [disabled]="dataBusy() || startingEoin() || !eoinRangeValid() || !eoin.games?.present || !eoin.teamStatistics?.present"
+                    (click)="startEoinMoore()">
+              Importer {{ seasonName(eoinFrom()) }}@if (eoinTo() !== eoinFrom()) { à {{ seasonName(eoinTo()) }} }
+            </button>
+          </div>
+          <p id="eoin-range" class="text-xs" [class.text-red-600]="!eoinRangeValid()" [class.text-gray-500]="eoinRangeValid()">
+            Année de début de saison (2023 pour 2023-24), {{ eoin.maxSeasons }} saisons au plus.
+          </p>
+        } @else if (eoinMoore.error()) {
+          <p class="text-sm text-red-600" role="alert">État de l'import des fichiers d'Eoin Moore indisponible.</p>
+        }
+
+        @if (eoinError(); as message) {
+          <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+        }
+
+        @if (eoinJob(); as job) {
+          <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-medium">{{ eoinMoorePhaseLabel(job.phase) }} · {{ job.fromSeason }}@if (job.toSeason !== job.fromSeason) { à {{ job.toSeason }} }</span>
+              <span class="text-gray-500">lancé le {{ job.startedAt | date: 'short' }}</span>
+            </div>
+            @if (job.phase === 'READING' || job.phase === 'IMPORTING') {
+              <p class="mt-2 text-gray-500">{{ job.phase === 'READING' ? 'Lecture des deux fichiers…' : 'Écriture des matchs et des bilans de saison…' }}</p>
+            } @else if (job.phase === 'FAILED' || job.phase === 'INTERRUPTED') {
+              <p class="mt-2 text-red-600" role="alert">{{ job.error }}</p>
+            } @else if (job.report; as report) {
+              <p class="mt-2">
+                {{ report.seasons?.length ?? 0 }} saison(s) importée(s)@if (report.seasons?.length) { ({{ report.seasons![0] }} à {{ report.seasons![report.seasons!.length - 1] }}) },
+                {{ report.games | number }} matchs dont {{ report.playedGames | number }} joués, {{ report.teamGameStats | number }} feuilles de match, en {{ formatDuration(report.durationMs) }}.
+              </p>
+            }
+          </div>
+        }
+      </div>
+
       <!-- Saisons récentes : stats.nba.com, la source de la base Walsh -->
       <div class="space-y-3 border-t border-gray-200 pt-4">
         <div>

@@ -24,7 +24,7 @@ import java.util.stream.Stream;
  * <ul>
  *   <li>la saison est codée dans {@code season_id} (« 22023 » : type puis année de début) et devient « 2023-24 » ;</li>
  *   <li>les identifiants de match et d'équipe peuvent être stockés en nombre : ils sont normalisés
- *       (« 0022300001 » sur dix caractères) pour garder les préfixes 002 / 004 et les identifiants externes de nbadb ;</li>
+ *       (« 0022300001 » sur dix caractères) pour garder les préfixes 002 / 005 / 004 et les identifiants externes de nbadb ;</li>
  *   <li>{@code team_info_common}, qui donnait conférences, divisions et classements, est vide : conférences et divisions
  *       viennent de l'alignement actuel de la NBA (inchangé depuis 2004-05) et les classements sont recalculés à partir
  *       des résultats de saison régulière (pourcentage de victoires, sans les critères de départage officiels).</li>
@@ -42,8 +42,8 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
     private static final String GAMES = """
             WITH g AS (SELECT %s AS gid, %s AS start_year, * FROM game)""".formatted(GAME_ID, START_YEAR);
 
-    /** Saison régulière (002) et playoffs (004) ; présaison, All-Star et play-in sont ignorés. */
-    private static final String GAME_KINDS = "substr(g.gid, 1, 3) IN ('002', '004')";
+    /** Saison régulière (002), play-in (005) et playoffs (004) ; présaison et All-Star sont ignorés. */
+    private static final String GAME_KINDS = "substr(g.gid, 1, 3) IN ('002', '005', '004')";
 
     private static final int OVERTIME_COLUMNS = 10;
 
@@ -101,7 +101,7 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
         int columns = 4 + OVERTIME_COLUMNS;
         List<Map.Entry<String, List<List<Integer>>>> rows = query("""
                 SELECT %s, %s, %s FROM line_score
-                WHERE substr(%s, 1, 3) IN ('002', '004')""".formatted(GAME_ID, periodColumns("home"), periodColumns("away"), GAME_ID),
+                WHERE substr(%s, 1, 3) IN ('002', '005', '004')""".formatted(GAME_ID, periodColumns("home"), periodColumns("away"), GAME_ID),
                 rs -> Map.entry(rs.getString(1),
                         List.of(periods(rs, 2, OVERTIME_COLUMNS), periods(rs, 2 + columns, OVERTIME_COLUMNS))));
         return rows.stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));

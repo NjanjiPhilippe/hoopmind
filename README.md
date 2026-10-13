@@ -41,7 +41,8 @@ reprend l'architecture de [ledger-ai](https://github.com/NjanjiPhilippe/ledger-a
 ## Données
 
 Les matchs viennent de la [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh**
-(licence CC BY-SA 4.0) et les statistiques de saison de [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats)
+(licence CC BY-SA 4.0) jusqu'à 2022-23, puis des [fichiers d'**Eoin Moore**](https://www.kaggle.com/datasets/eoinamoore/historical-nba-data-and-player-box-scores)
+pour les saisons suivantes, et les statistiques de saison de [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats)
 de **Sumitro Datta**. Elles ne sont pas incluses dans ce dépôt : elles se chargent depuis la page **Administration > Données**, voir [Charger les données NBA](backend/README.md#charger-les-données-nba).
 
 ## Historique du projet

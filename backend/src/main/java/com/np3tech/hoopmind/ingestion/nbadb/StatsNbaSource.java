@@ -129,7 +129,7 @@ final class StatsNbaSource implements NbaSource {
     @Override
     public List<String> recentSeasons(int count) {
         List<String> withRegularSeason = games.entrySet().stream()
-                .filter(e -> e.getValue().stream().anyMatch(g -> !g.playoffs()))
+                .filter(e -> e.getValue().stream().anyMatch(GameRow::regularSeason))
                 .map(Map.Entry::getKey)
                 .sorted()
                 .toList();

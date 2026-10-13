@@ -191,7 +191,7 @@ public class NbaDatabaseImporter {
         Map<String, Long> ids = new HashMap<>();
         for (String seasonYear : seasonYears) {
             List<GameRow> seasonGames = bySeason.getOrDefault(seasonYear, List.of());
-            List<GameRow> regular = seasonGames.stream().filter(g -> !g.playoffs()).toList();
+            List<GameRow> regular = seasonGames.stream().filter(GameRow::regularSeason).toList();
             if (regular.isEmpty()) {
                 continue;
             }
@@ -262,7 +262,8 @@ public class NbaDatabaseImporter {
 
     private static GameType gameType(GameRow game) {
         if (game.finals()) return GameType.FINALS;
-        return game.playoffs() ? GameType.PLAYOFFS : GameType.REGULAR_SEASON;
+        if (game.playoffs()) return GameType.PLAYOFFS;
+        return game.playIn() ? GameType.PLAY_IN : GameType.REGULAR_SEASON;
     }
 
     private Map<String, Long> importResults(List<GameRow> games, Map<String, Long> gameIds, Map<Long, Long> teamIds) {

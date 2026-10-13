@@ -12,6 +12,7 @@ describe('nba-format', () => {
 
   it('labels only the games that are not regular season', () => {
     expect(gameTypeLabel('PLAYOFFS')).toBe('Playoffs');
+    expect(gameTypeLabel('PLAY_IN')).toBe('Play-in');
     expect(gameTypeLabel('FINALS')).toBe('Finales');
     expect(gameTypeLabel('REGULAR_SEASON')).toBe('');
     expect(gameTypeLabel(undefined)).toBe('');
