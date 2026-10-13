@@ -15,25 +15,32 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Lecture du fichier {@code nba.sqlite} de nbadb, en lecture seule. Seules les tables utiles aux prédictions sont lues,
+ * Lecture du fichier {@code nba.sqlite} de Wyatt Walsh, en lecture seule. Seules les tables utiles aux prédictions sont lues,
  * et seulement pour les saisons demandées.
+ * <p>
+ * Le fichier publié sur Kaggle existe sous deux formats, reconnus à l'ouverture :
+ * <ul>
+ *   <li>le schéma en étoile de nbadb ({@code dim_game}, {@code fact_game_result}…), lu par {@link NbadbReader} ;</li>
+ *   <li>l'ancien format à plat ({@code game}, {@code team}, {@code line_score}…), encore livré dans l'archive Kaggle
+ *       alors que sa description annonce le nouveau, lu par {@link LegacyKaggleReader}.</li>
+ * </ul>
+ * Les deux produisent les mêmes lignes ({@link NbaDatabaseRows}) : l'import ne dépend pas du format.
  */
 @Slf4j
-final class NbaDatabaseReader implements AutoCloseable {
-
-    /** Saison régulière (002) et playoffs (004) ; présaison, All-Star, play-in et finale de la NBA Cup sont ignorés. */
-    private static final String GAME_KINDS = "substr(g.game_id, 1, 3) IN ('002', '004')";
+abstract sealed class NbaDatabaseReader implements AutoCloseable permits NbadbReader, LegacyKaggleReader {
 
     private final Connection connection;
 
-    private NbaDatabaseReader(Connection connection) {
+    NbaDatabaseReader(Connection connection) {
         this.connection = connection;
     }
 
@@ -43,74 +50,43 @@ final class NbaDatabaseReader implements AutoCloseable {
             throw new NbaImportException("Base NBA introuvable sur le serveur. Téléchargez-la depuis la page Données, "
                     + "avec scripts/download-nba-database.sh, ou renseignez NBA_DATABASE_PATH.");
         }
+        Connection connection;
         try {
-            return new NbaDatabaseReader(DriverManager.getConnection("jdbc:sqlite:file:" + file.toAbsolutePath() + "?mode=ro"));
+            connection = DriverManager.getConnection("jdbc:sqlite:file:" + file.toAbsolutePath() + "?mode=ro");
         } catch (SQLException e) {
             log.warn("Impossible d'ouvrir la base NBA {}", file.toAbsolutePath(), e);
             throw new NbaImportException("Impossible d'ouvrir la base NBA : le fichier n'est pas une base SQLite lisible.", e);
         }
+        Set<String> tables = tables(connection);
+        if (tables.contains("dim_game")) {
+            return new NbadbReader(connection);
+        }
+        if (tables.contains("game") && tables.contains("team")) {
+            log.info("Base NBA {} au format ancien (tables game, team, line_score)", file.toAbsolutePath());
+            return new LegacyKaggleReader(connection);
+        }
+        close(connection);
+        throw new NbaImportException("Format de base NBA inconnu : ni la table dim_game (nbadb) ni la table game "
+                + "(ancien format Kaggle) n'existent dans ce fichier.");
     }
 
     /** Les {@code count} saisons les plus récentes qui ont des matchs de saison régulière, de la plus ancienne à la plus récente. */
-    List<String> recentSeasons(int count) {
-        List<String> seasons = query("""
-                SELECT DISTINCT g.season_year FROM dim_game g
-                WHERE substr(g.game_id, 1, 3) = '002' AND g.season_year IS NOT NULL
-                ORDER BY g.season_year DESC LIMIT ?""", rs -> rs.getString(1), count);
-        Collections.reverse(seasons);
-        return seasons;
-    }
+    abstract List<String> recentSeasons(int count);
 
-    List<TeamRow> teams() {
-        return query("""
-                SELECT team_id, abbreviation, full_name, city, arena, year_founded, conference, division
-                FROM dim_team""", rs -> new TeamRow(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
-                rs.getString(5), integer(rs, 6), rs.getString(7), rs.getString(8)));
-    }
+    abstract List<TeamRow> teams();
 
-    List<GameRow> games(List<String> seasons) {
-        List<GameRow> rows = query("""
-                SELECT g.game_id, g.game_date, g.season_year, g.home_team_id, g.visitor_team_id, g.arena_name,
-                       r.pts_home, r.pts_away,
-                       r.pts_qtr1_home, r.pts_qtr2_home, r.pts_qtr3_home, r.pts_qtr4_home, r.pts_ot1_home, r.pts_ot2_home,
-                       r.pts_qtr1_away, r.pts_qtr2_away, r.pts_qtr3_away, r.pts_qtr4_away, r.pts_ot1_away, r.pts_ot2_away
-                FROM dim_game g
-                LEFT JOIN fact_game_result r ON r.game_id = g.game_id
-                WHERE %s AND g.home_team_id IS NOT NULL AND g.visitor_team_id IS NOT NULL
-                  AND g.season_year IN (%s)
-                ORDER BY g.game_date, g.game_id""".formatted(GAME_KINDS, placeholders(seasons)),
-                rs -> new GameRow(rs.getString(1), date(rs.getString(2)), rs.getString(3), rs.getLong(4), rs.getLong(5),
-                        rs.getString(6), integer(rs, 7), integer(rs, 8), periods(rs, 9), periods(rs, 15)),
-                seasons.toArray());
-        return distinctBy(rows, GameRow::gameId);
-    }
+    abstract List<GameRow> games(List<String> seasons);
 
-    List<TeamGameRow> teamGames(List<String> seasons) {
-        List<TeamGameRow> rows = query("""
-                SELECT t.game_id, t.team_id, t.pts, t.fgm, t.fga, t.fg3m, t.fg3a, t.ftm, t.fta,
-                       t.oreb, t.dreb, t.reb, t.ast, t.stl, t.blk, t.tov, t.pf
-                FROM fact_team_game t
-                JOIN dim_game g ON g.game_id = t.game_id
-                WHERE %s AND g.season_year IN (%s)""".formatted(GAME_KINDS, placeholders(seasons)),
-                rs -> new TeamGameRow(rs.getString(1), rs.getLong(2), integer(rs, 3), integer(rs, 4), integer(rs, 5),
-                        integer(rs, 6), integer(rs, 7), integer(rs, 8), integer(rs, 9), integer(rs, 10), integer(rs, 11),
-                        integer(rs, 12), integer(rs, 13), integer(rs, 14), integer(rs, 15), integer(rs, 16), integer(rs, 17)),
-                seasons.toArray());
-        return distinctBy(rows, row -> row.gameId() + "/" + row.teamId());
-    }
+    abstract List<TeamGameRow> teamGames(List<String> seasons);
 
-    List<StandingRow> standings(List<String> seasons) {
-        return query("""
-                SELECT season_year, team_id, MIN(conf_rank), MIN(div_rank)
-                FROM fact_standings
-                WHERE (season_type IS NULL OR season_type = 'Regular Season') AND season_year IN (%s)
-                GROUP BY season_year, team_id""".formatted(placeholders(seasons)),
-                rs -> new StandingRow(rs.getString(1), rs.getLong(2), integer(rs, 3), integer(rs, 4)),
-                seasons.toArray());
-    }
+    abstract List<StandingRow> standings(List<String> seasons);
 
     @Override
     public void close() {
+        close(connection);
+    }
+
+    private static void close(Connection connection) {
         try {
             connection.close();
         } catch (SQLException ignored) {
@@ -118,11 +94,27 @@ final class NbaDatabaseReader implements AutoCloseable {
         }
     }
 
-    private interface RowMapper<T> {
+    private static Set<String> tables(Connection connection) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT name FROM sqlite_master WHERE type IN ('table', 'view')");
+             ResultSet rs = statement.executeQuery()) {
+            Set<String> names = new HashSet<>();
+            while (rs.next()) {
+                names.add(rs.getString(1));
+            }
+            return names;
+        } catch (SQLException e) {
+            close(connection);
+            log.warn("Impossible de lister les tables de la base NBA", e);
+            throw new NbaImportException("Impossible d'ouvrir la base NBA : le fichier n'est pas une base SQLite lisible.", e);
+        }
+    }
+
+    interface RowMapper<T> {
         T map(ResultSet rs) throws SQLException;
     }
 
-    private <T> List<T> query(String sql, RowMapper<T> mapper, Object... parameters) {
+    <T> List<T> query(String sql, RowMapper<T> mapper, Object... parameters) {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             for (int i = 0; i < parameters.length; i++) {
                 statement.setObject(i + 1, parameters[i]);
@@ -136,21 +128,28 @@ final class NbaDatabaseReader implements AutoCloseable {
             return rows;
         } catch (SQLException e) {
             log.warn("Lecture de la base NBA impossible", e);
-            throw new NbaImportException("Lecture de la base NBA impossible. Le fichier suit-il bien le schéma de nbadb ?", e);
+            throw new NbaImportException("Lecture de la base NBA impossible : une table ou une colonne attendue manque "
+                    + "(le détail est dans le journal du serveur).", e);
         }
     }
 
-    private static String placeholders(List<?> values) {
+    static String placeholders(List<?> values) {
         return values.stream().map(v -> "?").collect(Collectors.joining(", "));
     }
 
-    private static Integer integer(ResultSet rs, int column) throws SQLException {
+    /** Les nombres peuvent arriver en entier ou en réel (l'ancien format stocke les points en {@code REAL}). */
+    static Integer integer(ResultSet rs, int column) throws SQLException {
         Object value = rs.getObject(column);
-        return value == null ? null : ((Number) value).intValue();
+        return switch (value) {
+            case null -> null;
+            case Number number -> number.intValue();
+            case String text when !text.isBlank() -> (int) Double.parseDouble(text.strip());
+            default -> null;
+        };
     }
 
     /** Quatre quart-temps puis les prolongations jouées (une prolongation à 0 point reste une prolongation jouée). */
-    private static List<Integer> periods(ResultSet rs, int firstColumn) throws SQLException {
+    static List<Integer> periods(ResultSet rs, int firstColumn, int overtimeColumns) throws SQLException {
         List<Integer> periods = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             Integer points = integer(rs, firstColumn + i);
@@ -159,7 +158,7 @@ final class NbaDatabaseReader implements AutoCloseable {
             }
             periods.add(points);
         }
-        for (int i = 4; i < 6; i++) {
+        for (int i = 4; i < 4 + overtimeColumns; i++) {
             Integer points = integer(rs, firstColumn + i);
             if (points != null) {
                 periods.add(points);
@@ -176,7 +175,7 @@ final class NbaDatabaseReader implements AutoCloseable {
         return LocalDate.parse(value.substring(0, 10));
     }
 
-    private static <T> List<T> distinctBy(List<T> rows, java.util.function.Function<T, String> key) {
+    static <T> List<T> distinctBy(List<T> rows, Function<T, String> key) {
         Map<String, T> unique = new LinkedHashMap<>();
         rows.forEach(row -> unique.putIfAbsent(key.apply(row), row));
         return new ArrayList<>(unique.values());
