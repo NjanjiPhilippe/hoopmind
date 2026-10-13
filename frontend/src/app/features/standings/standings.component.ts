@@ -9,8 +9,10 @@ import { TeamStatsResponse } from '../../core/api/generated/models/team-stats-re
 import { AuthService } from '../../core/auth/auth.service';
 import { NbaCatalog, idParam, seasonOrLatest, teamName } from '../../core/nba/nba-catalog';
 import { streakLabel } from '../../core/nba/nba-format';
+import { teamColor } from '../../core/nba/team-branding';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { TeamLogoComponent } from '../../shared/components/team-logo/team-logo.component';
 
 export interface ConferenceStandings {
   conference: NonNullable<TeamResponse['conference']>;
@@ -28,7 +30,7 @@ export function byConference(stats: TeamStatsResponse[], teams: Map<number, Team
 
 @Component({
   selector: 'app-standings',
-  imports: [DecimalPipe, RouterLink, NavbarComponent],
+  imports: [DecimalPipe, RouterLink, NavbarComponent, TeamLogoComponent],
   templateUrl: './standings.component.html',
   providers: [NbaCatalog],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,7 @@ export class StandingsComponent {
   protected readonly catalog = inject(NbaCatalog);
   protected readonly teamName = teamName;
   protected readonly streakLabel = streakLabel;
+  protected readonly teamColor = teamColor;
 
   readonly season = input(undefined, { transform: idParam });
   protected readonly seasonId = linkedSignal(() => seasonOrLatest(this.catalog, this.season()));

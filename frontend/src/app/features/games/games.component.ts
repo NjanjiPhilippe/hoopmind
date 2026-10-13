@@ -7,22 +7,18 @@ import { getGamesBySeason } from '../../core/api/generated/fn/games/get-games-by
 import { GameResponse } from '../../core/api/generated/models/game-response';
 import { AuthService } from '../../core/auth/auth.service';
 import { NbaCatalog, idParam, seasonOrLatest, teamName } from '../../core/nba/nba-catalog';
-import { byDateDesc, gameTypeLabel, isPlayoffGame } from '../../core/nba/nba-format';
+import { defaultPredictionDate, gameTypeLabel, isPlayoffGame } from '../../core/nba/nba-format';
+import { teamColor } from '../../core/nba/team-branding';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
-
-const PAGE_SIZE = 50;
-
-/** Matchs d'une saison, filtrés sur une équipe si besoin, du plus récent au plus ancien. */
-export function filterGames(games: GameResponse[], teamId: number | null): GameResponse[] {
-  return games
-    .filter(game => teamId === null || game.homeTeam?.id === teamId || game.awayTeam?.id === teamId)
-    .sort(byDateDesc);
-}
+import { MonthCalendarComponent } from '../../shared/components/month-calendar/month-calendar.component';
+import { monthOf } from '../../shared/components/month-calendar/month-grid';
+import { TeamLogoComponent } from '../../shared/components/team-logo/team-logo.component';
+import { teamCalendar } from '../../core/nba/team-calendar';
 
 @Component({
   selector: 'app-games',
-  imports: [DatePipe, RouterLink, NavbarComponent],
+  imports: [DatePipe, RouterLink, NavbarComponent, MonthCalendarComponent, TeamLogoComponent],
   templateUrl: './games.component.html',
   providers: [NbaCatalog],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +30,7 @@ export class GamesComponent {
   protected readonly catalog = inject(NbaCatalog);
   protected readonly teamName = teamName;
   protected readonly gameTypeLabel = gameTypeLabel;
+  protected readonly teamColor = teamColor;
 
   readonly season = input(undefined, { transform: idParam });
   readonly team = input(undefined, { transform: idParam });
@@ -45,10 +42,26 @@ export class GamesComponent {
     params: () => this.seasonId() ?? undefined,
     loader: ({ params }) => this.api.invoke(getGamesBySeason, { seasonId: params }),
   });
-  protected readonly filtered = computed(() => filterGames(currentValue(this.games) ?? [], this.teamId()));
-  /** Une saison complète compte plus de 1 200 matchs : ils s'affichent par tranches. */
-  protected readonly shown = linkedSignal({ source: () => [this.seasonId(), this.teamId()], computation: () => PAGE_SIZE });
-  protected readonly visible = computed(() => this.filtered().slice(0, this.shown()));
+  /** Équipe choisie : son calendrier de la saison, mois par mois, avec son bilan. */
+  protected readonly selectedTeam = computed(() => {
+    const id = this.teamId();
+    return id === null ? undefined : this.catalog.teamsById().get(id);
+  });
+  protected readonly calendar = computed(() => {
+    const id = this.teamId();
+    return id === null ? null : teamCalendar(currentValue(this.games) ?? [], id);
+  });
+  protected readonly allGames = computed(() => currentValue(this.games) ?? []);
+  /** Jour choisi dans l'agenda (sans équipe) : par défaut aujourd'hui pendant la saison, sinon son dernier jour. */
+  protected readonly day = linkedSignal(() => defaultPredictionDate(this.catalog.season(this.seasonId())));
+  protected readonly dayGames = computed(() => this.allGames().filter(game => game.scheduledDate?.slice(0, 10) === this.day()));
+  /** Mois affiché : celui du prochain match de l'équipe choisie, sinon celui du jour choisi. */
+  protected readonly month = linkedSignal(() => {
+    const next = this.calendar()?.months.flatMap(month => month.games).find(entry => entry.next);
+    return next?.game.scheduledDate ? monthOf(next.game.scheduledDate) : monthOf(this.day());
+  });
+  /** Matchs de l'équipe dans le mois affiché, en liste sous l'agenda. */
+  protected readonly monthEntries = computed(() => this.calendar()?.months.find(month => month.month === this.month())?.games ?? []);
 
   onFilter(change: { season?: string; team?: string }): void {
     if (change.season !== undefined) {
@@ -60,13 +73,15 @@ export class GamesComponent {
     void this.router.navigate([], { queryParams: { season: this.seasonId(), team: this.teamId() }, replaceUrl: true });
   }
 
-  showMore(): void {
-    this.shown.update(count => count + PAGE_SIZE);
+  /** Un match de l'agenda ouvre sa prédiction. */
+  openPrediction(game: GameResponse): void {
+    void this.router.navigate(['/predict'], { queryParams: this.predictParams(game) });
   }
 
-  /** Lien vers la prédiction de ce match, à la date du match. */
+  /** Lien vers la prédiction de ce match, à la date du match ; la page Prédire montre aussi son résultat réel. */
   predictParams(game: GameResponse) {
     return {
+      game: game.id,
       season: game.season?.id,
       home: game.homeTeam?.id,
       away: game.awayTeam?.id,

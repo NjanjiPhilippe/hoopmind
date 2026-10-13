@@ -35,8 +35,9 @@ export function gameTypeLabel(type: GameResponse['gameType']): string {
   return type ? GAME_TYPE_LABELS[type] ?? '' : '';
 }
 
+/** Match à élimination (play-in, playoffs, Finales) : le modèle le traite comme un match de playoffs. */
 export function isPlayoffGame(game: GameResponse): boolean {
-  return game.gameType === 'PLAYOFFS' || game.gameType === 'FINALS';
+  return game.gameType === 'PLAY_IN' || game.gameType === 'PLAYOFFS' || game.gameType === 'FINALS';
 }
 
 /** Matchs du plus récent au plus ancien ; à date égale, l'ordre de l'API est conservé. */

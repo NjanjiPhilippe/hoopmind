@@ -1,0 +1,58 @@
+<div class="space-y-2">
+  <div class="flex items-center justify-between">
+    <button type="button" class="btn-secondary px-3 py-1" [disabled]="!canGoBack()" (click)="go(-1)" aria-label="Mois précédent">‹</button>
+    <h3 class="text-base font-semibold capitalize text-gray-900" aria-live="polite">{{ month() + '-01' | date: 'MMMM y' }}</h3>
+    <button type="button" class="btn-secondary px-3 py-1" [disabled]="!canGoForward()" (click)="go(1)" aria-label="Mois suivant">›</button>
+  </div>
+
+  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white" role="grid">
+    <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-center text-xs font-medium uppercase text-gray-500" role="row">
+      @for (weekday of weekdays; track weekday) {
+        <div class="py-2" role="columnheader">{{ weekday }}</div>
+      }
+    </div>
+    @for (week of weeks(); track week[0].date) {
+      <div class="grid grid-cols-7 border-b border-gray-100 last:border-b-0" role="row">
+        @for (day of week; track day.date) {
+          @let entry = teamDays().get(day.date);
+          @let dayGames = allDays().get(day.date) ?? [];
+          <button type="button" role="gridcell"
+                  class="flex min-h-16 flex-col items-stretch gap-1 border-r border-gray-100 p-1 text-left last:border-r-0 enabled:hover:bg-primary-50 sm:min-h-24 sm:p-1.5"
+                  [class.bg-gray-50]="!day.inMonth"
+                  [class.text-gray-400]="!day.inMonth"
+                  [class.cursor-default]="!clickable(day)"
+                  [class.bg-green-50]="day.inMonth && entry?.outcome === 'V'"
+                  [class.bg-red-50]="day.inMonth && entry?.outcome === 'D'"
+                  [class.ring-2]="selected(day)" [class.ring-inset]="selected(day)" [class.ring-primary-500]="selected(day)"
+                  [disabled]="!clickable(day)" [attr.aria-pressed]="selected(day)" [attr.aria-label]="describe(day)"
+                  (click)="pick(day)">
+            <span class="text-xs font-medium" [class.text-gray-700]="day.inMonth">{{ dayNumber(day) }}</span>
+            @if (entry) {
+              <span class="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-1">
+                <span class="text-[10px] text-gray-500 sm:text-xs">{{ entry.home ? 'vs' : '@' }}</span>
+                <app-team-logo [team]="entry.opponent" [size]="22" />
+                <span class="hidden truncate text-xs font-medium text-gray-800 lg:inline">{{ entry.opponent?.abbreviation }}</span>
+              </span>
+              @if (entry.outcome) {
+                <span class="text-center text-[10px] font-bold sm:text-left sm:text-xs" [class.text-green-700]="entry.outcome === 'V'" [class.text-red-600]="entry.outcome === 'D'">
+                  {{ entry.outcome }}<span class="hidden font-normal text-gray-600 sm:inline"> {{ entry.teamScore }}-{{ entry.opponentScore }}</span>
+                </span>
+              } @else if (entry.game.gameType === 'PLAY_IN' || entry.game.gameType === 'PLAYOFFS' || entry.game.gameType === 'FINALS') {
+                <span class="text-center text-[10px] text-primary-700 sm:text-left sm:text-xs">{{ entry.game.gameType === 'PLAY_IN' ? 'Play-in' : 'Playoffs' }}</span>
+              }
+            } @else if (teamId() === null && dayGames.length) {
+              <span class="hidden flex-wrap gap-x-1.5 gap-y-0.5 sm:flex">
+                @for (game of dayGames.slice(0, 4); track game.id) {
+                  <span class="flex items-center">
+                    <app-team-logo [team]="game.awayTeam" [size]="16" /><app-team-logo [team]="game.homeTeam" [size]="16" />
+                  </span>
+                }
+              </span>
+              <span class="text-[10px] text-gray-600 sm:text-xs">{{ dayGames.length }} match{{ dayGames.length > 1 ? 's' : '' }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>

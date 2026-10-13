@@ -43,7 +43,7 @@ export const routes: Routes = [
   },
   {
     path: 'games',
-    title: 'Matchs · HoopMind',
+    title: 'Calendrier · HoopMind',
     canActivate: [authGuard],
     loadComponent: () => import('./features/games/games.component').then(m => m.GamesComponent),
   },

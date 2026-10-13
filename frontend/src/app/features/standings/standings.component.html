@@ -53,10 +53,11 @@
               <tbody class="divide-y divide-gray-100">
                 @for (row of group.rows; track row.id; let i = $index) {
                   <tr>
-                    <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ i + 1 }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums text-gray-500" [style.box-shadow]="'inset 4px 0 0 ' + teamColor(row.team)">{{ i + 1 }}</td>
                     <td class="whitespace-nowrap px-3 py-2">
-                      <a class="font-medium hover:text-primary-600 hover:underline" routerLink="/games"
-                         [queryParams]="{ season: seasonId(), team: row.team?.id }" [title]="'Matchs de ' + teamName(row.team)">
+                      <a class="inline-flex items-center gap-2 font-medium hover:text-primary-600 hover:underline" routerLink="/games"
+                         [queryParams]="{ season: seasonId(), team: row.team?.id }" [title]="'Calendrier de ' + teamName(row.team)">
+                        <app-team-logo [team]="row.team" [size]="22" />
                         <span class="sm:hidden">{{ row.team?.abbreviation }}</span>
                         <span class="hidden sm:inline">{{ teamName(row.team) }}</span>
                       </a>

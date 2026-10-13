@@ -16,7 +16,7 @@ const LINKS: NavLink[] = [
   { path: '/dashboard', label: 'Accueil', exact: true },
   { path: '/predict', label: 'Prédire' },
   { path: '/standings', label: 'Classement' },
-  { path: '/games', label: 'Matchs' },
+  { path: '/games', label: 'Calendrier' },
 ];
 
 @Component({
