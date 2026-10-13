@@ -74,47 +74,55 @@ public class NbaDatabaseImporter {
         if (seasonCount < 1 || seasonCount > MAX_SEASONS) {
             throw new NbaImportException("Le nombre de saisons doit être compris entre 1 et " + MAX_SEASONS + ".");
         }
-        long start = System.nanoTime();
         Path file = Path.of(properties.path());
         log.info("Import de la base NBA {} ({} saisons)", file.toAbsolutePath(), seasonCount);
-
         try (NbaDatabaseReader reader = NbaDatabaseReader.open(file)) {
-            List<String> seasonYears = reader.recentSeasons(seasonCount);
-            if (seasonYears.isEmpty()) {
-                throw new NbaImportException("La base NBA ne contient aucun match de saison régulière.");
-            }
-            Map<Long, Long> teamIds = importTeams(reader.teams());
-
-            List<GameRow> allGames = reader.games(seasonYears);
-            List<GameRow> games = allGames.stream()
-                    .filter(g -> teamIds.containsKey(g.homeTeamId()) && teamIds.containsKey(g.awayTeamId()))
-                    .toList();
-            int skipped = allGames.size() - games.size();
-            if (skipped > 0) {
-                log.warn("{} matchs ignorés : au moins une des deux équipes est absente de dim_team", skipped);
-            }
-
-            Map<String, Long> seasonIds = importSeasons(seasonYears, games);
-            // Une saison sans match de saison régulière n'est pas créée : ni elle ni ses matchs ne sont importés.
-            List<String> importedSeasons = seasonYears.stream().filter(seasonIds::containsKey).toList();
-            List<GameRow> seasonGames = games.stream().filter(g -> seasonIds.containsKey(g.seasonYear())).toList();
-            skipped += games.size() - seasonGames.size();
-            games = seasonGames;
-            Map<String, Long> gameIds = importGames(games, teamIds, seasonIds);
-            Map<String, Long> resultIds = importResults(games, gameIds, teamIds);
-
-            Map<String, Map<Long, TeamGameRow>> boxScore = reader.teamGames(seasonYears).stream()
-                    .filter(row -> gameIds.containsKey(row.gameId()) && teamIds.containsKey(row.teamId()))
-                    .collect(Collectors.groupingBy(TeamGameRow::gameId, Collectors.toMap(TeamGameRow::teamId, row -> row)));
-            int teamGameStats = importTeamGameStats(boxScore, games, gameIds, resultIds, teamIds);
-            int teamSeasons = importTeamSeasons(games, boxScore, reader.standings(seasonYears), teamIds, seasonIds);
-
-            ImportReport report = new ImportReport(importedSeasons, teamIds.size(), games.size(),
-                    (int) games.stream().filter(GameRow::played).count(), teamGameStats, teamSeasons, skipped,
-                    Duration.ofNanos(System.nanoTime() - start).toMillis());
-            log.info("Import terminé : {}", report);
-            return report;
+            return importSource(reader, seasonCount);
         }
+    }
+
+    /**
+     * Importe les {@code seasonCount} saisons les plus récentes d'une source : la base de Walsh, ou les saisons
+     * lues sur stats.nba.com (déjà téléchargées : la transaction ne couvre que l'écriture).
+     */
+    @Transactional
+    ImportReport importSource(NbaSource source, int seasonCount) {
+        long start = System.nanoTime();
+        List<String> seasonYears = source.recentSeasons(seasonCount);
+        if (seasonYears.isEmpty()) {
+            throw new NbaImportException("La source ne contient aucun match de saison régulière.");
+        }
+        Map<Long, Long> teamIds = importTeams(source.teams());
+
+        List<GameRow> allGames = source.games(seasonYears);
+        List<GameRow> games = allGames.stream()
+                .filter(g -> teamIds.containsKey(g.homeTeamId()) && teamIds.containsKey(g.awayTeamId()))
+                .toList();
+        int skipped = allGames.size() - games.size();
+        if (skipped > 0) {
+            log.warn("{} matchs ignorés : au moins une des deux équipes est inconnue", skipped);
+        }
+
+        Map<String, Long> seasonIds = importSeasons(seasonYears, games);
+        // Une saison sans match de saison régulière n'est pas créée : ni elle ni ses matchs ne sont importés.
+        List<String> importedSeasons = seasonYears.stream().filter(seasonIds::containsKey).toList();
+        List<GameRow> seasonGames = games.stream().filter(g -> seasonIds.containsKey(g.seasonYear())).toList();
+        skipped += games.size() - seasonGames.size();
+        games = seasonGames;
+        Map<String, Long> gameIds = importGames(games, teamIds, seasonIds);
+        Map<String, Long> resultIds = importResults(games, gameIds, teamIds);
+
+        Map<String, Map<Long, TeamGameRow>> boxScore = source.teamGames(seasonYears).stream()
+                .filter(row -> gameIds.containsKey(row.gameId()) && teamIds.containsKey(row.teamId()))
+                .collect(Collectors.groupingBy(TeamGameRow::gameId, Collectors.toMap(TeamGameRow::teamId, row -> row)));
+        int teamGameStats = importTeamGameStats(boxScore, games, gameIds, resultIds, teamIds);
+        int teamSeasons = importTeamSeasons(games, boxScore, source.standings(seasonYears), teamIds, seasonIds);
+
+        ImportReport report = new ImportReport(importedSeasons, teamIds.size(), games.size(),
+                (int) games.stream().filter(GameRow::played).count(), teamGameStats, teamSeasons, skipped,
+                Duration.ofNanos(System.nanoTime() - start).toMillis());
+        log.info("Import terminé : {}", report);
+        return report;
     }
 
     // ---------- Équipes ----------

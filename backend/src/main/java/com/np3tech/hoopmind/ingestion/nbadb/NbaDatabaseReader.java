@@ -1,9 +1,5 @@
 package com.np3tech.hoopmind.ingestion.nbadb;
 
-import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.GameRow;
-import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.StandingRow;
-import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamGameRow;
-import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamRow;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Files;
@@ -36,7 +32,7 @@ import java.util.stream.Collectors;
  * Les deux produisent les mêmes lignes ({@link NbaDatabaseRows}) : l'import ne dépend pas du format.
  */
 @Slf4j
-abstract sealed class NbaDatabaseReader implements AutoCloseable permits NbadbReader, LegacyKaggleReader {
+abstract sealed class NbaDatabaseReader implements NbaSource permits NbadbReader, LegacyKaggleReader {
 
     private final Connection connection;
 
@@ -69,17 +65,6 @@ abstract sealed class NbaDatabaseReader implements AutoCloseable permits NbadbRe
         throw new NbaImportException("Format de base NBA inconnu : ni la table dim_game (nbadb) ni la table game "
                 + "(ancien format Kaggle) n'existent dans ce fichier.");
     }
-
-    /** Les {@code count} saisons les plus récentes qui ont des matchs de saison régulière, de la plus ancienne à la plus récente. */
-    abstract List<String> recentSeasons(int count);
-
-    abstract List<TeamRow> teams();
-
-    abstract List<GameRow> games(List<String> seasons);
-
-    abstract List<TeamGameRow> teamGames(List<String> seasons);
-
-    abstract List<StandingRow> standings(List<String> seasons);
 
     @Override
     public void close() {

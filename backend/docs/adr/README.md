@@ -21,3 +21,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0014](0014-import-par-lots-et-coherence.md) | Import par lots réécrits, une seule transaction, horodatages et rôles | Acceptée |
 | [0015](0015-explication-par-llm.md) | Explication des prédictions par un LLM, avec nos propres adaptateurs plutôt que Spring AI | Acceptée |
 | [0016](0016-ancien-format-kaggle.md) | L'import lit aussi l'ancien format de la base de Wyatt Walsh | Acceptée |
+| [0017](0017-complement-stats-nba.md) | Les saisons récentes viennent de stats.nba.com | Acceptée |

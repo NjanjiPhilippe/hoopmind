@@ -1360,6 +1360,45 @@
         ]
       }
     },
+    "/api/v1/admin/imports/stats-nba/jobs": {
+      "post": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Compléter les matchs récents depuis stats.nba.com",
+        "description": "Lit sur stats.nba.com (public, sans clé) les matchs de saison régulière et de playoffs, de la saison fromYear jusqu'à la saison en cours, puis les importe. Suivre l'avancement avec GET /stats-nba/status.",
+        "operationId": "startStatsNbaImport",
+        "parameters": [
+          {
+            "name": "fromYear",
+            "in": "query",
+            "description": "Année de début de la première saison (2023 pour 2023-24) ; par défaut la dernière saison en base",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsNbaJobStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/imports/csv": {
       "post": {
         "tags": [
@@ -3854,6 +3893,33 @@
         ]
       }
     },
+    "/api/v1/admin/imports/stats-nba/status": {
+      "get": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Complément depuis stats.nba.com : saisons visées et dernier import",
+        "description": "Saisons qu'un import lirait (de la dernière saison en base à la saison en cours) et avancement du dernier import.",
+        "operationId": "getStatsNbaStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsNbaStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/imports/csv/datasets": {
       "get": {
         "tags": [
@@ -6085,6 +6151,67 @@
           },
           "page": {
             "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "StatsNbaJobStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "FETCHING",
+              "IMPORTING",
+              "SUCCEEDED",
+              "FAILED",
+              "INTERRUPTED"
+            ]
+          },
+          "fromSeason": {
+            "type": "string"
+          },
+          "toSeason": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fetched": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ImportReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "StatsNbaStatus": {
+        "type": "object",
+        "properties": {
+          "fromSeason": {
+            "type": "string"
+          },
+          "toSeason": {
+            "type": "string"
+          },
+          "job": {
+            "$ref": "#/components/schemas/StatsNbaJobStatus"
           }
         }
       }

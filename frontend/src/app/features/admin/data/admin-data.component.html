@@ -118,6 +118,54 @@
           }
         </div>
       }
+
+      <!-- Saisons récentes : stats.nba.com, la source de la base Walsh -->
+      <div class="space-y-3 border-t border-gray-200 pt-4">
+        <div>
+          <h3 class="font-semibold">Saisons récentes (stats.nba.com)</h3>
+          <p class="text-sm text-gray-600">
+            La base de Walsh s'arrête à la saison 2022-23. Ce bouton lit les saisons suivantes sur stats.nba.com, d'où viennent ses données
+            (mêmes identifiants de matchs et d'équipes) : saison régulière et playoffs, sans compte ni clé. Les points par quart-temps ne sont pas fournis.
+          </p>
+        </div>
+        @if (currentValue(statsNba); as stats) {
+          <button type="button" class="btn-secondary" [disabled]="dataBusy() || startingStats()" (click)="startStatsNba()">
+            Compléter avec stats.nba.com ({{ stats.fromSeason }} à {{ stats.toSeason }})
+          </button>
+        } @else if (statsNba.error()) {
+          <p class="text-sm text-red-600" role="alert">État de l'import stats.nba.com indisponible.</p>
+        }
+
+        @if (statsError(); as message) {
+          <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+        }
+
+        @if (statsJob(); as job) {
+          <div class="rounded-lg border border-gray-200 p-4 text-sm" aria-live="polite">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-medium">{{ statsNbaPhaseLabel(job.phase) }} · {{ job.fromSeason }} à {{ job.toSeason }}</span>
+              <span class="text-gray-500">lancé le {{ job.startedAt | date: 'short' }}</span>
+            </div>
+            @if (job.phase === 'FETCHING') {
+              <div class="mt-3 h-2 overflow-hidden rounded bg-gray-200" role="progressbar" aria-label="Lecture de stats.nba.com"
+                   aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="fetchPercent()">
+                <div class="h-full bg-primary-600 transition-all" [style.width.%]="fetchPercent() ?? 100"
+                     [class.animate-pulse]="fetchPercent() === null"></div>
+              </div>
+              <p class="mt-1 text-gray-500">{{ job.fetched ?? 0 }} requête(s) sur {{ job.requests ?? '…' }}, une seconde d'écart entre chacune.</p>
+            } @else if (job.phase === 'IMPORTING') {
+              <p class="mt-2 text-gray-500">Écriture des matchs et des bilans de saison…</p>
+            } @else if (job.phase === 'FAILED' || job.phase === 'INTERRUPTED') {
+              <p class="mt-2 text-red-600" role="alert">{{ job.error }}</p>
+            } @else if (job.report; as report) {
+              <p class="mt-2">
+                {{ report.seasons?.length ?? 0 }} saison(s) importée(s)@if (report.seasons?.length) { ({{ report.seasons![0] }} à {{ report.seasons![report.seasons!.length - 1] }}) },
+                {{ report.games | number }} matchs, {{ report.teamGameStats | number }} feuilles de match, en {{ formatDuration(report.durationMs) }}.
+              </p>
+            }
+          </div>
+        }
+      </div>
     </section>
 
     <!-- Archive CSV de Sumitro Datta : statistiques par saison et trophées -->

@@ -126,6 +126,10 @@ class AuditTranslator {
         };
     }
 
+    private static AuditTarget statsNba() {
+        return new AuditTarget(AuditTarget.DATASET, "stats-nba", "stats.nba.com (saisons récentes)");
+    }
+
     static AuditEvent translate(DataImportEvent event) {
         AuditActor actor = requester(event.requestedBy());
         AuditTarget walsh = new AuditTarget(AuditTarget.DATASET, "nba-database", "Base NBA (Wyatt Walsh)");
@@ -138,6 +142,14 @@ class AuditTranslator {
                     AuditEvent.failure(AuditAction.DATA_IMPORTED, actor, walsh, "IMPORT_FAILED")
                             .withDetail("download", String.valueOf(failed.download()))
                             .withDetail("seasons", String.valueOf(failed.seasons()))
+                            .withDetail("error", shorten(failed.error()));
+            case DataImportEvent.StatsNbaImported imported -> AuditEvent.success(AuditAction.DATA_IMPORTED, actor, statsNba())
+                    .withDetail("seasons", String.join(",", imported.seasons()))
+                    .withDetail("games", String.valueOf(imported.games()));
+            case DataImportEvent.StatsNbaImportFailed failed ->
+                    AuditEvent.failure(AuditAction.DATA_IMPORTED, actor, statsNba(), "IMPORT_FAILED")
+                            .withDetail("from", failed.fromSeason())
+                            .withDetail("to", failed.toSeason())
                             .withDetail("error", shorten(failed.error()));
             case DataImportEvent.ReferenceCsvImported csv -> AuditEvent.success(AuditAction.DATA_IMPORTED, actor,
                             new AuditTarget(AuditTarget.DATASET, "reference-csv", "Archive NBA Stats (CSV)"))
