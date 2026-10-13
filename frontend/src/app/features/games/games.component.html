@@ -34,15 +34,11 @@
       <p class="text-sm text-gray-500">Chargement des matchs…</p>
     } @else if (catalog.failed() || games.error()) {
       <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">Les matchs sont indisponibles. Réessayez dans un instant.</p>
-    } @else if (filtered().length === 0) {
+    } @else if (catalog.empty()) {
       <section class="card text-center">
-        @if (catalog.empty()) {
-          <p class="font-medium">Aucun match n'a encore été importé.</p>
-          @if (auth.isAdmin()) {
-            <a routerLink="/admin/data" class="btn-primary mt-4 inline-block">Importer les données NBA</a>
-          }
-        } @else {
-          <p class="font-medium">Aucun match pour ce choix.</p>
+        <p class="font-medium">Aucun match n'a encore été importé.</p>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin/data" class="btn-primary mt-4 inline-block">Importer les données NBA</a>
         }
       </section>
     } @else if (calendar(); as cal) {
@@ -57,98 +53,95 @@
         </div>
       </section>
 
-      @for (month of cal.months; track month.month) {
-        <section [attr.aria-labelledby]="'month-' + month.month">
-          <h3 [id]="'month-' + month.month" class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {{ month.month + '-01' | date: 'MMMM y' }}
-          </h3>
-          <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow">
-            @for (entry of month.games; track entry.game.id) {
-              <li>
-                <a class="grid grid-cols-[4rem_1fr_auto] items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none sm:grid-cols-[6rem_1fr_auto]"
-                   [class.bg-primary-50]="entry.next" routerLink="/predict" [queryParams]="predictParams(entry.game)"
-                   [attr.aria-label]="'Prédire ' + teamName(team) + (entry.home ? ' contre ' : ' chez ') + teamName(entry.opponent) + ', le ' + (entry.game.scheduledDate | date: 'd MMMM y')">
-                  <div class="text-gray-500">
-                    <div><span class="hidden sm:inline">{{ entry.game.scheduledDate | date: 'EEE ' }}</span>{{ entry.game.scheduledDate | date: 'd MMM' }}</div>
-                    @if (gameTypeLabel(entry.game.gameType); as type) {
-                      <span class="badge badge-info mt-1 whitespace-nowrap">{{ type }}</span>
-                    } @else if (entry.next) {
-                      <span class="badge badge-info mt-1 whitespace-nowrap">Prochain</span>
-                    }
-                  </div>
-                  <div class="flex min-w-0 items-center gap-2">
-                    <span class="w-5 shrink-0 text-center text-gray-400">{{ entry.home ? 'vs' : '@' }}</span>
-                    <app-team-logo [team]="entry.opponent" [size]="24" />
-                    <span class="truncate font-medium text-gray-900">
-                      <span class="sm:hidden">{{ entry.opponent?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(entry.opponent) }}</span>
+      <app-month-calendar [games]="allGames()" [teamId]="teamId()" [(month)]="month" (gameSelected)="openPrediction($event)" />
+
+      @if (monthEntries().length) {
+        <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow" aria-label="Matchs du mois">
+          @for (entry of monthEntries(); track entry.game.id) {
+            <li>
+              <a class="grid grid-cols-[4rem_1fr_auto] items-center gap-2 px-3 py-3 text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none sm:grid-cols-[6rem_1fr_auto] sm:gap-3 sm:px-4"
+                 [class.bg-primary-50]="entry.next" routerLink="/predict" [queryParams]="predictParams(entry.game)"
+                 [attr.aria-label]="'Prédire ' + teamName(team) + (entry.home ? ' contre ' : ' chez ') + teamName(entry.opponent) + ', le ' + (entry.game.scheduledDate | date: 'd MMMM y')">
+                <div class="text-gray-500">
+                  <div><span class="hidden sm:inline">{{ entry.game.scheduledDate | date: 'EEE ' }}</span>{{ entry.game.scheduledDate | date: 'd MMM' }}</div>
+                  @if (gameTypeLabel(entry.game.gameType); as type) {
+                    <span class="badge badge-info mt-1 whitespace-nowrap">{{ type }}</span>
+                  } @else if (entry.next) {
+                    <span class="badge badge-info mt-1 whitespace-nowrap">Prochain</span>
+                  }
+                </div>
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="w-5 shrink-0 text-center text-gray-400">{{ entry.home ? 'vs' : '@' }}</span>
+                  <app-team-logo [team]="entry.opponent" [size]="24" />
+                  <span class="truncate font-medium text-gray-900">
+                    <span class="sm:hidden">{{ entry.opponent?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(entry.opponent) }}</span>
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 text-right">
+                  @if (entry.outcome) {
+                    <span class="whitespace-nowrap tabular-nums">
+                      <span class="font-bold" [class.text-green-700]="entry.outcome === 'V'" [class.text-red-600]="entry.outcome === 'D'">{{ entry.outcome }}</span>
+                      {{ entry.teamScore }}-{{ entry.opponentScore }}@if (entry.game.result?.overtime) { <span class="hidden text-xs text-gray-500 sm:inline">(prol.)</span>}
                     </span>
+                  } @else {
+                    <span class="text-xs text-gray-500">À venir</span>
+                  }
+                  <span class="font-medium text-primary-600" aria-hidden="true"><span class="hidden sm:inline">Prédire </span>→</span>
+                </div>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <app-month-calendar [games]="allGames()" [selectedDay]="day()" [(month)]="month" (daySelected)="day.set($event)" />
+
+      <section aria-labelledby="day-title" class="space-y-2">
+        <h2 id="day-title" class="text-sm font-semibold uppercase tracking-wide text-gray-500">
+          {{ day() | date: 'EEEE d MMMM y' }} · {{ dayGames().length }} match{{ dayGames().length > 1 ? 's' : '' }}
+        </h2>
+        @if (dayGames().length === 0) {
+          <p class="text-sm text-gray-500">Aucun match ce jour-là : choisissez un jour dans l'agenda.</p>
+        } @else {
+          <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow">
+            @for (game of dayGames(); track game.id) {
+              <li class="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-sm">
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'away')">
+                    <span class="flex items-center gap-2">
+                      <app-team-logo [team]="game.awayTeam" [size]="20" />
+                      <span><span class="sm:hidden">{{ game.awayTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.awayTeam) }}</span></span>
+                    </span>
+                    <span class="tabular-nums">{{ game.result?.awayTeamScore }}</span>
                   </div>
-                  <div class="flex items-center gap-3 text-right">
-                    @if (entry.outcome) {
-                      <span class="whitespace-nowrap tabular-nums">
-                        <span class="font-bold" [class.text-green-700]="entry.outcome === 'V'" [class.text-red-600]="entry.outcome === 'D'">{{ entry.outcome }}</span>
-                        {{ entry.teamScore }}-{{ entry.opponentScore }}@if (entry.game.result?.overtime) { <span class="hidden text-xs text-gray-500 sm:inline">(prol.)</span>}
-                      </span>
-                    } @else {
-                      <span class="text-xs text-gray-500">À venir</span>
-                    }
-                    <span class="font-medium text-primary-600" aria-hidden="true"><span class="hidden sm:inline">Prédire </span>→</span>
+                  <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'home')">
+                    <span class="flex items-center gap-2">
+                      <app-team-logo [team]="game.homeTeam" [size]="20" />
+                      <span class="text-gray-400" aria-hidden="true">&#64;</span>
+                      <span class="sr-only">à domicile : </span>
+                      <span class="sm:hidden">{{ game.homeTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.homeTeam) }}</span>
+                    </span>
+                    <span class="tabular-nums">{{ game.result?.homeTeamScore }}</span>
                   </div>
-                </a>
+                </div>
+                <div class="text-right">
+                  @if (gameTypeLabel(game.gameType); as type) {
+                    <span class="badge badge-info">{{ type }}</span>
+                  }
+                  @if (game.result) {
+                    <span class="block text-xs text-gray-500">Final@if (game.result.overtime) { (prol.)}</span>
+                  } @else {
+                    <span class="block text-xs text-gray-500">À venir</span>
+                  }
+                  <a class="mt-1 block text-sm font-medium text-primary-600 hover:underline" routerLink="/predict" [queryParams]="predictParams(game)">
+                    Prédire
+                  </a>
+                </div>
               </li>
             }
           </ul>
-        </section>
-      }
-    } @else {
-      <p class="text-sm text-gray-500" aria-live="polite">{{ filtered().length }} match(s)</p>
-      <ul class="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white shadow">
-        @for (game of visible(); track game.id) {
-          <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-3 px-4 py-3 text-sm sm:grid-cols-[7rem_1fr_auto]">
-            <div class="text-gray-500">
-              <div>{{ game.scheduledDate | date: 'd MMM y' }}</div>
-              @if (gameTypeLabel(game.gameType); as type) {
-                <span class="badge badge-info mt-1">{{ type }}</span>
-              }
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'away')">
-                <span class="flex items-center gap-2">
-                  <app-team-logo [team]="game.awayTeam" [size]="20" />
-                  <span><span class="sm:hidden">{{ game.awayTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.awayTeam) }}</span></span>
-                </span>
-                <span class="tabular-nums">{{ game.result?.awayTeamScore }}</span>
-              </div>
-              <div class="flex items-center justify-between gap-2" [class.font-semibold]="won(game, 'home')">
-                <span class="flex items-center gap-2">
-                  <app-team-logo [team]="game.homeTeam" [size]="20" />
-                  <span class="text-gray-400" aria-hidden="true">&#64;</span>
-                  <span class="sr-only">à domicile : </span>
-                  <span class="sm:hidden">{{ game.homeTeam?.abbreviation }}</span><span class="hidden sm:inline">{{ teamName(game.homeTeam) }}</span>
-                </span>
-                <span class="tabular-nums">{{ game.result?.homeTeamScore }}</span>
-              </div>
-            </div>
-            <div class="text-right">
-              @if (game.result) {
-                <span class="text-xs text-gray-500">Final@if (game.result.overtime) { (prol.)}</span>
-              } @else {
-                <span class="block text-xs text-gray-500">À venir</span>
-              }
-              <a class="mt-1 block text-sm font-medium text-primary-600 hover:underline" routerLink="/predict" [queryParams]="predictParams(game)">
-                Prédire
-              </a>
-            </div>
-          </li>
         }
-      </ul>
-      @if (visible().length < filtered().length) {
-        <div class="text-center">
-          <button type="button" class="btn-secondary" (click)="showMore()">
-            Afficher plus ({{ filtered().length - visible().length }} restants)
-          </button>
-        </div>
-      }
+      </section>
     }
   </main>
 </div>

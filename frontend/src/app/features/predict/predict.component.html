@@ -25,7 +25,7 @@
     } @else {
       <section class="card space-y-4" aria-labelledby="pick-title">
         <h2 id="pick-title" class="text-lg font-bold">Choisir un match</h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_1.5fr]">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label for="season" class="mb-1 block text-sm font-medium text-gray-700">Saison</label>
             <select id="season" class="input-field" (change)="onSeason($any($event.target).value)">
@@ -43,28 +43,19 @@
               }
             </select>
           </div>
-          @if (pickTeamId() !== null) {
-            <div>
-              <label for="pick-game" class="mb-1 block text-sm font-medium text-gray-700">Match</label>
-              <select id="pick-game" class="input-field" (change)="onPickGame($any($event.target).value)">
-                @for (entry of teamEntries(); track entry.game.id) {
-                  <option [value]="entry.game.id" [selected]="entry.game.id === gameId()">{{ label(entry) }}</option>
-                }
-              </select>
-            </div>
-          } @else {
-            <div>
-              <label for="pick-day" class="mb-1 block text-sm font-medium text-gray-700">Jour</label>
-              <input id="pick-day" type="date" class="input-field" [value]="pickDay()" (change)="pickDay.set($any($event.target).value)" />
-            </div>
-          }
         </div>
 
-        @if (pickTeamId() === null) {
-          @if (seasonGames.isLoading()) {
-            <p class="text-sm text-gray-500">Chargement du calendrier…</p>
-          } @else if (dayGames().length === 0) {
-            <p class="text-sm text-gray-500">Aucun match ce jour-là. Choisissez un autre jour ou une équipe.</p>
+        @if (seasonGames.isLoading()) {
+          <p class="text-sm text-gray-500">Chargement du calendrier…</p>
+        } @else if (pickTeamId() !== null) {
+          <app-month-calendar [games]="allGames()" [teamId]="pickTeamId()" [selectedGameId]="gameId()" [(month)]="month" (gameSelected)="choose($event)" />
+        } @else {
+          <app-month-calendar [games]="allGames()" [selectedDay]="pickDay()" [(month)]="month" (daySelected)="pickDay.set($event)" />
+        }
+
+        @if (pickTeamId() === null && !seasonGames.isLoading()) {
+          @if (dayGames().length === 0) {
+            <p class="text-sm text-gray-500">Aucun match le {{ pickDay() | date: 'EEEE d MMMM' }} : choisissez un autre jour dans l'agenda, ou une équipe.</p>
           } @else {
             <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Matchs du jour">
               @for (game of dayGames(); track game.id) {

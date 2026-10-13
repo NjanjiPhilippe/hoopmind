@@ -1,6 +1,6 @@
-import { DecimalPipe, PercentPipe, formatDate } from '@angular/common';
+import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, LOCALE_ID, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { Api } from '../../core/api/generated/api';
@@ -18,10 +18,12 @@ import { defaultPredictionDate, isPlayoffGame } from '../../core/nba/nba-format'
 import { matchupColors, textOn } from '../../core/nba/team-branding';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { MonthCalendarComponent } from '../../shared/components/month-calendar/month-calendar.component';
+import { monthOf } from '../../shared/components/month-calendar/month-grid';
 import { TeamLogoComponent } from '../../shared/components/team-logo/team-logo.component';
-import { teamCalendar } from '../games/team-calendar';
+import { teamCalendar } from '../../core/nba/team-calendar';
 import { actualResult } from './actual-result';
-import { calendarLabel, defaultGame, gamesOn } from './game-picker';
+import { defaultGame, gamesOn } from './game-picker';
 import { FactorRow, explanationSource, factorRows } from './prediction-factors';
 
 interface Prediction {
@@ -42,7 +44,7 @@ interface Prediction {
  */
 @Component({
   selector: 'app-predict',
-  imports: [DecimalPipe, PercentPipe, RouterLink, NavbarComponent, TeamLogoComponent],
+  imports: [DatePipe, DecimalPipe, PercentPipe, RouterLink, NavbarComponent, TeamLogoComponent, MonthCalendarComponent],
   templateUrl: './predict.component.html',
   providers: [NbaCatalog],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,7 +89,6 @@ export class PredictComponent {
   protected readonly error = signal<{ text: string; notTrained: boolean } | null>(null);
 
   // Choix d'un match du calendrier en base : par équipe (sa saison) ou par jour (tous les matchs du jour).
-  private readonly locale = inject(LOCALE_ID);
   protected readonly seasonGames = resource({
     params: () => this.seasonId() ?? undefined,
     loader: ({ params }) => this.api.invoke(getGamesBySeason, { seasonId: params }),
@@ -96,9 +97,12 @@ export class PredictComponent {
   protected readonly pickDay = linkedSignal(() => this.day());
   protected readonly teamEntries = computed(() => {
     const team = this.pickTeamId();
-    return team === null ? [] : teamCalendar(currentValue(this.seasonGames) ?? [], team).months.flatMap(month => month.games);
+    return team === null ? [] : teamCalendar(this.allGames(), team).months.flatMap(month => month.games);
   });
-  protected readonly dayGames = computed(() => gamesOn(currentValue(this.seasonGames) ?? [], this.pickDay()));
+  protected readonly allGames = computed(() => currentValue(this.seasonGames) ?? []);
+  protected readonly dayGames = computed(() => gamesOn(this.allGames(), this.pickDay()));
+  /** Mois affiché par l'agenda : celui du match choisi, puis celui où l'on navigue. */
+  protected readonly month = linkedSignal(() => monthOf(this.day()));
   /** Saisie libre d'une affiche (match hypothétique) : repliée par défaut, ouverte si l'URL décrit un match sans identifiant. */
   protected readonly manual = linkedSignal(() => !!this.home() && !this.game());
 
@@ -115,10 +119,6 @@ export class PredictComponent {
     });
   }
 
-  label(entry: Parameters<typeof calendarLabel>[0]): string {
-    return calendarLabel(entry, value => formatDate(value, 'EEE d MMM', this.locale));
-  }
-
   /** Choisir une équipe propose son prochain match, prédit aussitôt. */
   onPickTeam(value: string): void {
     this.pickTeamId.set(idParam(value) ?? null);
@@ -127,13 +127,6 @@ export class PredictComponent {
       this.choose(entry.game);
     } else {
       this.prediction.set(null);
-    }
-  }
-
-  onPickGame(value: string): void {
-    const game = this.teamEntries().find(entry => entry.game.id === idParam(value))?.game;
-    if (game) {
-      this.choose(game);
     }
   }
 

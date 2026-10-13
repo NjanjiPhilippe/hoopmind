@@ -148,6 +148,9 @@ public class NbaDatabaseImporter {
                 continue;
             }
             team.setExternalId(row.teamId());
+            if (team.getLogoUrl() == null || team.getLogoUrl().isBlank()) {
+                team.setLogoUrl(logoUrl(row.teamId()));
+            }
             conference.ifPresent(team::setConference);
             division.ifPresent(team::setDivision);
             if (row.arena() != null) team.setArena(row.arena());
@@ -155,6 +158,11 @@ public class NbaDatabaseImporter {
             ids.put(row.teamId(), teamRepository.saveAndFlush(team).getId());
         }
         return ids;
+    }
+
+    /** Logo de la franchise sur le site de la NBA : seule l'adresse est enregistrée, l'image n'est pas copiée. */
+    static String logoUrl(long teamId) {
+        return "https://cdn.nba.com/logos/nba/" + teamId + "/global/L/logo.svg";
     }
 
     /** « Los Angeles Lakers » et « Los Angeles » donnent « Lakers ». */

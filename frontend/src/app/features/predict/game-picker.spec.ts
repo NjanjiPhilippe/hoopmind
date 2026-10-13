@@ -1,5 +1,5 @@
-import { calendarLabel, defaultGame, gamesOn } from './game-picker';
-import { teamCalendar } from '../games/team-calendar';
+import { defaultGame, gamesOn } from './game-picker';
+import { teamCalendar } from '../../core/nba/team-calendar';
 
 describe('game-picker', () => {
   const GSW = { id: 1, city: 'Golden State', name: 'Warriors' };
@@ -15,14 +15,9 @@ describe('game-picker', () => {
     expect(gamesOn(games, '2023-11-03')).toEqual([]);
   });
 
-  it('labels a game from the team side and proposes its next game', () => {
+  it("proposes the team's next game, else its last one", () => {
     const entries = teamCalendar(games, 1).months.flatMap(month => month.games);
-    const date = (value: string) => value.slice(5, 10);
 
-    expect(entries.map(entry => calendarLabel(entry, date))).toEqual([
-      '11-02 · @ Los Angeles Clippers · V 115-112',
-      '11-05 · vs Los Angeles Clippers · prochain match',
-    ]);
     expect(defaultGame(entries)?.game.id).toBe(3);
     expect(defaultGame(entries.slice(0, 1))?.game.id).toBe(1);
     expect(defaultGame([])).toBeUndefined();

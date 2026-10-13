@@ -9,22 +9,26 @@ prédiction.
 
 ## Décision
 
-- **Calendrier** (ancienne page Matchs, même URL `/games`) : une équipe choisie donne son calendrier de la saison,
-  du premier au dernier match, par mois, avec l'adversaire, le lieu (« vs » ou « @ »), le résultat (V ou D et le
-  score) et le prochain match signalé. Chaque ligne ouvre la prédiction de ce match. Sans équipe choisie, la liste
-  de tous les matchs reste en place.
-- **Prédire part du calendrier** : la page propose d'abord « Choisir un match » parmi ceux en base, soit par équipe
-  (liste de ses matchs de la saison, le prochain proposé et prédit aussitôt), soit par jour (tous les matchs du
-  jour). La saisie libre de deux équipes et d'un jour reste possible, repliée sous « Ou imaginer une autre affiche ».
+- **Agenda du mois** (`app-month-calendar`), comme Google Agenda : une grille du lundi au dimanche, flèches pour le
+  mois précédent ou suivant (bornées aux mois qui ont des matchs). Avec une équipe, chaque case montre son match
+  (logo de l'adversaire, « vs » ou « @ », V ou D et le score, fond vert ou rouge) et un clic choisit ce match. Sans
+  équipe, chaque case montre les affiches du jour et un clic choisit le jour, dont les matchs sont listés dessous.
+- **Calendrier** (ancienne page Matchs, même URL `/games`) : l'agenda du mois, ouvert sur le mois du prochain match
+  de l'équipe, puis la liste des matchs de ce mois. Un clic ouvre la prédiction du match.
+- **Prédire part du calendrier** : la page propose d'abord « Choisir un match » dans le même agenda, soit par équipe
+  (son prochain match est proposé et prédit aussitôt), soit par jour. La saisie libre de deux équipes et d'un jour
+  reste possible, repliée sous « Ou imaginer une autre affiche ».
 - **Résultat réel** : le lien du calendrier porte l'identifiant du match (`game`). La page Prédire lit ce match et,
   s'il a été joué, affiche le score et si le favori du modèle a gagné. Changer une équipe, la saison ou le jour fait
   oublier ce match.
 - **Couleurs** : les couleurs officielles des trente franchises sont dans le code (`team-branding.ts`), par
   abréviation. Quand les deux équipes d'un match ont des couleurs proches, l'équipe à l'extérieur prend sa couleur
   secondaire ; le texte posé sur une couleur est blanc ou noir selon sa luminance.
-- **Logos** : le navigateur charge le logo depuis le site de la NBA (`cdn.nba.com`, par identifiant de franchise),
-  sauf si l'équipe a un `logoUrl` en base. Aucun logo n'est copié dans le dépôt. Si l'image ne charge pas, une
-  pastille aux couleurs de l'équipe porte son abréviation.
+- **Logos en base** : la colonne `teams.logo_url` porte le lien de l'image sur le site de la NBA
+  (`https://cdn.nba.com/logos/nba/{identifiant NBA}/global/L/logo.svg`). La migration Liquibase 015 la remplit pour
+  les trente franchises actuelles, l'import des données la remplit pour les équipes créées ensuite ; un lien déjà
+  saisi n'est jamais écrasé. Le frontend affiche seulement ce lien : aucune image n'est copiée dans le dépôt. Sans
+  lien, ou si l'image ne charge pas, une pastille aux couleurs de l'équipe porte son abréviation.
 
 ## Conséquences
 

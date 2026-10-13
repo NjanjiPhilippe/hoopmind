@@ -1,12 +1,13 @@
 import { matchupColors, teamColor, teamLogoUrl, textOn } from './team-branding';
 
 describe('team-branding', () => {
-  it('gives each franchise its official colour and NBA logo', () => {
+  it('gives each franchise its official colour, and the logo stored with the team', () => {
     expect(teamColor({ abbreviation: 'GSW' })).toBe('#1D428A');
     expect(teamColor({ abbreviation: 'xyz' })).toBe('#6B7280');
-    expect(teamLogoUrl({ abbreviation: 'BOS' })).toBe('https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg');
-    expect(teamLogoUrl({ abbreviation: 'BOS', logoUrl: '/logos/bos.svg' })).toBe('/logos/bos.svg');
-    expect(teamLogoUrl({ abbreviation: 'SEA' })).toBeNull();
+    expect(teamLogoUrl({ abbreviation: 'BOS', logoUrl: 'https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg' }))
+      .toBe('https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg');
+    expect(teamLogoUrl({ abbreviation: 'BOS' })).toBeNull();
+    expect(teamLogoUrl({ abbreviation: 'BOS', logoUrl: '' })).toBeNull();
     expect(teamLogoUrl(null)).toBeNull();
   });
 

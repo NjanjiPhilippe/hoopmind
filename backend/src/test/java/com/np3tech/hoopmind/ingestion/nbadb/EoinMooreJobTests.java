@@ -92,6 +92,9 @@ class EoinMooreJobTests {
                 .containsEntry("quarters", "[25,25,25,25,12]");
         assertThat(jdbc.queryForObject("SELECT status FROM games WHERE external_id = '0021000003'", String.class))
                 .isEqualTo("SCHEDULED");
+        // Chaque équipe a l'adresse de son logo sur le site de la NBA (migration 015 ou import).
+        assertThat(teams.findByAbbreviation("POR")).get().satisfies(team -> assertThat(team.getLogoUrl())
+                .isEqualTo("https://cdn.nba.com/logos/nba/1610612757/global/L/logo.svg"));
         // Le play-in gagné par les Lakers ne compte pas dans leur bilan de saison régulière (0-1).
         assertThat(jdbc.queryForMap("""
                 SELECT ts.wins, ts.losses FROM team_stats ts JOIN teams t ON t.id = ts.team_id

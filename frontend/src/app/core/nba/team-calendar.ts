@@ -1,5 +1,5 @@
-import { GameResponse } from '../../core/api/generated/models/game-response';
-import { TeamSummaryResponse } from '../../core/api/generated/models/team-summary-response';
+import { GameResponse } from '../api/generated/models/game-response';
+import { TeamSummaryResponse } from '../api/generated/models/team-summary-response';
 
 /** Un match vu par l'équipe choisie : adversaire, lieu, et résultat une fois joué. */
 export interface CalendarGame {
