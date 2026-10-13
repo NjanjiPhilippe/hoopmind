@@ -4,9 +4,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 import { Api } from '../../../core/api/generated/api';
 import { getNbaDatabaseStatus } from '../../../core/api/generated/fn/import-des-donnees/get-nba-database-status';
+import { getStatsNbaStatus } from '../../../core/api/generated/fn/import-des-donnees/get-stats-nba-status';
 import { importReferenceCsv } from '../../../core/api/generated/fn/import-des-donnees/import-reference-csv';
 import { listReferenceDatasets } from '../../../core/api/generated/fn/import-des-donnees/list-reference-datasets';
 import { startNbaDatabaseImport } from '../../../core/api/generated/fn/import-des-donnees/start-nba-database-import';
+import { startStatsNbaImport } from '../../../core/api/generated/fn/import-des-donnees/start-stats-nba-import';
 import { getModelMetrics } from '../../../core/api/generated/fn/spark-analytics/get-model-metrics';
 import { getGameOutcomeTrainingStatus } from '../../../core/api/generated/fn/spark-analytics/get-game-outcome-training-status';
 import { startGameOutcomeTraining } from '../../../core/api/generated/fn/spark-analytics/start-game-outcome-training';
@@ -19,12 +21,15 @@ import { NavbarComponent } from '../../../shared/components/navbar/navbar.compon
 import {
   downloadPercent,
   featureLabel,
+  fetchPercent,
   formatBytes,
   formatDuration,
   gainOverBaseline,
   isRunning,
+  isStatsNbaRunning,
   isTraining,
   phaseLabel,
+  statsNbaPhaseLabel,
   trainingPhaseLabel,
   validSeasons,
 } from './data-labels';
@@ -54,6 +59,7 @@ export class AdminDataComponent {
   protected readonly featureLabel = featureLabel;
   protected readonly formatBytes = formatBytes;
   protected readonly phaseLabel = phaseLabel;
+  protected readonly statsNbaPhaseLabel = statsNbaPhaseLabel;
   protected readonly trainingPhaseLabel = trainingPhaseLabel;
   protected readonly formatDuration = formatDuration;
   protected readonly maxTrainingSeasons = MAX_TRAINING_SEASONS;
@@ -68,6 +74,14 @@ export class AdminDataComponent {
   protected readonly importSeasonsValid = computed(() => validSeasons(this.importSeasons(), this.maxImportSeasons()));
   protected readonly nbaError = signal<string | null>(null);
   protected readonly starting = signal(false);
+
+  // Saisons récentes lues sur stats.nba.com, après la fin de la base Walsh
+  protected readonly statsNba = resource({ loader: () => this.api.invoke(getStatsNbaStatus) });
+  protected readonly statsJob = computed(() => currentValue(this.statsNba)?.job ?? null);
+  protected readonly statsRunning = computed(() => isStatsNbaRunning(this.statsJob()));
+  protected readonly fetchPercent = computed(() => fetchPercent(this.statsJob()));
+  protected readonly statsError = signal<string | null>(null);
+  protected readonly startingStats = signal(false);
 
   // Archive CSV de Sumitro Datta
   protected readonly datasets = resource({ loader: () => this.api.invoke(listReferenceDatasets) });
@@ -94,7 +108,7 @@ export class AdminDataComponent {
   protected readonly gain = computed(() => gainOverBaseline(this.report()));
 
   /** Le serveur n'exécute qu'une opération sur les données à la fois : import et entraînement s'excluent. */
-  protected readonly dataBusy = computed(() => this.jobRunning() || this.training());
+  protected readonly dataBusy = computed(() => this.jobRunning() || this.statsRunning() || this.training());
 
   protected readonly weights = computed(() => {
     const weights = Object.entries(this.report()?.featureWeights ?? {});
@@ -108,6 +122,7 @@ export class AdminDataComponent {
   constructor() {
     // Tant qu'un import ou un entraînement tourne, son état est relu régulièrement.
     pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS);
+    pollWhile(() => isStatsNbaRunning(currentValue(this.statsNba)?.job), () => this.statsNba.reload(), POLL_MS);
     pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS);
   }
 
@@ -124,6 +139,20 @@ export class AdminDataComponent {
       this.nbaError.set(toProblem(e).detail ?? 'Import impossible');
     } finally {
       this.starting.set(false);
+    }
+  }
+
+  /** Lit sur stats.nba.com les saisons qui manquent, de la dernière saison en base à la saison en cours. */
+  async startStatsNba(): Promise<void> {
+    this.startingStats.set(true);
+    this.statsError.set(null);
+    try {
+      await this.api.invoke(startStatsNbaImport, {});
+      this.statsNba.reload();
+    } catch (e) {
+      this.statsError.set(toProblem(e).detail ?? 'Import impossible');
+    } finally {
+      this.startingStats.set(false);
     }
   }
 

@@ -34,6 +34,21 @@ public sealed interface DataImportEvent {
         }
     }
 
+    record StatsNbaImported(CurrentUser requestedBy, List<String> seasons, int games) implements DataImportEvent {
+        public StatsNbaImported {
+            seasons = List.copyOf(seasons);
+        }
+    }
+
+    /** {@code error} : message déjà présentable à un administrateur (ni chemin, ni trace technique). */
+    record StatsNbaImportFailed(CurrentUser requestedBy, String fromSeason, String toSeason, String error)
+            implements DataImportEvent {
+        @Override
+        public boolean failed() {
+            return true;
+        }
+    }
+
     record ReferenceCsvImported(CurrentUser requestedBy, int files, int importedFiles, int failedFiles,
                                 int insertedRows, int updatedRows) implements DataImportEvent {
     }

@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties({NbaDatabaseImportProperties.class, KaggleProperties.class})
+@EnableConfigurationProperties({NbaDatabaseImportProperties.class, KaggleProperties.class, StatsNbaProperties.class})
 class NbaImportConfig {
 
     /**

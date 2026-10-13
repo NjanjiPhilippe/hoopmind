@@ -5,14 +5,13 @@ import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.StandingRow;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamGameRow;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseRows.TeamRow;
 
+import com.np3tech.hoopmind.ingestion.nbadb.NbaAlignment.Alignment;
+
 import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,21 +47,12 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
 
     private static final int OVERTIME_COLUMNS = 10;
 
-    /** Alignement de la NBA depuis 2004-05 : abréviation, conférence, division. */
-    private static final Map<String, String[]> ALIGNMENT = alignment(
-            "East", "Atlantic", "BOS", "BKN", "NYK", "PHI", "TOR",
-            "East", "Central", "CHI", "CLE", "DET", "IND", "MIL",
-            "East", "Southeast", "ATL", "CHA", "MIA", "ORL", "WAS",
-            "West", "Northwest", "DEN", "MIN", "OKC", "POR", "UTA",
-            "West", "Pacific", "GSW", "LAC", "LAL", "PHX", "SAC",
-            "West", "Southwest", "DAL", "HOU", "MEM", "NOP", "SAS");
-
     LegacyKaggleReader(Connection connection) {
         super(connection);
     }
 
     @Override
-    List<String> recentSeasons(int count) {
+    public List<String> recentSeasons(int count) {
         List<String> seasons = query(GAMES + """
                 SELECT DISTINCT g.start_year FROM g
                 WHERE substr(g.gid, 1, 3) = '002' AND g.start_year IS NOT NULL
@@ -72,7 +62,7 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
     }
 
     @Override
-    List<TeamRow> teams() {
+    public List<TeamRow> teams() {
         return query("""
                 SELECT CAST(t.id AS INTEGER), t.abbreviation, t.full_name, t.city, d.arena, t.year_founded
                 FROM team t
@@ -80,14 +70,15 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
                            GROUP BY CAST(team_id AS INTEGER)) d ON d.team_id = CAST(t.id AS INTEGER)""",
                 rs -> {
                     String abbreviation = rs.getString(2);
-                    String[] alignment = ALIGNMENT.getOrDefault(abbreviation, new String[2]);
+                    Optional<Alignment> alignment = NbaAlignment.of(abbreviation);
                     return new TeamRow(rs.getLong(1), abbreviation, rs.getString(3), rs.getString(4), rs.getString(5),
-                            integer(rs, 6), alignment[0], alignment[1]);
+                            integer(rs, 6), alignment.map(Alignment::conference).orElse(null),
+                            alignment.map(Alignment::division).orElse(null));
                 });
     }
 
     @Override
-    List<GameRow> games(List<String> seasons) {
+    public List<GameRow> games(List<String> seasons) {
         Map<String, List<List<Integer>>> periods = periods();
         List<GameRow> rows = query(GAMES + """
                 SELECT g.gid, g.game_date, g.start_year, CAST(g.team_id_home AS INTEGER), CAST(g.team_id_away AS INTEGER),
@@ -124,7 +115,7 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
     }
 
     @Override
-    List<TeamGameRow> teamGames(List<String> seasons) {
+    public List<TeamGameRow> teamGames(List<String> seasons) {
         String where = "WHERE %s AND g.start_year IN (%s)".formatted(GAME_KINDS, placeholders(seasons));
         Object[] years = startYears(seasons);
         Object[] parameters = Stream.concat(Stream.of(years), Stream.of(years)).toArray();
@@ -147,81 +138,18 @@ final class LegacyKaggleReader extends NbaDatabaseReader {
                 .collect(Collectors.joining(", "));
     }
 
-    /**
-     * Classements recalculés : rang dans la conférence et dans la division au pourcentage de victoires
-     * (puis au nombre de victoires), sur les matchs de saison régulière joués.
-     */
+    /** Classements recalculés à partir des résultats (voir {@link NbaAlignment#standings}). */
     @Override
-    List<StandingRow> standings(List<String> seasons) {
-        Map<Long, String[]> alignment = teams().stream()
-                .filter(team -> team.conference() != null)
-                .collect(Collectors.toMap(TeamRow::teamId, team -> new String[]{team.conference(), team.division()},
-                        (a, b) -> a));
-        String regular = "substr(g.gid, 1, 3) = '002' AND g.start_year IN (%s) AND g.pts_home IS NOT NULL"
-                .formatted(placeholders(seasons));
-        Object[] years = startYears(seasons);
-        Object[] parameters = Stream.concat(Stream.of(years), Stream.of(years)).toArray();
-        List<SeasonRecord> records = query(GAMES + """
-                SELECT start_year, team_id, SUM(won), COUNT(*) FROM (
-                    SELECT g.start_year, CAST(g.team_id_home AS INTEGER) AS team_id,
-                           CASE WHEN g.pts_home > g.pts_away THEN 1 ELSE 0 END AS won FROM g WHERE %s
-                    UNION ALL
-                    SELECT g.start_year, CAST(g.team_id_away AS INTEGER),
-                           CASE WHEN g.pts_away > g.pts_home THEN 1 ELSE 0 END FROM g WHERE %s)
-                GROUP BY start_year, team_id""".formatted(regular, regular),
-                rs -> new SeasonRecord(season(rs.getInt(1)), rs.getLong(2), rs.getInt(3), rs.getInt(4)),
-                parameters);
-
-        List<StandingRow> standings = new ArrayList<>();
-        records.stream()
-                .filter(r -> alignment.containsKey(r.teamId()))
-                .collect(Collectors.groupingBy(SeasonRecord::season))
-                .forEach((season, teams) -> {
-                    Map<Long, Integer> conferenceRanks = ranks(teams, r -> alignment.get(r.teamId())[0]);
-                    Map<Long, Integer> divisionRanks = ranks(teams, r -> alignment.get(r.teamId())[1]);
-                    teams.forEach(r -> standings.add(new StandingRow(season, r.teamId(),
-                            conferenceRanks.get(r.teamId()), divisionRanks.get(r.teamId()))));
-                });
-        return standings;
-    }
-
-    private record SeasonRecord(String season, long teamId, int wins, int games) {
-        double winPercentage() {
-            return games == 0 ? 0 : (double) wins / games;
-        }
-    }
-
-    private static Map<Long, Integer> ranks(List<SeasonRecord> teams, Function<SeasonRecord, String> group) {
-        Map<Long, Integer> ranks = new HashMap<>();
-        teams.stream().collect(Collectors.groupingBy(group)).values().forEach(members -> {
-            List<SeasonRecord> sorted = members.stream()
-                    .sorted(Comparator.comparingDouble(SeasonRecord::winPercentage).reversed()
-                            .thenComparing(Comparator.comparingInt(SeasonRecord::wins).reversed())
-                            .thenComparingLong(SeasonRecord::teamId))
-                    .toList();
-            for (int i = 0; i < sorted.size(); i++) {
-                ranks.put(sorted.get(i).teamId(), i + 1);
-            }
-        });
-        return ranks;
+    public List<StandingRow> standings(List<String> seasons) {
+        return NbaAlignment.standings(games(seasons), teams());
     }
 
     /** 2023 donne « 2023-24 », comme les saisons de nbadb. */
     static String season(int startYear) {
-        return "%d-%02d".formatted(startYear, (startYear + 1) % 100);
+        return NbaAlignment.season(startYear);
     }
 
     private static Object[] startYears(List<String> seasons) {
         return seasons.stream().map(season -> Integer.parseInt(season.substring(0, 4))).toArray();
-    }
-
-    private static Map<String, String[]> alignment(String... values) {
-        Map<String, String[]> alignment = new HashMap<>();
-        for (int i = 0; i < values.length; i += 7) {
-            for (int team = 2; team < 7; team++) {
-                alignment.put(values[i + team], new String[]{values[i], values[i + 1]});
-            }
-        }
-        return Map.copyOf(alignment);
     }
 }

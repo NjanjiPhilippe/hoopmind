@@ -1,12 +1,15 @@
 import {
   downloadPercent,
   featureLabel,
+  fetchPercent,
   formatBytes,
   formatDuration,
   gainOverBaseline,
   isRunning,
+  isStatsNbaRunning,
   isTraining,
   phaseLabel,
+  statsNbaPhaseLabel,
   trainingPhaseLabel,
   validSeasons,
 } from './data-labels';
@@ -61,5 +64,15 @@ describe('data-labels', () => {
     expect(gainOverBaseline({ accuracy: 0.752, homeTeamBaseline: 0.55, betterRecordBaseline: 0.7 })).toBeCloseTo(0.052);
     expect(gainOverBaseline({ accuracy: 0.7 })).toBeNull();
     expect(gainOverBaseline(null)).toBeNull();
+  });
+
+  it('follows an import from stats.nba.com', () => {
+    expect(statsNbaPhaseLabel('FETCHING')).toBe('Lecture de stats.nba.com');
+    expect(isStatsNbaRunning({ phase: 'FETCHING' })).toBe(true);
+    expect(isStatsNbaRunning({ phase: 'IMPORTING' })).toBe(true);
+    expect(isStatsNbaRunning({ phase: 'FAILED' })).toBe(false);
+    expect(isStatsNbaRunning(null)).toBe(false);
+    expect(fetchPercent({ fetched: 3, requests: 8 })).toBe(38);
+    expect(fetchPercent({ fetched: 0 })).toBeNull();
   });
 });

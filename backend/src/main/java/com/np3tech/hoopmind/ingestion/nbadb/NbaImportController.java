@@ -2,6 +2,8 @@ package com.np3tech.hoopmind.ingestion.nbadb;
 
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.JobStatus;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.NbaDatabaseStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.StatsNbaJobService.StatsNbaJobStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.StatsNbaJobService.StatsNbaStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 class NbaImportController {
 
     private final NbaDatabaseJobService jobs;
+    private final StatsNbaJobService statsNba;
 
     @GetMapping("/nba-database/status")
     @Operation(operationId = "getNbaDatabaseStatus", summary = "État de la base NBA (Wyatt Walsh)",
@@ -48,5 +51,26 @@ class NbaImportController {
             @Parameter(description = "Télécharger la base depuis Kaggle avant l'import")
             @RequestParam(defaultValue = "false") boolean download) {
         return jobs.start(seasons, download);
+    }
+
+    @GetMapping("/stats-nba/status")
+    @Operation(operationId = "getStatsNbaStatus", summary = "Complément depuis stats.nba.com : saisons visées et dernier import",
+            description = "Saisons qu'un import lirait (de la dernière saison en base à la saison en cours) et avancement "
+                    + "du dernier import.")
+    StatsNbaStatus getStatsNbaStatus() {
+        return statsNba.status();
+    }
+
+    @PostMapping("/stats-nba/jobs")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(operationId = "startStatsNbaImport", summary = "Compléter les matchs récents depuis stats.nba.com",
+            description = "Lit sur stats.nba.com (public, sans clé) les matchs de saison régulière et de playoffs, de la "
+                    + "saison fromYear jusqu'à la saison en cours, puis les importe. Suivre l'avancement avec "
+                    + "GET /stats-nba/status.")
+    StatsNbaJobStatus startStatsNbaImport(
+            @Parameter(description = "Année de début de la première saison (2023 pour 2023-24) ; par défaut la dernière "
+                    + "saison en base")
+            @RequestParam(required = false) Integer fromYear) {
+        return statsNba.start(fromYear);
     }
 }
