@@ -25,3 +25,5 @@ databaseChangeLog:
       file: db/changelog/changes/012-background-jobs.yaml
   - include:
       file: db/changelog/changes/013-timestamps-with-time-zone.yaml
+  - include:
+      file: db/changelog/changes/014-remove-demo-season.yaml
