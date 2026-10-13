@@ -101,6 +101,9 @@ public class StatsNbaJobService {
             long requests = 2L * (to - from + 1);
             long done = 0;
             context.progress(done, requests);
+            String unavailableSeason = null;
+            StatsNbaUnavailableException unavailable = null;
+            fetch:
             for (int year = from; year <= to; year++) {
                 String season = NbaAlignment.season(year);
                 List<GameLogLine> seasonLines = new ArrayList<>();
@@ -108,11 +111,22 @@ public class StatsNbaJobService {
                     if (done > 0) {
                         pause();
                     }
-                    seasonLines.addAll(client.gameLog(season, type));
+                    try {
+                        seasonLines.addAll(client.gameLog(season, type));
+                    } catch (StatsNbaUnavailableException e) {
+                        // Le site ralentit puis cesse de répondre après quelques requêtes : les saisons déjà lues
+                        // sont importées, et l'import suivant reprend à partir de la dernière saison en base.
+                        unavailableSeason = season;
+                        unavailable = e;
+                        break fetch;
+                    }
                     context.progress(++done, requests);
                 }
                 lines.put(season, seasonLines);
                 log.info("stats.nba.com, saison {} : {} lignes", season, seasonLines.size());
+            }
+            if (lines.isEmpty() && unavailable != null) {
+                throw unavailable;
             }
             context.step(StatsNbaPhase.IMPORTING.name());
             ImportReport report;
@@ -124,6 +138,12 @@ public class StatsNbaJobService {
                 report = importer.importSource(source, MAX_SEASONS);
             }
             events.publishEvent(new DataImportEvent.StatsNbaImported(requestedBy, report.seasons(), report.games()));
+            if (unavailable != null) {
+                throw new NbaImportException("Import partiel : " + String.join(", ", report.seasons())
+                        + " importée(s) (" + report.games() + " matchs), puis stats.nba.com a cessé de répondre pour "
+                        + unavailableSeason + ". Relancez dans quelques minutes : l'import reprendra là où il s'est arrêté.",
+                        unavailable);
+            }
             return report;
         } catch (RuntimeException e) {
             events.publishEvent(new DataImportEvent.StatsNbaImportFailed(requestedBy, fromSeason, toSeason,

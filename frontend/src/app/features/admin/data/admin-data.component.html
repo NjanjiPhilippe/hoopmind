@@ -152,7 +152,7 @@
                 <div class="h-full bg-primary-600 transition-all" [style.width.%]="fetchPercent() ?? 100"
                      [class.animate-pulse]="fetchPercent() === null"></div>
               </div>
-              <p class="mt-1 text-gray-500">{{ job.fetched ?? 0 }} requête(s) sur {{ job.requests ?? '…' }}, une seconde d'écart entre chacune.</p>
+              <p class="mt-1 text-gray-500">{{ job.fetched ?? 0 }} requête(s) sur {{ job.requests ?? '…' }}, trois secondes d'écart entre chacune.</p>
             } @else if (job.phase === 'IMPORTING') {
               <p class="mt-2 text-gray-500">Écriture des matchs et des bilans de saison…</p>
             } @else if (job.phase === 'FAILED' || job.phase === 'INTERRUPTED') {

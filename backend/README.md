@@ -150,9 +150,10 @@ des `NBA_IMPORT_SEASONS` dernières saisons (10 par défaut). Il calcule ensuite
 (victoires, domicile et extérieur, séries, ratings offensif et défensif, rythme) à partir des feuilles de match.
 
 Le complément stats.nba.com lit, pour chaque saison de la dernière en base à la saison en cours, le journal des matchs
-de saison régulière et de playoffs (deux requêtes par saison, une seconde d'écart), puis l'importe comme la base Walsh :
+de saison régulière et de playoffs (deux requêtes par saison, trois secondes d'écart), puis l'importe comme la base Walsh :
 mêmes identifiants, donc les saisons communes sont mises à jour sans doublon (voir [ADR 0017](docs/adr/0017-complement-stats-nba.md)).
-Le site bloque souvent les serveurs hébergés : lancez ce complément depuis un poste personnel.
+Le site bloque souvent les serveurs hébergés : lancez ce complément depuis un poste personnel. S'il cesse de répondre en cours
+de route, les saisons déjà lues sont importées et l'import suivant reprend à partir de la dernière saison en base.
 
 L'import des CSV (`nba.importer.csv`) reconnaît les 22 fichiers de l'archive par leurs colonnes caractéristiques et range
 chaque ligne sous sa clé naturelle (par exemple saison, ligue, joueur et équipe), avec ses valeurs en JSON : « NA » devient nul,

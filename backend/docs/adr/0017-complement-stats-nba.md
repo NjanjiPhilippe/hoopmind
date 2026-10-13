@@ -16,12 +16,15 @@ l'API publique de stats.nba.com, endpoint `leaguegamelog` (une ligne par équipe
 - **Une source commune** : `NbaSource` est l'interface que lisent l'import Walsh (`NbaDatabaseReader`) et
   `StatsNbaSource`. Alignement et classements recalculés sont partagés avec l'ancien format (`NbaAlignment`).
 - **Saisons lues** : de la dernière saison en base (relue pour la compléter) à la saison en cours, qui commence en
-  octobre. Deux requêtes par saison (saison régulière, playoffs), une seconde d'écart (`STATS_NBA_DELAY_MS`).
-- **Tout est lu avant d'écrire** : l'écriture reste une seule transaction ([ADR 0014](0014-import-par-lots-et-coherence.md)),
-  une coupure du site en cours de lecture ne laisse pas d'import partiel.
+  octobre. Deux requêtes par saison (saison régulière, playoffs), trois secondes d'écart (`STATS_NBA_DELAY_MS`) :
+  le site laisse sans réponse les clients trop pressés.
+- **Lecture puis écriture** : les saisons sont lues avant d'écrire, et l'écriture reste une seule transaction
+  ([ADR 0014](0014-import-par-lots-et-coherence.md)). Si le site cesse de répondre en cours de lecture, les saisons
+  entièrement lues sont importées et le job échoue en le disant ; relancé, il reprend à la dernière saison en base.
 - **Job en arrière-plan** (`STATS_NBA_IMPORT`) sous le même verrou que l'import Walsh, journal d'audit dédié.
 - **Résilience** : `@Retryable` sur délai dépassé, coupure, 429 et 5xx ([ADR 0011](0011-resilience-spring-7.md)) ;
-  un refus (403) n'est pas retenté. Les en-têtes imitent un navigateur sur nba.com, sans quoi le site ne répond pas.
+  un refus (403) n'est pas retenté. Les en-têtes imitent un navigateur sur nba.com (HTTP/1.1, gzip, `x-nba-stats-*`), sans quoi le site ne
+  répond pas ; chaque requête attend au plus 30 secondes.
 
 ## Conséquences
 
