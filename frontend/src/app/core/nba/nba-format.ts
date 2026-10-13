@@ -23,6 +23,7 @@ export function defaultPredictionDate(season: SeasonResponse | null | undefined,
 }
 
 const GAME_TYPE_LABELS: Partial<Record<NonNullable<GameResponse['gameType']>, string>> = {
+  PLAY_IN: 'Play-in',
   PLAYOFFS: 'Playoffs',
   FINALS: 'Finales',
   PRESEASON: 'Présaison',

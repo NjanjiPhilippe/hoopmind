@@ -1,16 +1,20 @@
 import {
   downloadPercent,
+  eoinMoorePhaseLabel,
   featureLabel,
   fetchPercent,
   formatBytes,
   formatDuration,
   gainOverBaseline,
+  isEoinMooreRunning,
   isRunning,
   isStatsNbaRunning,
   isTraining,
   phaseLabel,
+  seasonName,
   statsNbaPhaseLabel,
   trainingPhaseLabel,
+  validSeasonRange,
   validSeasons,
 } from './data-labels';
 
@@ -74,5 +78,23 @@ describe('data-labels', () => {
     expect(isStatsNbaRunning(null)).toBe(false);
     expect(fetchPercent({ fetched: 3, requests: 8 })).toBe(38);
     expect(fetchPercent({ fetched: 0 })).toBeNull();
+  });
+
+  it('follows an import of the Eoin Moore files', () => {
+    expect(eoinMoorePhaseLabel('READING')).toBe('Lecture des fichiers');
+    expect(isEoinMooreRunning({ phase: 'READING' })).toBe(true);
+    expect(isEoinMooreRunning({ phase: 'SUCCEEDED' })).toBe(false);
+    expect(isEoinMooreRunning(undefined)).toBe(false);
+  });
+
+  it('names seasons and checks a season range', () => {
+    expect(seasonName(2023)).toBe('2023-24');
+    expect(seasonName(1999)).toBe('1999-00');
+    expect(seasonName(Number.NaN)).toBe('');
+    expect(validSeasonRange(2023, 2023, 10)).toBe(true);
+    expect(validSeasonRange(2023, 2025, 10)).toBe(true);
+    expect(validSeasonRange(2024, 2023, 10)).toBe(false);
+    expect(validSeasonRange(2010, 2025, 10)).toBe(false);
+    expect(validSeasonRange(Number.NaN, 2023, 10)).toBe(false);
   });
 });

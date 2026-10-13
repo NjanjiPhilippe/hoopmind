@@ -1,5 +1,7 @@
 package com.np3tech.hoopmind.ingestion.nbadb;
 
+import com.np3tech.hoopmind.ingestion.nbadb.EoinMooreJobService.EoinMooreJobStatus;
+import com.np3tech.hoopmind.ingestion.nbadb.EoinMooreJobService.EoinMooreStatus;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.JobStatus;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseJobService.NbaDatabaseStatus;
 import com.np3tech.hoopmind.ingestion.nbadb.StatsNbaJobService.StatsNbaJobStatus;
@@ -32,6 +34,7 @@ class NbaImportController {
 
     private final NbaDatabaseJobService jobs;
     private final StatsNbaJobService statsNba;
+    private final EoinMooreJobService eoinMoore;
 
     @GetMapping("/nba-database/status")
     @Operation(operationId = "getNbaDatabaseStatus", summary = "État de la base NBA (Wyatt Walsh)",
@@ -72,5 +75,28 @@ class NbaImportController {
                     + "saison en base")
             @RequestParam(required = false) Integer fromYear) {
         return statsNba.start(fromYear);
+    }
+
+    @GetMapping("/eoin-moore/status")
+    @Operation(operationId = "getEoinMooreStatus", summary = "Saisons récentes (fichiers d'Eoin Moore) : fichiers et dernier import",
+            description = "Présence de Games.csv et TeamStatistics.csv dans le dossier du serveur, saison proposée et "
+                    + "avancement du dernier import.")
+    EoinMooreStatus getEoinMooreStatus() {
+        return eoinMoore.status();
+    }
+
+    @PostMapping("/eoin-moore/jobs")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Operation(operationId = "startEoinMooreImport", summary = "Importer des saisons récentes depuis les fichiers d'Eoin Moore",
+            description = "Lit Games.csv et TeamStatistics.csv (Kaggle eoinamoore/historical-nba-data-and-player-box-scores) "
+                    + "et importe les matchs de saison régulière, de play-in et de playoffs des saisons fromYear à toYear. "
+                    + "Suivre l'avancement avec GET /eoin-moore/status.")
+    EoinMooreJobStatus startEoinMooreImport(
+            @Parameter(description = "Année de début de la première saison (2023 pour 2023-24) ; par défaut celle qui "
+                    + "suit la dernière saison en base")
+            @RequestParam(required = false) Integer fromYear,
+            @Parameter(description = "Année de début de la dernière saison ; par défaut fromYear")
+            @RequestParam(required = false) Integer toYear) {
+        return eoinMoore.start(fromYear, toYear);
     }
 }

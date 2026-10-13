@@ -14,7 +14,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Pour les sources qui ne donnent ni conférence, ni division, ni classement (ancien format Kaggle, stats.nba.com) :
+ * Pour les sources qui ne donnent ni conférence, ni division, ni classement (ancien format Kaggle, stats.nba.com,
+ * fichiers d'Eoin Moore) :
  * l'alignement actuel de la NBA, et des classements recalculés à partir des résultats de saison régulière.
  */
 final class NbaAlignment {
@@ -28,6 +29,13 @@ final class NbaAlignment {
             "West", "Pacific", "GSW", "LAC", "LAL", "PHX", "SAC",
             "West", "Southwest", "DAL", "HOU", "MEM", "NOP", "SAS");
 
+    /** Identifiants stats.nba.com des trente franchises (1610612737 à 1610612766), dans l'ordre. */
+    private static final List<String> FRANCHISES = List.of(
+            "ATL", "BOS", "CLE", "NOP", "CHI", "DAL", "DEN", "GSW", "HOU", "LAC", "LAL", "MIA", "MIL", "MIN", "BKN",
+            "NYK", "ORL", "IND", "PHI", "PHX", "POR", "SAC", "SAS", "OKC", "TOR", "UTA", "MEM", "WAS", "DET", "CHA");
+
+    private static final long FIRST_FRANCHISE_ID = 1_610_612_737L;
+
     record Alignment(String conference, String division) {
     }
 
@@ -36,6 +44,12 @@ final class NbaAlignment {
 
     static Optional<Alignment> of(String abbreviation) {
         return Optional.ofNullable(abbreviation == null ? null : ALIGNMENT.get(abbreviation));
+    }
+
+    /** Abréviation actuelle d'une franchise, pour les sources qui ne donnent que l'identifiant (1610612738 : BOS). */
+    static Optional<String> abbreviation(long teamId) {
+        long index = teamId - FIRST_FRANCHISE_ID;
+        return index < 0 || index >= FRANCHISES.size() ? Optional.empty() : Optional.of(FRANCHISES.get((int) index));
     }
 
     /**
@@ -48,7 +62,7 @@ final class NbaAlignment {
                 .collect(Collectors.toMap(TeamRow::teamId, team -> new Alignment(team.conference(), team.division()),
                         (a, b) -> a));
         Map<String, Map<Long, int[]>> records = new HashMap<>();
-        games.stream().filter(g -> g.played() && !g.playoffs()).forEach(g -> {
+        games.stream().filter(g -> g.played() && g.regularSeason()).forEach(g -> {
             Map<Long, int[]> season = records.computeIfAbsent(g.seasonYear(), s -> new HashMap<>());
             boolean homeWon = g.homePoints() > g.awayPoints();
             count(season, g.homeTeamId(), homeWon);

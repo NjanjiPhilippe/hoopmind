@@ -17,7 +17,7 @@ final class NbaDatabaseRows {
     }
 
     /**
-     * Un match de saison régulière ou de playoffs. Les scores sont {@code null} tant que le match n'est pas joué.
+     * Un match de saison régulière, de play-in ou de playoffs. Les scores sont {@code null} tant que le match n'est pas joué.
      * Les listes de points par période contiennent les quatre quart-temps puis les prolongations jouées.
      */
     record GameRow(String gameId, LocalDate gameDate, String seasonYear, long homeTeamId, long awayTeamId,
@@ -28,7 +28,16 @@ final class NbaDatabaseRows {
             return homePoints != null && awayPoints != null;
         }
 
-        /** Les identifiants stats.nba.com commencent par 002 en saison régulière et 004 en playoffs. */
+        /** Les identifiants stats.nba.com commencent par 002 en saison régulière, 005 en play-in et 004 en playoffs. */
+        boolean regularSeason() {
+            return gameId.startsWith("002");
+        }
+
+        /** Tournoi de play-in (depuis 2020-21) : ni le bilan de saison régulière, ni les playoffs. */
+        boolean playIn() {
+            return gameId.startsWith("005");
+        }
+
         boolean playoffs() {
             return gameId.startsWith("004");
         }

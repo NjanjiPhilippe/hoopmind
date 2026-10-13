@@ -3,7 +3,7 @@ package com.np3tech.hoopmind.nba;
 import java.time.LocalDate;
 
 /**
- * Un match de saison régulière ou de playoffs, tel que le module NBA l'expose aux autres modules
+ * Un match de saison régulière, de play-in ou de playoffs, tel que le module NBA l'expose aux autres modules
  * (en lecture seule, sans entité JPA).
  *
  * @param homePoints {@code null} tant que le match n'est pas joué

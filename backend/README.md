@@ -29,8 +29,9 @@ Les données ne sont pas fournies avec le dépôt (voir [Données NBA](#données
    chemin dans `NBA_DATABASE_PATH`) puis cliquez sur « Réimporter le fichier présent ». Sinon, renseignez `KAGGLE_USERNAME` et `KAGGLE_KEY` dans `.env` (jeton créé sur kaggle.com, Settings,
    API, Create New Token), puis cliquez sur « Télécharger depuis Kaggle et importer ». Le serveur télécharge la base de
    Wyatt Walsh lui-même (plusieurs Go, sans passer par le navigateur) puis l'importe en arrière-plan ; la page suit l'avancement.
-   La base s'arrête à 2022-23 : cliquez ensuite sur « Compléter avec stats.nba.com » pour lire les saisons suivantes,
-   jusqu'à la saison en cours (site public, sans compte ni clé).
+   La base s'arrête à 2022-23 : pour les saisons suivantes, téléchargez `Games.csv` et `TeamStatistics.csv` du jeu Kaggle
+   [eoinamoore/historical-nba-data-and-player-box-scores](https://www.kaggle.com/datasets/eoinamoore/historical-nba-data-and-player-box-scores),
+   déposez-les dans `data/eoinamoore/` (ou `EOINMOORE_DATA_DIR`), puis cliquez sur « Importer 2023-24 ».
 2. **Statistiques de saison et trophées** : déposez le zip de l'archive de Sumitro Datta, ou des CSV isolés, dans n'importe
    quel ordre. Chaque fichier est reconnu par ses colonnes, quel que soit son nom, et la page affiche un compte rendu par fichier.
 3. **Modèle** : choisissez le nombre de saisons et lancez l'entraînement ; la page affiche la précision, la comparaison aux
@@ -41,7 +42,7 @@ Sans interface, les mêmes opérations existent dans l'API (jeton administrateur
 ```bash
 scripts/download-nba-database.sh         # ou téléchargement manuel de data/nba.sqlite
 curl -X POST "localhost:8083/api/v1/admin/imports/nba-database/jobs?seasons=10" -H "Authorization: Bearer $TOKEN"
-curl -X POST "localhost:8083/api/v1/admin/imports/stats-nba/jobs" -H "Authorization: Bearer $TOKEN"
+curl -X POST "localhost:8083/api/v1/admin/imports/eoin-moore/jobs?fromYear=2023&toYear=2023" -H "Authorization: Bearer $TOKEN"
 curl -X POST "localhost:8083/api/v1/admin/imports/csv" -F "files=@archive.zip" -H "Authorization: Bearer $TOKEN"
 curl -X POST "localhost:8083/api/v1/spark/ml/train/game-outcome/jobs?seasons=5" -H "Authorization: Bearer $TOKEN"
 curl "localhost:8083/api/v1/spark/ml/train/game-outcome/status" -H "Authorization: Bearer $TOKEN"
@@ -136,23 +137,28 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | Source | Contenu | Utilisation |
 |---|---|---|
 | [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh** ([nbadb](https://github.com/wyattowalsh/nbadb)), licence CC BY-SA 4.0 | Tous les matchs depuis 1946-47 avec scores, feuilles de match, classements, issus de stats.nba.com | Équipes, saisons, matchs, résultats, statistiques par match et bilans de saison |
+| [Historical NBA Data and Player Box Scores](https://www.kaggle.com/datasets/eoinamoore/historical-nba-data-and-player-box-scores) de **Eoin Moore** | Tous les matchs et feuilles de match d'équipe, mis à jour chaque jour | Saisons absentes de la base Walsh (2023-24 et suivantes) : matchs, play-in, résultats avec points par quart-temps, statistiques par match et bilans de saison |
 | [stats.nba.com](https://www.nba.com/stats), site officiel de la NBA, public | Journal des matchs par équipe (`leaguegamelog`) | Saisons récentes absentes de la base Walsh : matchs, résultats, statistiques par match et bilans de saison, sans les points par quart-temps |
 | [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats) de **Sumitro Datta**, d'après Basketball-Reference | Statistiques de saison des joueurs et des équipes, votes des trophées individuels | Importée telle quelle (table `reference_csv_rows`), pour la future prédiction des trophées (MVP, DPOY, ROY…) |
 
 Les données ne sont pas versionnées : chacun les télécharge depuis Kaggle, et `data/` est ignoré par git.
-Merci à Wyatt Walsh et à Sumitro Datta pour leur travail de collecte et de publication.
+Merci à Wyatt Walsh, Eoin Moore et Sumitro Datta pour leur travail de collecte et de publication.
 
 L'import (`ingestion.nbadb`) lit le fichier `nba.sqlite` en lecture seule. Il reconnaît seul les deux formats de la base :
 le schéma en étoile de nbadb (`dim_game`, `fact_game_result`…) et l'ancien format à plat (`game`, `team`, `line_score`),
 qui est celui réellement livré dans l'archive Kaggle en octobre 2026 et s'arrête à la saison 2022-23
-(voir [ADR 0016](docs/adr/0016-ancien-format-kaggle.md)). Il ne garde que la saison régulière et les playoffs
+(voir [ADR 0016](docs/adr/0016-ancien-format-kaggle.md)). Il ne garde que la saison régulière, le play-in et les playoffs
 des `NBA_IMPORT_SEASONS` dernières saisons (10 par défaut). Il calcule ensuite le bilan de chaque équipe par saison
 (victoires, domicile et extérieur, séries, ratings offensif et défensif, rythme) à partir des feuilles de match.
+
+Les fichiers d'Eoin Moore donnent les saisons suivantes, avec les mêmes identifiants que la base Walsh : l'import garde
+la saison régulière, le play-in et les playoffs des saisons choisies (voir [ADR 0018](docs/adr/0018-saisons-recentes-eoin-moore.md)).
+Le play-in (type `PLAY_IN`) ne compte ni dans le bilan de saison régulière ni dans les classements.
 
 Le complément stats.nba.com lit, pour chaque saison de la dernière en base à la saison en cours, le journal des matchs
 de saison régulière et de playoffs (deux requêtes par saison, trois secondes d'écart), puis l'importe comme la base Walsh :
 mêmes identifiants, donc les saisons communes sont mises à jour sans doublon (voir [ADR 0017](docs/adr/0017-complement-stats-nba.md)).
-Le site bloque souvent les serveurs hébergés : lancez ce complément depuis un poste personnel. S'il cesse de répondre en cours
+Depuis mars 2026, nba.com coupe tout client qui n'est pas un navigateur (empreinte TLS) : ce complément ne répond plus. S'il cesse de répondre en cours
 de route, les saisons déjà lues sont importées et l'import suivant reprend à partir de la dernière saison en base.
 
 L'import des CSV (`nba.importer.csv`) reconnaît les 22 fichiers de l'archive par leurs colonnes caractéristiques et range

@@ -22,3 +22,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0015](0015-explication-par-llm.md) | Explication des prédictions par un LLM, avec nos propres adaptateurs plutôt que Spring AI | Acceptée |
 | [0016](0016-ancien-format-kaggle.md) | L'import lit aussi l'ancien format de la base de Wyatt Walsh | Acceptée |
 | [0017](0017-complement-stats-nba.md) | Les saisons récentes viennent de stats.nba.com | Acceptée |
+| [0018](0018-saisons-recentes-eoin-moore.md) | Les saisons récentes viennent des fichiers d'Eoin Moore, play-in compris | Acceptée |

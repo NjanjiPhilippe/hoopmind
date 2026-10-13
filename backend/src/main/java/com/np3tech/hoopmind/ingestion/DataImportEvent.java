@@ -40,6 +40,21 @@ public sealed interface DataImportEvent {
         }
     }
 
+    record EoinMooreImported(CurrentUser requestedBy, List<String> seasons, int games) implements DataImportEvent {
+        public EoinMooreImported {
+            seasons = List.copyOf(seasons);
+        }
+    }
+
+    /** {@code error} : message déjà présentable à un administrateur (ni chemin, ni trace technique). */
+    record EoinMooreImportFailed(CurrentUser requestedBy, String fromSeason, String toSeason, String error)
+            implements DataImportEvent {
+        @Override
+        public boolean failed() {
+            return true;
+        }
+    }
+
     /** {@code error} : message déjà présentable à un administrateur (ni chemin, ni trace technique). */
     record StatsNbaImportFailed(CurrentUser requestedBy, String fromSeason, String toSeason, String error)
             implements DataImportEvent {

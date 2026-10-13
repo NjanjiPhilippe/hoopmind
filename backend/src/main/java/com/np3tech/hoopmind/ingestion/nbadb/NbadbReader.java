@@ -15,8 +15,8 @@ import java.util.List;
  */
 final class NbadbReader extends NbaDatabaseReader {
 
-    /** Saison régulière (002) et playoffs (004) ; présaison, All-Star, play-in et finale de la NBA Cup sont ignorés. */
-    private static final String GAME_KINDS = "substr(g.game_id, 1, 3) IN ('002', '004')";
+    /** Saison régulière (002), play-in (005) et playoffs (004) ; présaison, All-Star et finale de la NBA Cup sont ignorés. */
+    private static final String GAME_KINDS = "substr(g.game_id, 1, 3) IN ('002', '005', '004')";
 
     NbadbReader(Connection connection) {
         super(connection);

@@ -36,7 +36,7 @@ class JdbcGameHistory implements GameHistory {
             LEFT JOIN game_results r ON r.game_id = g.id
             LEFT JOIN team_game_stats h ON h.game_id = g.id AND h.team_id = g.home_team_id
             LEFT JOIN team_game_stats a ON a.game_id = g.id AND a.team_id = g.away_team_id
-            WHERE g.game_type IN ('REGULAR_SEASON', 'PLAYOFFS', 'FINALS') AND s.year = ANY (?)
+            WHERE g.game_type IN ('REGULAR_SEASON', 'PLAY_IN', 'PLAYOFFS', 'FINALS') AND s.year = ANY (?)
             """;
 
     private static final String ORDER = " ORDER BY game_date, g.id";
