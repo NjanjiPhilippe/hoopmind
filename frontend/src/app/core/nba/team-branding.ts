@@ -52,7 +52,7 @@ const BRANDING: Record<string, Branding> = {
 const NEUTRAL = '#6B7280';
 
 /** En dessous de cette distance (RVB), deux couleurs se confondent sur une barre. */
-const MIN_COLOR_DISTANCE = 120;
+const MIN_COLOR_DISTANCE = 80;
 
 function branding(team: Team): Branding | undefined {
   return team?.abbreviation ? BRANDING[team.abbreviation.toUpperCase()] : undefined;

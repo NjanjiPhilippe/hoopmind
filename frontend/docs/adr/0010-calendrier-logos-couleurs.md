@@ -13,6 +13,9 @@ prédiction.
   du premier au dernier match, par mois, avec l'adversaire, le lieu (« vs » ou « @ »), le résultat (V ou D et le
   score) et le prochain match signalé. Chaque ligne ouvre la prédiction de ce match. Sans équipe choisie, la liste
   de tous les matchs reste en place.
+- **Prédire part du calendrier** : la page propose d'abord « Choisir un match » parmi ceux en base, soit par équipe
+  (liste de ses matchs de la saison, le prochain proposé et prédit aussitôt), soit par jour (tous les matchs du
+  jour). La saisie libre de deux équipes et d'un jour reste possible, repliée sous « Ou imaginer une autre affiche ».
 - **Résultat réel** : le lien du calendrier porte l'identifiant du match (`game`). La page Prédire lit ce match et,
   s'il a été joué, affiche le score et si le favori du modèle a gagné. Changer une équipe, la saison ou le jour fait
   oublier ce match.

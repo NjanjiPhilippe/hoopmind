@@ -1,23 +1,27 @@
-import { DecimalPipe, PercentPipe } from '@angular/common';
+import { DecimalPipe, PercentPipe, formatDate } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, LOCALE_ID, computed, effect, inject, input, linkedSignal, resource, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { Api } from '../../core/api/generated/api';
 import { getModelMetrics } from '../../core/api/generated/fn/spark-analytics/get-model-metrics';
 import { explainGameOutcome } from '../../core/api/generated/fn/spark-analytics/explain-game-outcome';
 import { getGameById } from '../../core/api/generated/fn/games/get-game-by-id';
+import { getGamesBySeason } from '../../core/api/generated/fn/games/get-games-by-season';
+import { GameResponse } from '../../core/api/generated/models/game-response';
 import { ExplainedPrediction } from '../../core/api/generated/models/explained-prediction';
 import { TrainingReport } from '../../core/api/generated/models/training-report';
 import { AuthService } from '../../core/auth/auth.service';
 import { toProblem } from '../../core/http/problem';
 import { NbaCatalog, idParam, seasonOrLatest, teamName } from '../../core/nba/nba-catalog';
-import { defaultPredictionDate } from '../../core/nba/nba-format';
+import { defaultPredictionDate, isPlayoffGame } from '../../core/nba/nba-format';
 import { matchupColors, textOn } from '../../core/nba/team-branding';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { TeamLogoComponent } from '../../shared/components/team-logo/team-logo.component';
+import { teamCalendar } from '../games/team-calendar';
 import { actualResult } from './actual-result';
+import { calendarLabel, defaultGame, gamesOn } from './game-picker';
 import { FactorRow, explanationSource, factorRows } from './prediction-factors';
 
 interface Prediction {
@@ -82,6 +86,22 @@ export class PredictComponent {
   protected readonly prediction = signal<Prediction | null>(null);
   protected readonly error = signal<{ text: string; notTrained: boolean } | null>(null);
 
+  // Choix d'un match du calendrier en base : par équipe (sa saison) ou par jour (tous les matchs du jour).
+  private readonly locale = inject(LOCALE_ID);
+  protected readonly seasonGames = resource({
+    params: () => this.seasonId() ?? undefined,
+    loader: ({ params }) => this.api.invoke(getGamesBySeason, { seasonId: params }),
+  });
+  protected readonly pickTeamId = signal<number | null>(null);
+  protected readonly pickDay = linkedSignal(() => this.day());
+  protected readonly teamEntries = computed(() => {
+    const team = this.pickTeamId();
+    return team === null ? [] : teamCalendar(currentValue(this.seasonGames) ?? [], team).months.flatMap(month => month.games);
+  });
+  protected readonly dayGames = computed(() => gamesOn(currentValue(this.seasonGames) ?? [], this.pickDay()));
+  /** Saisie libre d'une affiche (match hypothétique) : repliée par défaut, ouverte si l'URL décrit un match sans identifiant. */
+  protected readonly manual = linkedSignal(() => !!this.home() && !this.game());
+
   /** Qualité du modèle, montrée à côté de chaque prédiction pour savoir quelle confiance lui accorder. */
   protected readonly model = resource({ loader: () => this.latestModel() });
 
@@ -95,12 +115,48 @@ export class PredictComponent {
     });
   }
 
+  label(entry: Parameters<typeof calendarLabel>[0]): string {
+    return calendarLabel(entry, value => formatDate(value, 'EEE d MMM', this.locale));
+  }
+
+  /** Choisir une équipe propose son prochain match, prédit aussitôt. */
+  onPickTeam(value: string): void {
+    this.pickTeamId.set(idParam(value) ?? null);
+    const entry = defaultGame(this.teamEntries());
+    if (entry) {
+      this.choose(entry.game);
+    } else {
+      this.prediction.set(null);
+    }
+  }
+
+  onPickGame(value: string): void {
+    const game = this.teamEntries().find(entry => entry.game.id === idParam(value))?.game;
+    if (game) {
+      this.choose(game);
+    }
+  }
+
+  /** Un match du calendrier remplit le formulaire (équipes, jour, type) et lance la prédiction. */
+  choose(game: GameResponse): void {
+    if (!game.homeTeam?.id || !game.awayTeam?.id || !game.scheduledDate) {
+      return;
+    }
+    this.homeTeamId.set(game.homeTeam.id);
+    this.awayTeamId.set(game.awayTeam.id);
+    this.day.set(game.scheduledDate.slice(0, 10));
+    this.isPlayoff.set(isPlayoffGame(game));
+    this.gameId.set(game.id ?? null);
+    void this.predict();
+  }
+
   team(id: number | null) {
     return id === null ? undefined : this.catalog.teamsById().get(id);
   }
 
   onSeason(value: string): void {
     this.seasonId.set(idParam(value) ?? null);
+    this.pickTeamId.set(null);
     this.day.set(defaultPredictionDate(this.catalog.season(this.seasonId())));
     this.reset();
   }

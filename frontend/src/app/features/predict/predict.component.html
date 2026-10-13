@@ -5,7 +5,7 @@
     <header>
       <h1 class="text-3xl font-bold text-gray-900">Prédire un match</h1>
       <p class="mt-1 text-gray-600">
-        Choisissez deux équipes et un jour : le modèle compare leur forme sur les matchs joués avant ce jour et donne la probabilité de victoire de chacune.
+        Choisissez un match du calendrier : le modèle compare la forme des deux équipes sur les matchs joués avant ce jour et donne la probabilité de victoire de chacune.
       </p>
     </header>
 
@@ -23,34 +23,9 @@
         }
       </section>
     } @else {
-      <form class="card space-y-5" (submit)="$event.preventDefault(); predict()" novalidate>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-          <div>
-            <label for="home-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à domicile</label>
-            <select id="home-team" class="input-field" (change)="onTeam('home', $any($event.target).value)">
-              <option value="" [selected]="homeTeamId() === null" disabled>Choisir une équipe</option>
-              @for (team of catalog.teams(); track team.id) {
-                <option [value]="team.id" [selected]="team.id === homeTeamId()">{{ teamName(team) }}</option>
-              }
-            </select>
-          </div>
-          <button type="button" class="btn-secondary justify-self-center px-3" (click)="swap()" aria-label="Inverser domicile et extérieur" title="Inverser domicile et extérieur">⇄</button>
-          <div>
-            <label for="away-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à l'extérieur</label>
-            <select id="away-team" class="input-field" (change)="onTeam('away', $any($event.target).value)"
-                    [attr.aria-invalid]="sameTeam()" aria-describedby="same-team-error">
-              <option value="" [selected]="awayTeamId() === null" disabled>Choisir une équipe</option>
-              @for (team of catalog.teams(); track team.id) {
-                <option [value]="team.id" [selected]="team.id === awayTeamId()">{{ teamName(team) }}</option>
-              }
-            </select>
-          </div>
-        </div>
-        @if (sameTeam()) {
-          <p id="same-team-error" class="text-sm text-red-600">Choisissez deux équipes différentes.</p>
-        }
-
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <section class="card space-y-4" aria-labelledby="pick-title">
+        <h2 id="pick-title" class="text-lg font-bold">Choisir un match</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_1.5fr]">
           <div>
             <label for="season" class="mb-1 block text-sm font-medium text-gray-700">Saison</label>
             <select id="season" class="input-field" (change)="onSeason($any($event.target).value)">
@@ -60,19 +35,111 @@
             </select>
           </div>
           <div>
-            <label for="day" class="mb-1 block text-sm font-medium text-gray-700">Jour du match</label>
-            <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value); reset()" />
+            <label for="pick-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe</label>
+            <select id="pick-team" class="input-field" (change)="onPickTeam($any($event.target).value)">
+              <option value="" [selected]="pickTeamId() === null">Tous les matchs du jour</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id" [selected]="team.id === pickTeamId()">{{ teamName(team) }}</option>
+              }
+            </select>
           </div>
-          <label class="flex items-center gap-2 text-sm font-medium text-gray-700 sm:mt-7">
-            <input type="checkbox" class="h-4 w-4" [checked]="isPlayoff()" (change)="isPlayoff.set($any($event.target).checked); reset()" />
-            Play-in ou playoffs
-          </label>
+          @if (pickTeamId() !== null) {
+            <div>
+              <label for="pick-game" class="mb-1 block text-sm font-medium text-gray-700">Match</label>
+              <select id="pick-game" class="input-field" (change)="onPickGame($any($event.target).value)">
+                @for (entry of teamEntries(); track entry.game.id) {
+                  <option [value]="entry.game.id" [selected]="entry.game.id === gameId()">{{ label(entry) }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div>
+              <label for="pick-day" class="mb-1 block text-sm font-medium text-gray-700">Jour</label>
+              <input id="pick-day" type="date" class="input-field" [value]="pickDay()" (change)="pickDay.set($any($event.target).value)" />
+            </div>
+          }
         </div>
 
-        <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="!canPredict() || predicting()">
-          {{ predicting() ? 'Calcul…' : 'Prédire le vainqueur' }}
-        </button>
-      </form>
+        @if (pickTeamId() === null) {
+          @if (seasonGames.isLoading()) {
+            <p class="text-sm text-gray-500">Chargement du calendrier…</p>
+          } @else if (dayGames().length === 0) {
+            <p class="text-sm text-gray-500">Aucun match ce jour-là. Choisissez un autre jour ou une équipe.</p>
+          } @else {
+            <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Matchs du jour">
+              @for (game of dayGames(); track game.id) {
+                <li>
+                  <button type="button" class="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm hover:border-primary-400 hover:bg-primary-50"
+                          [class.border-primary-500]="game.id === gameId()" [class.bg-primary-50]="game.id === gameId()" [class.border-gray-200]="game.id !== gameId()"
+                          [attr.aria-pressed]="game.id === gameId()" (click)="choose(game)">
+                    <span class="flex min-w-0 items-center gap-2">
+                      <app-team-logo [team]="game.awayTeam" [size]="22" />
+                      <span class="font-medium">{{ game.awayTeam?.abbreviation }}</span>
+                      <span class="text-gray-400">&#64;</span>
+                      <app-team-logo [team]="game.homeTeam" [size]="22" />
+                      <span class="font-medium">{{ game.homeTeam?.abbreviation }}</span>
+                    </span>
+                    <span class="whitespace-nowrap text-xs text-gray-500 tabular-nums">
+                      @if (game.result) {
+                        {{ game.result.awayTeamScore }}-{{ game.result.homeTeamScore }}
+                      } @else {
+                        À venir
+                      }
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+
+        <details class="group" [open]="manual()" (toggle)="manual.set($any($event.target).open)">
+          <summary class="cursor-pointer text-sm font-medium text-primary-600 hover:underline">Ou imaginer une autre affiche</summary>
+        <form class="space-y-5 border-t border-gray-100 pt-4" (submit)="$event.preventDefault(); predict()" novalidate>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+            <div>
+              <label for="home-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à domicile</label>
+              <select id="home-team" class="input-field" (change)="onTeam('home', $any($event.target).value)">
+                <option value="" [selected]="homeTeamId() === null" disabled>Choisir une équipe</option>
+                @for (team of catalog.teams(); track team.id) {
+                  <option [value]="team.id" [selected]="team.id === homeTeamId()">{{ teamName(team) }}</option>
+                }
+              </select>
+            </div>
+            <button type="button" class="btn-secondary justify-self-center px-3" (click)="swap()" aria-label="Inverser domicile et extérieur" title="Inverser domicile et extérieur">⇄</button>
+            <div>
+              <label for="away-team" class="mb-1 block text-sm font-medium text-gray-700">Équipe à l'extérieur</label>
+              <select id="away-team" class="input-field" (change)="onTeam('away', $any($event.target).value)"
+                      [attr.aria-invalid]="sameTeam()" aria-describedby="same-team-error">
+                <option value="" [selected]="awayTeamId() === null" disabled>Choisir une équipe</option>
+                @for (team of catalog.teams(); track team.id) {
+                  <option [value]="team.id" [selected]="team.id === awayTeamId()">{{ teamName(team) }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          @if (sameTeam()) {
+            <p id="same-team-error" class="text-sm text-red-600">Choisissez deux équipes différentes.</p>
+          }
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            <div>
+              <label for="day" class="mb-1 block text-sm font-medium text-gray-700">Jour du match</label>
+              <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value); reset()" />
+            </div>
+            <label class="flex items-center gap-2 text-sm font-medium text-gray-700 sm:mt-7">
+              <input type="checkbox" class="h-4 w-4" [checked]="isPlayoff()" (change)="isPlayoff.set($any($event.target).checked); reset()" />
+              Play-in ou playoffs
+            </label>
+          </div>
+
+          <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="!canPredict() || predicting()">
+            {{ predicting() ? 'Calcul…' : 'Prédire le vainqueur' }}
+          </button>
+        </form>
+        </details>
+      </section>
 
       @if (error(); as error) {
         <div class="rounded-lg border p-4 text-sm" role="alert"
