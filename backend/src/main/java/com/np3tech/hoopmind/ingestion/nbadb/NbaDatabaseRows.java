@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Lignes lues dans la base NBA (schéma en étoile de nbadb : {@code dim_team}, {@code dim_game},
- * {@code fact_game_result}, {@code fact_team_game}, {@code fact_standings}).
+ * Lignes lues dans la base NBA, quel que soit son format (voir {@link NbaDatabaseReader}). Elles suivent le schéma en étoile
+ * de nbadb ({@code dim_team}, {@code dim_game}, {@code fact_game_result}, {@code fact_team_game}, {@code fact_standings}).
  */
 final class NbaDatabaseRows {
 

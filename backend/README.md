@@ -25,7 +25,8 @@ set -a && . ./.env && set +a
 Les données ne sont pas fournies avec le dépôt (voir [Données NBA](#données-nba)). Tout se fait depuis la page
 **Administration > Données** du frontend :
 
-1. **Matchs et résultats** : renseignez `KAGGLE_USERNAME` et `KAGGLE_KEY` dans `.env` (jeton créé sur kaggle.com, Settings,
+1. **Matchs et résultats** : si vous avez déjà téléchargé la base, placez `nba.sqlite` dans `data/` (ou indiquez son
+   chemin dans `NBA_DATABASE_PATH`) puis cliquez sur « Réimporter le fichier présent ». Sinon, renseignez `KAGGLE_USERNAME` et `KAGGLE_KEY` dans `.env` (jeton créé sur kaggle.com, Settings,
    API, Create New Token), puis cliquez sur « Télécharger depuis Kaggle et importer ». Le serveur télécharge la base de
    Wyatt Walsh lui-même (plusieurs Go, sans passer par le navigateur) puis l'importe en arrière-plan ; la page suit l'avancement.
 2. **Statistiques de saison et trophées** : déposez le zip de l'archive de Sumitro Datta, ou des CSV isolés, dans n'importe
@@ -137,7 +138,10 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 Les données ne sont pas versionnées : chacun les télécharge depuis Kaggle, et `data/` est ignoré par git.
 Merci à Wyatt Walsh et à Sumitro Datta pour leur travail de collecte et de publication.
 
-L'import (`nba.importer`) lit le fichier `nba.sqlite` en lecture seule et ne garde que la saison régulière et les playoffs
+L'import (`ingestion.nbadb`) lit le fichier `nba.sqlite` en lecture seule. Il reconnaît seul les deux formats de la base :
+le schéma en étoile de nbadb (`dim_game`, `fact_game_result`…) et l'ancien format à plat (`game`, `team`, `line_score`),
+qui est celui réellement livré dans l'archive Kaggle en octobre 2026 et s'arrête à la saison 2022-23
+(voir [ADR 0016](docs/adr/0016-ancien-format-kaggle.md)). Il ne garde que la saison régulière et les playoffs
 des `NBA_IMPORT_SEASONS` dernières saisons (10 par défaut). Il calcule ensuite le bilan de chaque équipe par saison
 (victoires, domicile et extérieur, séries, ratings offensif et défensif, rythme) à partir des feuilles de match.
 
