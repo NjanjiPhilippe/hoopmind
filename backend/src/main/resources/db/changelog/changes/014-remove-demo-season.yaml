@@ -1,0 +1,16 @@
+databaseChangeLog:
+    # La saison « 2024-2025 » insérée par 007-insert-current-season venait de l'ancien projet : sans aucun match,
+    # elle passait pour la saison la plus récente. Elle n'est retirée que si aucun match ne s'y rattache
+    # (une base où 2024-25 a été importée la garde, comme toute saison déjà référencée).
+    - changeSet:
+          id: 014-remove-demo-season
+          author: hoopmind
+          changes:
+              - sql:
+                    sql: >
+                        DELETE FROM seasons s
+                        WHERE s.year = 2024 AND s.name = '2024-2025'
+                          AND NOT EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id)
+                          AND NOT EXISTS (SELECT 1 FROM team_stats t WHERE t.season_id = s.id)
+                          AND NOT EXISTS (SELECT 1 FROM player_stats p WHERE p.season_id = s.id)
+                          AND NOT EXISTS (SELECT 1 FROM leaderboards l WHERE l.season_id = s.id)
