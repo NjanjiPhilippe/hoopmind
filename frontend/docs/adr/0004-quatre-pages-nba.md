@@ -15,7 +15,7 @@ Quatre pages, chacune construite sur un endpoint réel :
   modèle face à la règle « le meilleur bilan gagne ». Un modèle non entraîné donne un avertissement, avec un lien
   vers la page Données pour un administrateur.
 - **Classement** : les bilans de la saison, par conférence.
-- **Matchs** : filtres par équipe et par type, pagination par 50, un lien « Prédire » sur chaque match.
+- **Matchs** (devenue **Calendrier**, voir [ADR 0010](0010-calendrier-logos-couleurs.md)) : filtres par équipe et par type, pagination par 50, un lien « Prédire » sur chaque match.
 - **Accueil connecté** : derniers résultats, prochains matchs, état du modèle, et un état vide qui explique quoi
   faire quand aucune donnée n'a été importée.
 

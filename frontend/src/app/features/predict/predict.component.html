@@ -61,11 +61,11 @@
           </div>
           <div>
             <label for="day" class="mb-1 block text-sm font-medium text-gray-700">Jour du match</label>
-            <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value); prediction.set(null)" />
+            <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value); reset()" />
           </div>
           <label class="flex items-center gap-2 text-sm font-medium text-gray-700 sm:mt-7">
-            <input type="checkbox" class="h-4 w-4" [checked]="isPlayoff()" (change)="isPlayoff.set($any($event.target).checked); prediction.set(null)" />
-            Match de playoffs
+            <input type="checkbox" class="h-4 w-4" [checked]="isPlayoff()" (change)="isPlayoff.set($any($event.target).checked); reset()" />
+            Play-in ou playoffs
           </label>
         </div>
 
@@ -89,30 +89,48 @@
         @let home = team(p.homeTeamId);
         @let away = team(p.awayTeamId);
         @let homeWins = p.result.prediction!.homeWinProbability! >= 0.5;
+        @let colors = matchupColors(home, away);
+        @let actual = actualResult(currentValue(actualGame), p.homeTeamId, p.awayTeamId, p.result.prediction!.homeWinProbability!);
         <section class="card space-y-4" aria-live="polite" aria-labelledby="prediction-title">
-          <h2 id="prediction-title" class="text-lg font-bold">
-            {{ teamName(homeWins ? home : away) }} favori
-            <span class="font-normal text-gray-500">({{ (homeWins ? p.result.prediction!.homeWinProbability : p.result.prediction!.awayWinProbability) | percent: '1.0-0' }})</span>
+          <h2 id="prediction-title" class="flex items-center gap-3 text-lg font-bold">
+            <app-team-logo [team]="homeWins ? home : away" [size]="40" />
+            <span>{{ teamName(homeWins ? home : away) }} favori
+            <span class="font-normal text-gray-500">({{ (homeWins ? p.result.prediction!.homeWinProbability : p.result.prediction!.awayWinProbability) | percent: '1.0-0' }})</span></span>
           </h2>
+
+          @if (actual) {
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-3 text-sm"
+                 [class.border-green-200]="actual.correct" [class.bg-green-50]="actual.correct"
+                 [class.border-red-200]="!actual.correct" [class.bg-red-50]="!actual.correct">
+              <span class="font-semibold" [class.text-green-800]="actual.correct" [class.text-red-700]="!actual.correct">
+                {{ actual.correct ? '✓ Prédiction correcte' : '✗ Prédiction incorrecte' }}
+              </span>
+              <span class="text-gray-700">
+                Résultat réel : {{ home?.abbreviation }} {{ actual.homeScore }} - {{ actual.awayScore }} {{ away?.abbreviation }}@if (actual.overtime) { (prol.)},
+                victoire de {{ teamName(actual.homeWon ? home : away) }}.
+              </span>
+            </div>
+          }
 
           <div>
             <div class="flex justify-between text-sm font-medium">
-              <span>{{ home?.abbreviation }} · domicile</span>
-              <span>extérieur · {{ away?.abbreviation }}</span>
+              <span class="flex items-center gap-2"><app-team-logo [team]="home" [size]="24" />{{ home?.abbreviation }} · domicile</span>
+              <span class="flex items-center gap-2">extérieur · {{ away?.abbreviation }}<app-team-logo [team]="away" [size]="24" /></span>
             </div>
-            <div class="mt-1 flex h-8 overflow-hidden rounded-lg text-sm font-semibold text-white" role="img"
+            <div class="mt-1 flex h-8 overflow-hidden rounded-lg text-sm font-semibold" role="img"
                  [attr.aria-label]="teamName(home) + ' ' + (p.result.prediction!.homeWinProbability | percent: '1.0-0') + ', ' + teamName(away) + ' ' + (p.result.prediction!.awayWinProbability | percent: '1.0-0')">
-              <div class="flex items-center bg-primary-600 pl-3" [style.width.%]="p.result.prediction!.homeWinProbability! * 100">
+              <div class="flex items-center pl-3" [style.width.%]="p.result.prediction!.homeWinProbability! * 100"
+                   [style.background-color]="colors.home" [style.color]="textOn(colors.home)">
                 {{ p.result.prediction!.homeWinProbability | percent: '1.0-0' }}
               </div>
-              <div class="flex flex-1 items-center justify-end bg-gray-500 pr-3">
+              <div class="flex flex-1 items-center justify-end pr-3" [style.background-color]="colors.away" [style.color]="textOn(colors.away)">
                 {{ p.result.prediction!.awayWinProbability | percent: '1.0-0' }}
               </div>
             </div>
           </div>
 
           <p class="text-sm text-gray-600">
-            Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de playoffs}.
+            Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de play-in ou de playoffs}.
           </p>
 
           @if (p.result.explanation?.text; as text) {
@@ -149,12 +167,12 @@
                          [attr.aria-label]="factor.label + ' : en faveur de ' + teamName(factor.favorsHome ? home : away)">
                       <div class="flex justify-end border-r border-gray-300 pr-0.5">
                         @if (factor.favorsHome) {
-                          <div class="h-2.5 rounded-l bg-primary-600" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
+                          <div class="h-2.5 rounded-l" [style.background-color]="colors.home" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
                         }
                       </div>
                       <div class="flex pl-0.5">
                         @if (!factor.favorsHome) {
-                          <div class="h-2.5 rounded-r bg-gray-500" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
+                          <div class="h-2.5 rounded-r" [style.background-color]="colors.away" [class.opacity-40]="factor.correction" [style.width.%]="factor.weight * 100"></div>
                         }
                       </div>
                     </div>

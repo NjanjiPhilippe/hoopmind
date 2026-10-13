@@ -8,8 +8,11 @@ import { GameResponse } from '../../core/api/generated/models/game-response';
 import { AuthService } from '../../core/auth/auth.service';
 import { NbaCatalog, idParam, seasonOrLatest, teamName } from '../../core/nba/nba-catalog';
 import { byDateDesc, gameTypeLabel, isPlayoffGame } from '../../core/nba/nba-format';
+import { teamColor } from '../../core/nba/team-branding';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { TeamLogoComponent } from '../../shared/components/team-logo/team-logo.component';
+import { teamCalendar } from './team-calendar';
 
 const PAGE_SIZE = 50;
 
@@ -22,7 +25,7 @@ export function filterGames(games: GameResponse[], teamId: number | null): GameR
 
 @Component({
   selector: 'app-games',
-  imports: [DatePipe, RouterLink, NavbarComponent],
+  imports: [DatePipe, RouterLink, NavbarComponent, TeamLogoComponent],
   templateUrl: './games.component.html',
   providers: [NbaCatalog],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +37,7 @@ export class GamesComponent {
   protected readonly catalog = inject(NbaCatalog);
   protected readonly teamName = teamName;
   protected readonly gameTypeLabel = gameTypeLabel;
+  protected readonly teamColor = teamColor;
 
   readonly season = input(undefined, { transform: idParam });
   readonly team = input(undefined, { transform: idParam });
@@ -44,6 +48,15 @@ export class GamesComponent {
   protected readonly games = resource({
     params: () => this.seasonId() ?? undefined,
     loader: ({ params }) => this.api.invoke(getGamesBySeason, { seasonId: params }),
+  });
+  /** Équipe choisie : son calendrier de la saison, mois par mois, avec son bilan. */
+  protected readonly selectedTeam = computed(() => {
+    const id = this.teamId();
+    return id === null ? undefined : this.catalog.teamsById().get(id);
+  });
+  protected readonly calendar = computed(() => {
+    const id = this.teamId();
+    return id === null ? null : teamCalendar(currentValue(this.games) ?? [], id);
   });
   protected readonly filtered = computed(() => filterGames(currentValue(this.games) ?? [], this.teamId()));
   /** Une saison complète compte plus de 1 200 matchs : ils s'affichent par tranches. */
@@ -64,9 +77,10 @@ export class GamesComponent {
     this.shown.update(count => count + PAGE_SIZE);
   }
 
-  /** Lien vers la prédiction de ce match, à la date du match. */
+  /** Lien vers la prédiction de ce match, à la date du match ; la page Prédire montre aussi son résultat réel. */
   predictParams(game: GameResponse) {
     return {
+      game: game.id,
       season: game.season?.id,
       home: game.homeTeam?.id,
       away: game.awayTeam?.id,
