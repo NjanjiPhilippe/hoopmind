@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -66,29 +67,11 @@ class StatsNbaJobTests {
                         .played("0021500001", "2015-10-27", BOS, NYK, 95, 112)
                         .played("0021500002", "2015-10-28", LAL, POR, 99, 101).json(),
                 "Season=2015-16&SeasonType=Playoffs", new StatsNbaFixture().json());
-        String empty = new StatsNbaFixture().json();
         List<String> requested = new CopyOnWriteArrayList<>();
-        HttpServer stats = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        stats.createContext("/stats/leaguegamelog", exchange -> {
-            String query = exchange.getRequestURI().getRawQuery();
-            requested.add(query);
-            byte[] body = responses.entrySet().stream().filter(e -> query.contains(e.getKey())).findFirst()
-                    .map(Map.Entry::getValue).orElse(empty).getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(200, body.length);
-            try (OutputStream out = exchange.getResponseBody()) {
-                out.write(body);
-            }
-        });
-        stats.start();
+        HttpServer stats = server(responses, requested);
         try {
-            StatsNbaProperties properties = new StatsNbaProperties(
-                    "http://127.0.0.1:" + stats.getAddress().getPort() + "/stats", 0L);
-            NbaDatabaseImportProperties importProperties = new NbaDatabaseImportProperties(null, 10, false);
             List<Object> events = new CopyOnWriteArrayList<>();
-            StatsNbaJobService jobs = new StatsNbaJobService(
-                    new StatsNbaClient(properties, JsonMapper.builder().build()), properties,
-                    new NbaDatabaseImporter(importProperties, teams, seasons, jdbc, MARCH_2016), importProperties,
-                    seasons, jobService, events::add, MARCH_2016);
+            StatsNbaJobService jobs = jobs(stats, events, MARCH_2016);
 
             assertThat(jobs.status().toSeason()).isEqualTo("2015-16");
             assertThatThrownBy(() -> jobs.start(2016)).isInstanceOf(NbaImportException.class);
@@ -117,6 +100,68 @@ class StatsNbaJobTests {
         } finally {
             stats.stop(0);
         }
+    }
+
+    @Test
+    void importsTheSeasonsAlreadyReadWhenTheSiteStopsAnswering() throws Exception {
+        // 2012-13 est lue en entier ; stats.nba.com cesse de répondre sur 2013-14.
+        Map<String, String> responses = Map.of(
+                "Season=2012-13&SeasonType=Regular+Season", new StatsNbaFixture()
+                        .played("0021200001", "2012-10-30", BOS, NYK, 99, 104).json(),
+                "Season=2013-14", "503");
+        List<String> requested = new CopyOnWriteArrayList<>();
+        HttpServer stats = server(responses, requested);
+        try {
+            Clock march2014 = Clock.fixed(Instant.parse("2014-03-01T12:00:00Z"), ZoneOffset.UTC);
+            List<Object> events = new CopyOnWriteArrayList<>();
+            StatsNbaJobService jobs = jobs(stats, events, march2014);
+
+            jobs.start(2012);
+            StatsNbaJobStatus done = waitForEnd(jobs, lock);
+
+            assertThat(done.phase()).isEqualTo(StatsNbaPhase.FAILED);
+            assertThat(done.error()).startsWith("Import partiel : 2012-13 importée(s) (1 matchs)")
+                    .contains("pour 2013-14");
+            assertThat(requested).hasSize(3);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM games WHERE external_id = '0021200001'", Integer.class))
+                    .isEqualTo(1);
+            assertThat(events).first().isEqualTo(new DataImportEvent.StatsNbaImported(null, List.of("2012-13"), 1));
+        } finally {
+            stats.stop(0);
+        }
+    }
+
+    private StatsNbaJobService jobs(HttpServer stats, List<Object> events, Clock clock) {
+        StatsNbaProperties properties = new StatsNbaProperties(
+                "http://127.0.0.1:" + stats.getAddress().getPort() + "/stats", 0L, 5L);
+        NbaDatabaseImportProperties importProperties = new NbaDatabaseImportProperties(null, 10, false);
+        return new StatsNbaJobService(new StatsNbaClient(properties, JsonMapper.builder().build()), properties,
+                new NbaDatabaseImporter(importProperties, teams, seasons, jdbc, clock), importProperties,
+                seasons, jobService, events::add, clock);
+    }
+
+    /** Faux stats.nba.com : la réponse dont la clé figure dans la requête, « 503 » pour une erreur, sinon un journal vide. */
+    private static HttpServer server(Map<String, String> responses, List<String> requested) throws IOException {
+        String empty = new StatsNbaFixture().json();
+        HttpServer stats = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        stats.createContext("/stats/leaguegamelog", exchange -> {
+            String query = exchange.getRequestURI().getRawQuery();
+            requested.add(query);
+            String response = responses.entrySet().stream().filter(e -> query.contains(e.getKey())).findFirst()
+                    .map(Map.Entry::getValue).orElse(empty);
+            if (response.equals("503")) {
+                exchange.sendResponseHeaders(503, -1);
+                exchange.close();
+                return;
+            }
+            byte[] body = response.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        stats.start();
+        return stats;
     }
 
     private static StatsNbaJobStatus waitForEnd(StatsNbaJobService jobs, DataOperationLock lock)

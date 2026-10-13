@@ -82,7 +82,7 @@ hoopmind:
       key: ${KAGGLE_KEY:}
     # Saisons récentes lues sur stats.nba.com (public, sans clé), depuis la page « Données »
     stats-nba:
-      delay-ms: ${STATS_NBA_DELAY_MS:1000}
+      delay-ms: ${STATS_NBA_DELAY_MS:3000}
   ml:
     spark:
       enabled: ${SPARK_ENABLED:true}

@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -19,14 +21,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Lit le journal des matchs d'une saison sur stats.nba.com ({@code leaguegamelog}) : une ligne par équipe et par
  * match joué, avec la feuille de match de l'équipe. C'est la source d'où Wyatt Walsh tire sa base : mêmes
  * identifiants de match et d'équipe.
  * <p>
- * Le site est public mais refuse les requêtes qui ne ressemblent pas à celles d'un navigateur sur nba.com : les en-têtes
- * ci-dessous l'imitent. Il bloque aussi souvent les adresses d'hébergeurs cloud ; depuis un poste personnel, il répond.
+ * Le site est public mais laisse sans réponse les requêtes qui ne ressemblent pas à celles d'un navigateur sur nba.com :
+ * les en-têtes ci-dessous l'imitent, en HTTP/1.1 et en gzip comme un navigateur. Il ralentit aussi les clients trop
+ * pressés (d'où la pause entre deux requêtes) et bloque souvent les adresses d'hébergeurs cloud.
  */
 @Component
 @Slf4j
@@ -51,18 +55,24 @@ public class StatsNbaClient {
         }
     }
 
-    private static final Map<String, String> BROWSER_HEADERS = Map.of(
-            "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                    + "Chrome/126.0.0.0 Safari/537.36",
-            "Accept", "application/json, text/plain, */*",
-            "Accept-Language", "en-US,en;q=0.9",
-            "Referer", "https://www.nba.com/",
-            "Origin", "https://www.nba.com");
+    private static final Map<String, String> BROWSER_HEADERS = Map.ofEntries(
+            Map.entry("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/126.0.0.0 Safari/537.36"),
+            Map.entry("Accept", "application/json, text/plain, */*"),
+            Map.entry("Accept-Language", "en-US,en;q=0.9"),
+            Map.entry("Accept-Encoding", "gzip"),
+            Map.entry("Referer", "https://www.nba.com/"),
+            Map.entry("Origin", "https://www.nba.com"),
+            Map.entry("Pragma", "no-cache"),
+            Map.entry("Cache-Control", "no-cache"),
+            Map.entry("x-nba-stats-origin", "stats"),
+            Map.entry("x-nba-stats-token", "true"));
 
     private final StatsNbaProperties properties;
     private final JsonMapper json;
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
+            .version(HttpClient.Version.HTTP_1_1)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
@@ -76,13 +86,13 @@ public class StatsNbaClient {
      */
     @Retryable(includes = StatsNbaUnavailableException.class,
             maxRetriesString = "${hoopmind.import.stats-nba.retry.max-retries:3}",
-            delayString = "${hoopmind.import.stats-nba.retry.delay-ms:3000}",
-            multiplier = 2, jitter = 500, maxDelay = 30_000)
+            delayString = "${hoopmind.import.stats-nba.retry.delay-ms:10000}",
+            multiplier = 2, jitter = 2_000, maxDelay = 60_000)
     public List<GameLogLine> gameLog(String season, SeasonType type) {
         URI uri = URI.create(properties.apiUrl() + "/leaguegamelog?" + query(Map.of(
                 "Counter", "0", "Direction", "ASC", "LeagueID", "00", "PlayerOrTeam", "T",
                 "Season", season, "SeasonType", type.parameter, "Sorter", "DATE")));
-        HttpRequest.Builder request = HttpRequest.newBuilder(uri).GET().timeout(Duration.ofSeconds(60));
+        HttpRequest.Builder request = HttpRequest.newBuilder(uri).GET().timeout(Duration.ofSeconds(properties.timeoutSeconds()));
         BROWSER_HEADERS.forEach(request::header);
         HttpResponse<byte[]> response;
         try {
@@ -104,7 +114,19 @@ public class StatsNbaClient {
             throw new NbaImportException("stats.nba.com refuse la requête (HTTP " + status + "). Le site bloque "
                     + "parfois les serveurs hébergés ; lancez l'import depuis un poste personnel.");
         }
-        return lines(response.body(), season, type);
+        return lines(body(response), season, type);
+    }
+
+    private static byte[] body(HttpResponse<byte[]> response) {
+        if (!response.headers().firstValue("Content-Encoding").orElse("").equalsIgnoreCase("gzip")) {
+            return response.body();
+        }
+        try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(response.body()))) {
+            return in.readAllBytes();
+        } catch (IOException e) {
+            log.warn("Réponse gzip illisible de stats.nba.com", e);
+            throw unavailable(e);
+        }
     }
 
     private List<GameLogLine> lines(byte[] body, String season, SeasonType type) {

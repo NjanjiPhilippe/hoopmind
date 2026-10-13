@@ -11,6 +11,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPOutputStream;
 
 import static com.np3tech.hoopmind.ingestion.nbadb.StatsNbaFixture.BOS;
 import static com.np3tech.hoopmind.ingestion.nbadb.StatsNbaFixture.NYK;
@@ -32,6 +34,8 @@ class StatsNbaClientTests {
     private final AtomicInteger calls = new AtomicInteger();
     private final List<String> queries = new CopyOnWriteArrayList<>();
     private final List<String> referers = new CopyOnWriteArrayList<>();
+    private final List<String> origins = new CopyOnWriteArrayList<>();
+    private final List<String> protocols = new CopyOnWriteArrayList<>();
     private volatile int failuresBeforeSuccess;
     private volatile int failureStatus;
     private volatile String body = new StatsNbaFixture().played("0022400001", "2024-10-22", BOS, NYK, 132, 109).json();
@@ -42,6 +46,8 @@ class StatsNbaClientTests {
         server.createContext("/stats/leaguegamelog", exchange -> {
             queries.add(exchange.getRequestURI().getRawQuery());
             referers.add(exchange.getRequestHeaders().getFirst("Referer"));
+            origins.add(exchange.getRequestHeaders().getFirst("x-nba-stats-origin"));
+            protocols.add(exchange.getProtocol());
             if (calls.incrementAndGet() <= failuresBeforeSuccess) {
                 exchange.sendResponseHeaders(failureStatus, -1);
                 exchange.close();
@@ -49,6 +55,16 @@ class StatsNbaClientTests {
             }
             byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
+            String encoding = exchange.getRequestHeaders().getFirst("Accept-Encoding");
+            if (encoding != null && encoding.contains("gzip")) {
+                // Comme stats.nba.com : la réponse est compressée dès que le client l'accepte.
+                ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+                try (GZIPOutputStream gzip = new GZIPOutputStream(compressed)) {
+                    gzip.write(bytes);
+                }
+                bytes = compressed.toByteArray();
+                exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+            }
             exchange.sendResponseHeaders(200, bytes.length);
             try (OutputStream out = exchange.getResponseBody()) {
                 out.write(bytes);
@@ -74,6 +90,8 @@ class StatsNbaClientTests {
             assertThat(queries.getFirst()).contains("Season=2024-25", "SeasonType=Playoffs", "PlayerOrTeam=T",
                     "LeagueID=00");
             assertThat(referers.getFirst()).isEqualTo("https://www.nba.com/");
+            assertThat(origins.getFirst()).isEqualTo("stats");
+            assertThat(protocols.getFirst()).isEqualTo("HTTP/1.1");
         }
     }
 
@@ -117,7 +135,7 @@ class StatsNbaClientTests {
         context.register(ResilienceConfig.class, StatsNbaClient.class);
         context.registerBean(JsonMapper.class, () -> JsonMapper.builder().build());
         context.registerBean(StatsNbaProperties.class, () -> new StatsNbaProperties(
-                "http://127.0.0.1:" + server.getAddress().getPort() + "/stats", 0L));
+                "http://127.0.0.1:" + server.getAddress().getPort() + "/stats", 0L, 5L));
         context.refresh();
         return context;
     }
