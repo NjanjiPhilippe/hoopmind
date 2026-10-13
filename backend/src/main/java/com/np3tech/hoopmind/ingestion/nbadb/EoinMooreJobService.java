@@ -3,7 +3,6 @@ package com.np3tech.hoopmind.ingestion.nbadb;
 import com.np3tech.hoopmind.auth.CurrentUser;
 import com.np3tech.hoopmind.ingestion.DataImportEvent;
 import com.np3tech.hoopmind.ingestion.nbadb.NbaDatabaseImporter.ImportReport;
-import com.np3tech.hoopmind.nba.repository.SeasonRepository;
 import com.np3tech.hoopmind.shared.job.Job;
 import com.np3tech.hoopmind.shared.job.JobContext;
 import com.np3tech.hoopmind.shared.job.JobService;
@@ -12,6 +11,7 @@ import com.np3tech.hoopmind.shared.job.JobType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -54,7 +54,7 @@ public class EoinMooreJobService {
 
     private final NbaDatabaseImporter importer;
     private final EoinMooreProperties properties;
-    private final SeasonRepository seasons;
+    private final JdbcTemplate jdbc;
     private final JobService jobs;
     private final ApplicationEventPublisher events;
 
@@ -113,11 +113,15 @@ public class EoinMooreJobService {
         }
     }
 
-    /** La saison qui suit la dernière en base ; 2023-24 si la base est vide (la base Walsh s'arrête à 2022-23). */
+    /**
+     * La saison qui suit la dernière saison qui a des matchs (une saison vide, comme l'ancienne saison de démo, ne
+     * compte pas) ; 2023-24 si la base n'a aucun match (la base Walsh s'arrête à 2022-23).
+     */
     int defaultFrom() {
-        return seasons.findAllOrderByYearDesc().stream().findFirst()
-                .map(season -> season.getYear() + 1)
-                .orElse(2023);
+        Integer latest = jdbc.queryForObject(
+                "SELECT max(s.year) FROM seasons s WHERE EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id)",
+                Integer.class);
+        return latest == null ? 2023 : latest + 1;
     }
 
     private EoinMooreFile file(String name) {

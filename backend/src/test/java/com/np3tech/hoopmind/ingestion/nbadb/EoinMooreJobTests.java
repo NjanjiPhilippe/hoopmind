@@ -102,7 +102,7 @@ class EoinMooreJobTests {
     private EoinMooreJobService jobs(List<Object> events) {
         NbaDatabaseImportProperties importProperties = new NbaDatabaseImportProperties(null, 10, false);
         return new EoinMooreJobService(new NbaDatabaseImporter(importProperties, teams, seasons, jdbc, Clock.systemUTC()),
-                new EoinMooreProperties(directory.toString()), seasons, jobService, events::add);
+                new EoinMooreProperties(directory.toString()), jdbc, jobService, events::add);
     }
 
     private EoinMooreJobStatus waitForEnd(EoinMooreJobService jobs) throws InterruptedException {
