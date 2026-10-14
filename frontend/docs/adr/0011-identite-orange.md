@@ -17,21 +17,24 @@ dégradé bleu, ne disait rien du projet.
 - **Noir plutôt que bleu** pour les grandes surfaces : bandeau de l'accueil, panneau gauche de la connexion, pied
   de page (`neutral-950`, sans la teinte bleutée de `gray`).
 - **Connexion et inscription en deux panneaux** (`AuthLayoutComponent`) : à gauche, sur fond noir, le logo, une
-  accroche et un joueur en fade away dessiné en SVG (`app-login-illustration`) ; à droite, la carte. Sous `lg`, il
-  ne reste que la carte, sur fond noir.
-- **Photo locale facultative** : si `public/login-hero.jpg` existe, elle remplace l'illustration. Le fichier est
-  ignoré par git.
+  accroche et une photo de Kobe Bryant au dunk, très transparente (35 %) ; à droite, la carte. Sous `lg`, il ne
+  reste que la carte, sur fond noir.
+- **Photo par lien** : l'image est chargée depuis Wikimedia Commons (`Special:FilePath`, qui suit les
+  renommages), avec un crédit cliquable vers sa page. Rien n'est copié dans le dépôt. Si elle ne charge pas, le
+  panneau reste noir.
 
 ## Alternatives écartées
 
-- **Une photo de joueur dans le dépôt** (par exemple Kobe Bryant en fade away) : le dépôt est public, et ni la photo
-  ni l'image du joueur ne nous appartiennent. L'illustration vectorielle n'a pas ce problème ; la photo reste
-  possible en local, pour une démonstration.
+- **Une photo copiée dans le dépôt** : le dépôt est public ; un lien vers Commons évite d'y redistribuer l'image
+  et garde la source et la licence à un clic.
+- **Une illustration dessinée** (première version de cette PR) : jugée moins parlante qu'une vraie photo.
 - **Orange vif (`#ef6a1f`) pour les boutons** : texte blanc à 3,1:1, illisible pour une partie des utilisateurs.
 
 ## Conséquences
 
 - **+** Une identité reconnaissable, cohérente du favicon au pied de page.
 - **+** Changer de teinte plus tard ne touche que `styles.css`.
-- **−** L'image `login-hero.jpg` est demandée à chaque affichage de la connexion ; sans fichier, le serveur renvoie
-  `index.html` et l'illustration prend le relais.
+- **−** La page de connexion dépend de Wikimedia pour sa photo : hors ligne ou si le fichier disparaît, le panneau
+  reste noir (la connexion fonctionne normalement).
+- **−** La photo montre une personne réelle : acceptable pour une démonstration non commerciale, à remplacer pour
+  un usage commercial.

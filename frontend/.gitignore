@@ -43,6 +43,3 @@ Thumbs.db
 
 # Client API généré depuis openapi/hoopmind-api.json
 /src/app/core/api/generated/
-
-# Photo locale du panneau de connexion (droits d'image : jamais versionnée)
-/public/login-hero.jpg

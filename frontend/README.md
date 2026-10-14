@@ -21,9 +21,9 @@ npm start          # http://localhost:4200, /api est relayé vers le backend (pr
 
 ### Photo de la page de connexion
 
-Le panneau gauche de la connexion affiche une illustration vectorielle. Pour y mettre votre propre photo en local,
-déposez-la sous `public/login-hero.jpg` : elle remplace l'illustration au prochain rechargement. Ce fichier est
-ignoré par git, pour ne jamais publier une image dont on n'a pas les droits.
+Le panneau gauche de la connexion affiche une photo de Kobe Bryant chargée depuis Wikimedia Commons (lien dans
+`auth-layout.component.ts`, constante `HERO_PHOTO`) : aucune image n'est copiée dans le dépôt. Si elle ne charge
+pas, le panneau reste noir.
 
 ## Architecture
 
