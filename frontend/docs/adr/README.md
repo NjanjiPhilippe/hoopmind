@@ -16,3 +16,4 @@ chantier frontend qui a suivi la revue des PR #1 à #3.
 | [0008](0008-filtres-d-audit-dans-l-url.md) | Les filtres du journal d'audit vivent dans l'URL | Acceptée |
 | [0009](0009-zoneless.md) | L'application tourne sans zone.js | Acceptée |
 | [0010](0010-calendrier-logos-couleurs.md) | Calendrier par équipe, logos et couleurs des franchises | Acceptée |
+| [0011](0011-identite-orange.md) | Identité visuelle orange : logo, connexion en deux panneaux | Acceptée |

@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/ro
 import { filter } from 'rxjs';
 
 import { AuthService } from '../../../core/auth/auth.service';
+import { LogoComponent } from '../logo/logo.component';
 
 interface NavLink {
   path: string;
@@ -21,7 +22,7 @@ const LINKS: NavLink[] = [
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LogoComponent],
   templateUrl: './navbar.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

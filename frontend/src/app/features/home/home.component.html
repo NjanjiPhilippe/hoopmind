@@ -1,18 +1,18 @@
 <div class="flex min-h-screen flex-col bg-gray-50">
   <app-navbar />
 
-  <section class="bg-gradient-to-br from-primary-600 to-primary-900 py-16 text-white sm:py-20">
+  <section class="bg-neutral-950 py-16 text-white sm:py-20">
     <div class="mx-auto max-w-4xl px-4 text-center sm:px-6">
       <h1 class="text-4xl font-bold sm:text-5xl">Prédire les matchs NBA, et dire à quel point se fier à la prédiction</h1>
-      <p class="mx-auto mt-6 max-w-2xl text-lg text-primary-100 sm:text-xl">
+      <p class="mx-auto mt-6 max-w-2xl text-lg text-neutral-300 sm:text-xl">
         HoopMind entraîne un modèle sur les saisons passées, le teste sur la plus récente et compare sa précision à des règles simples.
       </p>
       <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
         @if (auth.isAuthenticated()) {
-          <a routerLink="/predict" class="btn-primary bg-white px-8 py-3 text-lg text-primary-700 hover:bg-gray-100">Prédire un match</a>
+          <a routerLink="/predict" class="btn-primary px-8 py-3 text-lg">Prédire un match</a>
         } @else {
-          <a routerLink="/auth/register" class="btn-primary bg-white px-8 py-3 text-lg text-primary-700 hover:bg-gray-100">Créer un compte</a>
-          <a routerLink="/auth/login" class="btn-outline border-white px-8 py-3 text-lg text-white hover:bg-white hover:text-primary-700">Se connecter</a>
+          <a routerLink="/auth/register" class="btn-primary px-8 py-3 text-lg">Créer un compte</a>
+          <a routerLink="/auth/login" class="btn-outline border-white px-8 py-3 text-lg text-white hover:bg-white hover:text-neutral-950">Se connecter</a>
         }
       </div>
     </div>

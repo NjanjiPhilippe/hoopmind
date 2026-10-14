@@ -19,6 +19,12 @@ npm start          # http://localhost:4200, /api est relayé vers le backend (pr
 | `npm run api:generate` | régénère le client API depuis `openapi/hoopmind-api.json` (lancé automatiquement avant `start`, `build` et `test`) |
 | `npm run api:update` | récupère la spécification du backend local puis régénère le client (`HOOPMIND_ADMIN_PASSWORD` requis) |
 
+### Photo de la page de connexion
+
+Le panneau gauche de la connexion affiche une illustration vectorielle. Pour y mettre votre propre photo en local,
+déposez-la sous `public/login-hero.jpg` : elle remplace l'illustration au prochain rechargement. Ce fichier est
+ignoré par git, pour ne jamais publier une image dont on n'a pas les droits.
+
 ## Architecture
 
 ```

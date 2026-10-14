@@ -5,16 +5,19 @@
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
 
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
+  /* Orange « ballon de basket » : 500 pour le logo et les accents, 600 et plus pour le texte et les boutons
+     (blanc sur 600 : contraste 4,7:1, conforme WCAG AA). */
+  --color-primary-50: #fff5ec;
+  --color-primary-100: #ffe8d4;
+  --color-primary-200: #fecca6;
+  --color-primary-300: #fca86d;
+  --color-primary-400: #f8843d;
+  --color-primary-500: #ef6a1f;
+  --color-primary-600: #c94a0c;
+  --color-primary-700: #a63c0e;
+  --color-primary-800: #843214;
+  --color-primary-900: #6b2a13;
+  --color-primary-950: #3d160a;
 
   --color-nba-blue: #1d428a;
   --color-nba-red: #c8102e;
@@ -50,7 +53,7 @@ body {
 /* Composants */
 @layer components {
 .btn-primary {
-  background-color: #2563eb;
+  background-color: var(--color-primary-600);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -64,12 +67,12 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: #1d4ed8;
+  background-color: var(--color-primary-700);
 }
 
 .btn-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(201, 74, 12, 0.45);
 }
 
 .btn-primary:disabled {
@@ -96,8 +99,8 @@ body {
 }
 
 .btn-outline {
-  border: 2px solid #2563eb;
-  color: #2563eb;
+  border: 2px solid var(--color-primary-600);
+  color: var(--color-primary-600);
   background-color: transparent;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -110,7 +113,7 @@ body {
 }
 
 .btn-outline:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-50);
 }
 
 .card {
@@ -136,7 +139,7 @@ body {
 .input-field:focus {
   outline: none;
   border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(201, 74, 12, 0.45);
 }
 
 .badge {
@@ -174,7 +177,7 @@ body {
   animation: spin 1s linear infinite;
   border-radius: 9999px;
   border: 4px solid #e5e7eb;
-  border-top-color: #2563eb;
+  border-top-color: var(--color-primary-500);
 }
 
 @keyframes spin {
