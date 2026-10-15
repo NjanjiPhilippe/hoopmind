@@ -6,7 +6,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
-    <footer class="bg-neutral-950 py-8 text-center text-sm text-neutral-400">
+    <footer class="border-t border-neutral-800 bg-neutral-950 py-8 text-center text-sm text-neutral-400">
       <p>© {{ year }} HoopMind · Prédictions de matchs NBA</p>
       <p class="mt-1">
         Données : « NBA Database » de Wyatt Walsh (Kaggle, CC BY-SA 4.0) et « NBA Stats (1947-present) » de Sumitro Datta.

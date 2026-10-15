@@ -8,33 +8,37 @@ dégradé bleu, ne disait rien du projet.
 
 ## Décision
 
-- **Palette** : la gamme `primary` (`styles.css`) passe à un orange « ballon de basket ». Le 500 (`#ef6a1f`) sert au
-  logo et aux accents ; le 600 (`#c94a0c`) aux boutons et aux liens, car le blanc y garde un contraste de 4,7:1
-  (WCAG AA). Tout le code utilisait déjà `primary-*`, donc seules les valeurs changent. Les couleurs des franchises
-  (`team-branding.ts`) et les badges d'état (vert, ambre, rouge, info) ne bougent pas.
+- **Palette** : la gamme `primary` (`styles.css`) passe à un orange clair « ballon de basket ». Le 500 (`#f7873a`)
+  sert au logo et aux icônes ; le 600 (`#ef6c1a`) aux boutons, en texte blanc gras (3:1, seuil WCAG des composants
+  et des grands textes) ; le 700 (`#c2510e`) aux liens et au texte orange sur fond blanc (4,7:1, AA). Tout le code
+  utilisait déjà `primary-*`. Les couleurs des franchises (`team-branding.ts`) et les badges d'état ne bougent pas.
 - **Logo** (`app-logo`, `public/favicon.svg`, `favicon.ico`) : les seules coutures d'un ballon, en traits épais et
   irréguliers, couleur héritée, sans fond.
 - **Noir plutôt que bleu** pour les grandes surfaces : bandeau de l'accueil, panneau gauche de la connexion, pied
   de page (`neutral-950`, sans la teinte bleutée de `gray`).
 - **Connexion et inscription en deux panneaux** (`AuthLayoutComponent`) : à gauche, sur fond noir, le logo, une
-  accroche et une photo de Kobe Bryant au dunk, très transparente (25 %) ; à droite, la carte. Sous `lg`, il ne
+  accroche et une photo de Kobe Bryant au dunk, à 40 % d'opacité ; à droite, la carte. Sous `lg`, il ne
   reste que la carte, sur fond noir.
 - **Photo par lien** : l'image est chargée depuis Wikimedia Commons (`Special:FilePath`, qui suit les
   renommages), avec un crédit cliquable vers sa page. Rien n'est copié dans le dépôt. Si elle ne charge pas, le
   panneau reste noir.
 - **Accueil** : le bandeau noir porte « The Last Shot » de Michael Jordan (finale 1998), chargée par lien de la
-  même façon, à 25 % d'opacité, avec un crédit cliquable.
+  même façon, à 40 % d'opacité, avec un crédit cliquable.
 - **Retour à l'accueil** depuis la connexion et l'inscription : un lien « Retour à l'accueil » au-dessus de la carte,
   et le logo (sur la carte et sur le panneau) mène aussi à l'accueil.
 - **Icônes au trait** (`app-icon`) à la place des émojis (accueil, tableau de bord admin, page Données) : même rendu
   sur tous les systèmes, couleur de la palette.
+- **Accueil plus complet** : bandeau plus haut (78 % de l'écran) pour la photo, puis « Comment ça marche » en quatre
+  étapes, les trois pages principales et une section « Pourquoi pas 100 % ? » sur les limites d'une prédiction.
+- **Mot de passe** : l'œil (icône au trait) remplace le texte « Afficher » ; le bouton garde un libellé accessible.
 
 ## Alternatives écartées
 
 - **Une photo copiée dans le dépôt** : le dépôt est public ; un lien vers Commons évite d'y redistribuer l'image
   et garde la source et la licence à un clic.
 - **Une illustration dessinée** (première version de cette PR) : jugée moins parlante qu'une vraie photo.
-- **Orange vif (`#ef6a1f`) pour les boutons** : texte blanc à 3,1:1, illisible pour une partie des utilisateurs.
+- **Orange brûlé (`#c94a0c`) pour les boutons** (première version) : plus contrasté, mais jugé trop sombre ; l'orange
+  clair garde le texte des liens lisible en passant au 700.
 
 ## Conséquences
 

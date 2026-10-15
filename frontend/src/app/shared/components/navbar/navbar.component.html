@@ -9,18 +9,18 @@
       @if (auth.isAuthenticated()) {
         <div class="hidden items-center gap-6 md:flex">
           @for (link of links; track link.path) {
-            <a [routerLink]="link.path" routerLinkActive="text-primary-600" [routerLinkActiveOptions]="{ exact: !!link.exact }"
-               ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-600">{{ link.label }}</a>
+            <a [routerLink]="link.path" routerLinkActive="text-primary-700" [routerLinkActiveOptions]="{ exact: !!link.exact }"
+               ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-700">{{ link.label }}</a>
           }
           @if (auth.isAdmin()) {
-            <a routerLink="/admin" routerLinkActive="text-primary-600" ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-600">Admin</a>
+            <a routerLink="/admin" routerLinkActive="text-primary-700" ariaCurrentWhenActive="page" class="font-medium text-gray-700 hover:text-primary-700">Admin</a>
           }
         </div>
       }
 
       <div class="flex items-center gap-2 sm:gap-3">
         @if (auth.user(); as user) {
-          <a routerLink="/account" class="hidden text-sm font-medium text-gray-700 hover:text-primary-600 md:inline">{{ user.username }}</a>
+          <a routerLink="/account" class="hidden text-sm font-medium text-gray-700 hover:text-primary-700 md:inline">{{ user.username }}</a>
           <button type="button" (click)="logout()" class="btn-secondary hidden text-sm md:inline-flex">Déconnexion</button>
           <button type="button" class="rounded-lg p-2 text-gray-700 hover:bg-gray-100 md:hidden" (click)="menuOpen.set(!menuOpen())"
                   [attr.aria-expanded]="menuOpen()" aria-controls="mobile-menu" [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'">

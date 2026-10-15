@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /** Icônes disponibles, toutes dessinées au trait (contours) dans un repère 24 × 24. */
-export type IconName = 'arrow-left' | 'trend' | 'scale' | 'bolt' | 'users' | 'database' | 'target' | 'folder';
+export type IconName = 'arrow-left' | 'eye' | 'eye-off' | 'trend' | 'scale' | 'bolt' | 'users' | 'database' | 'target' | 'folder' | 'calendar' | 'trophy' | 'chat';
 
 /**
  * Icône au trait, couleur héritée (`currentColor`). Décorative : le texte voisin porte toujours le sens.
@@ -15,6 +15,14 @@ export type IconName = 'arrow-left' | 'trend' | 'scale' | 'bolt' | 'users' | 'da
       @switch (name()) {
         @case ('arrow-left') {
           <path d="M19 12H5M11 6l-6 6 6 6" />
+        }
+        @case ('eye') {
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        }
+        @case ('eye-off') {
+          <path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.6 3.4M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6" />
+          <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
         }
         @case ('trend') {
           <path d="M3 3v18h18" />
@@ -42,6 +50,18 @@ export type IconName = 'arrow-left' | 'trend' | 'scale' | 'bolt' | 'users' | 'da
           <circle cx="12" cy="12" r="9" />
           <circle cx="12" cy="12" r="5" />
           <circle cx="12" cy="12" r="1" />
+        }
+        @case ('calendar') {
+          <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
+        }
+        @case ('trophy') {
+          <path d="M8 4h8v5a4 4 0 0 1-8 0V4z" />
+          <path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4" />
+        }
+        @case ('chat') {
+          <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" />
+          <path d="M8 9h8M8 12h5" />
         }
         @case ('folder') {
           <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.3l2 2.5h8.7A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" />
