@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 /** Icônes disponibles, toutes dessinées au trait (contours) dans un repère 24 × 24. */
-export type IconName = 'arrow-left' | 'eye' | 'eye-off' | 'trend' | 'scale' | 'bolt' | 'users' | 'database' | 'target' | 'folder' | 'calendar' | 'trophy' | 'chat';
+export type IconName = 'eye' | 'eye-off' | 'trend' | 'scale' | 'bolt' | 'users' | 'database' | 'target' | 'folder' | 'calendar' | 'trophy' | 'chat';
 
 /**
  * Icône au trait, couleur héritée (`currentColor`). Décorative : le texte voisin porte toujours le sens.
@@ -13,9 +13,6 @@ export type IconName = 'arrow-left' | 'eye' | 'eye-off' | 'trend' | 'scale' | 'b
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
          stroke-linejoin="round" aria-hidden="true" focusable="false" [attr.width]="size()" [attr.height]="size()">
       @switch (name()) {
-        @case ('arrow-left') {
-          <path d="M19 12H5M11 6l-6 6 6 6" />
-        }
         @case ('eye') {
           <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
           <circle cx="12" cy="12" r="3" />
