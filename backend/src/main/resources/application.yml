@@ -56,6 +56,12 @@ spring:
 
 hoopmind:
   version: '@project.version@'
+  # Monitoring (voir backend/docs/adr/0019-monitoring.md) : /actuator/prometheus n'est lisible qu'avec ces
+  # identifiants HTTP Basic. Sans mot de passe, l'endpoint reste fermé.
+  monitoring:
+    scrape:
+      username: ${METRICS_USERNAME:prometheus}
+      password: ${METRICS_PASSWORD:}
   security:
     jwt:
       secret: ${JWT_SECRET}
@@ -141,11 +147,18 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: when-authorized
       roles: ROLE_ADMIN
+  metrics:
+    tags:
+      application: hoopmind
+    distribution:
+      # Histogrammes des temps de réponse HTTP : percentiles calculables dans Prometheus et Grafana
+      percentiles-histogram:
+        http.server.requests: true
 
 logging:
   level:

@@ -23,3 +23,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0016](0016-ancien-format-kaggle.md) | L'import lit aussi l'ancien format de la base de Wyatt Walsh | Acceptée |
 | [0017](0017-complement-stats-nba.md) | Les saisons récentes viennent de stats.nba.com | Acceptée |
 | [0018](0018-saisons-recentes-eoin-moore.md) | Les saisons récentes viennent des fichiers d'Eoin Moore, play-in compris | Acceptée |
+| [0019](0019-monitoring.md) | Monitoring sur trois niveaux : Micrometer, Prometheus et Grafana | Acceptée |

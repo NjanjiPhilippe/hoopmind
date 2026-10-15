@@ -1,4 +1,7 @@
 hoopmind:
+  monitoring:
+    scrape:
+      password: test-metrics
   security:
     jwt:
       # Clé de test uniquement (32 octets aléatoires), sans valeur hors des tests.
