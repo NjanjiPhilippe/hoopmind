@@ -20,6 +20,7 @@ import { toProblem } from '../../../core/http/problem';
 import { pollWhile } from '../../../core/util/poll';
 import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 import {
   downloadPercent,
   eoinMoorePhaseLabel,
@@ -54,7 +55,7 @@ const MAX_IMPORT_SEASONS = 80;
  */
 @Component({
   selector: 'app-admin-data',
-  imports: [DatePipe, DecimalPipe, PercentPipe, NavbarComponent],
+  imports: [DatePipe, DecimalPipe, PercentPipe, NavbarComponent, IconComponent],
   templateUrl: './admin-data.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

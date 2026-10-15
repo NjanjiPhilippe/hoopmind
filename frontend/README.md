@@ -19,6 +19,12 @@ npm start          # http://localhost:4200, /api est relayé vers le backend (pr
 | `npm run api:generate` | régénère le client API depuis `openapi/hoopmind-api.json` (lancé automatiquement avant `start`, `build` et `test`) |
 | `npm run api:update` | récupère la spécification du backend local puis régénère le client (`HOOPMIND_ADMIN_PASSWORD` requis) |
 
+### Photos de l'accueil et de la connexion
+
+Le bandeau de l'accueil (« The Last Shot » de Michael Jordan) et le panneau gauche de la connexion (Kobe Bryant,
+Wikimedia Commons) chargent leur photo par lien : constante `HERO_PHOTO` dans `home.component.ts` et
+`auth-layout.component.ts`. Aucune image n'est copiée dans le dépôt ; si une photo ne charge pas, le fond reste noir.
+
 ## Architecture
 
 ```

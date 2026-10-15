@@ -50,7 +50,7 @@
           } @else {
             <p class="text-sm text-gray-600">Pas encore entraîné.</p>
             @if (auth.isAdmin()) {
-              <a routerLink="/admin/data" class="text-sm font-medium text-primary-600 hover:underline">Entraîner le modèle</a>
+              <a routerLink="/admin/data" class="text-sm font-medium text-primary-700 hover:underline">Entraîner le modèle</a>
             }
           }
         </section>
@@ -60,7 +60,7 @@
         <section class="card" aria-labelledby="results-title">
           <div class="mb-3 flex items-center justify-between">
             <h2 id="results-title" class="text-lg font-bold">Derniers résultats</h2>
-            <a routerLink="/games" class="text-sm font-medium text-primary-600 hover:underline">Tous les matchs</a>
+            <a routerLink="/games" class="text-sm font-medium text-primary-700 hover:underline">Tous les matchs</a>
           </div>
           @if (games.isLoading()) {
             <p class="text-sm text-gray-500">Chargement…</p>
@@ -85,7 +85,7 @@
         <section class="card" aria-labelledby="upcoming-title">
           <div class="mb-3 flex items-center justify-between">
             <h2 id="upcoming-title" class="text-lg font-bold">À venir</h2>
-            <a routerLink="/standings" class="text-sm font-medium text-primary-600 hover:underline">Classement</a>
+            <a routerLink="/standings" class="text-sm font-medium text-primary-700 hover:underline">Classement</a>
           </div>
           @if (games.isLoading()) {
             <p class="text-sm text-gray-500">Chargement…</p>
@@ -97,7 +97,7 @@
                 <li class="flex items-center justify-between gap-3 py-2">
                   <span class="w-20 shrink-0 text-gray-500">{{ game.scheduledDate | date: 'd MMM' }}</span>
                   <span class="flex-1">{{ game.awayTeam?.abbreviation }} <span class="text-gray-400">&#64;</span> {{ game.homeTeam?.abbreviation }}</span>
-                  <a class="font-medium text-primary-600 hover:underline" routerLink="/predict"
+                  <a class="font-medium text-primary-700 hover:underline" routerLink="/predict"
                      [queryParams]="{ season: game.season?.id, home: game.homeTeam?.id, away: game.awayTeam?.id, date: game.scheduledDate?.slice(0, 10) }">Prédire</a>
                 </li>
               }

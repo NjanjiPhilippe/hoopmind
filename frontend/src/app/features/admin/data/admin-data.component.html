@@ -261,7 +261,7 @@
       <label class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:ring-offset-2"
              [class.border-primary-500]="dragging()" [class.bg-primary-50]="dragging()" [class.border-gray-300]="!dragging()"
              (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)">
-        <span class="text-3xl" aria-hidden="true">📂</span>
+        <app-icon name="folder" [size]="36" class="text-gray-500" />
         <span class="font-medium">Glissez le zip ou les CSV ici, ou cliquez pour les choisir</span>
         <span class="text-xs text-gray-500">.zip ou .csv</span>
         <input type="file" class="sr-only" multiple accept=".zip,.csv" (change)="onFilesSelected($any($event.target))" />
