@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
+import { IconComponent } from '../../shared/components/icon/icon.component';
 import { LogoComponent } from '../../shared/components/logo/logo.component';
 
 /** Photo du panneau gauche : Kobe Bryant au dunk, chargée depuis Wikimedia Commons (aucune copie dans le dépôt). */
@@ -15,7 +17,7 @@ const HERO_PHOTO = {
  */
 @Component({
   selector: 'app-auth-layout',
-  imports: [LogoComponent],
+  imports: [RouterLink, IconComponent, LogoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex min-h-screen bg-neutral-950 lg:bg-gray-50">
@@ -27,10 +29,10 @@ const HERO_PHOTO = {
           <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-neutral-950/70"></div>
         }
 
-        <div class="relative flex items-center gap-3">
+        <a routerLink="/" class="relative flex w-fit items-center gap-3">
           <app-logo [size]="40" />
           <span class="text-2xl font-bold">HoopMind</span>
-        </div>
+        </a>
         <div class="relative max-w-md">
           <p class="text-3xl font-bold leading-tight">Prédire les matchs NBA, et savoir à quel point s'y fier.</p>
           <p class="mt-3 text-neutral-400">Un modèle Spark ML évalué face à des règles simples, expliqué en langage clair.</p>
@@ -42,10 +44,17 @@ const HERO_PHOTO = {
         </div>
       </aside>
 
-      <main class="flex flex-1 items-center justify-center px-4 py-12">
+      <main class="flex flex-1 flex-col items-center justify-center px-4 py-12">
+        <div class="w-full max-w-md">
+          <a routerLink="/" class="mb-4 inline-flex items-center gap-2 text-sm font-medium text-neutral-300 hover:text-white lg:text-gray-600 lg:hover:text-gray-900">
+            <app-icon name="arrow-left" [size]="18" /> Retour à l'accueil
+          </a>
+        </div>
         <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl lg:shadow-xl">
           <div class="mb-8 text-center">
-            <app-logo class="mx-auto mb-4 lg:hidden" [size]="56" />
+            <a routerLink="/" class="mx-auto mb-4 flex w-fit" aria-label="Accueil HoopMind">
+              <app-logo [size]="56" />
+            </a>
             <h1 class="text-3xl font-bold text-gray-900">{{ heading() }}</h1>
             <p class="mt-2 text-gray-600">{{ subheading() }}</p>
           </div>

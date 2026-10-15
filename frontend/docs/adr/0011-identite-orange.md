@@ -22,6 +22,12 @@ dégradé bleu, ne disait rien du projet.
 - **Photo par lien** : l'image est chargée depuis Wikimedia Commons (`Special:FilePath`, qui suit les
   renommages), avec un crédit cliquable vers sa page. Rien n'est copié dans le dépôt. Si elle ne charge pas, le
   panneau reste noir.
+- **Accueil** : le bandeau noir porte « The Last Shot » de Michael Jordan (finale 1998), chargée par lien de la
+  même façon, à 35 % d'opacité, avec un crédit cliquable.
+- **Retour à l'accueil** depuis la connexion et l'inscription : un lien « Retour à l'accueil » au-dessus de la carte,
+  et le logo (sur la carte et sur le panneau) mène aussi à l'accueil.
+- **Icônes au trait** (`app-icon`) à la place des émojis (accueil, tableau de bord admin, page Données) : même rendu
+  sur tous les systèmes, couleur de la palette.
 
 ## Alternatives écartées
 
@@ -34,7 +40,7 @@ dégradé bleu, ne disait rien du projet.
 
 - **+** Une identité reconnaissable, cohérente du favicon au pied de page.
 - **+** Changer de teinte plus tard ne touche que `styles.css`.
-- **−** La page de connexion dépend de Wikimedia pour sa photo : hors ligne ou si le fichier disparaît, le panneau
+- **−** L'accueil et la connexion dépendent de sites tiers pour leurs photos : hors ligne ou si le fichier disparaît, le panneau
   reste noir (la connexion fonctionne normalement).
-- **−** La photo montre une personne réelle : acceptable pour une démonstration non commerciale, à remplacer pour
+- **−** Les photos montrent des personnes réelles et ne sont pas sous licence libre pour celle de Jordan : acceptable pour une démonstration non commerciale, à remplacer pour
   un usage commercial.
