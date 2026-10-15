@@ -2,12 +2,15 @@ package com.np3tech.hoopmind.ml.explanation;
 
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
+import com.np3tech.hoopmind.ml.explanation.ExplanationMetrics.Source;
 import com.np3tech.hoopmind.nba.GameHistory;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -21,6 +24,7 @@ import java.util.Map;
  *     <li>Une explication générée est gardée en mémoire (match, date, version du modèle) : les offres gratuites
  *     limitent le nombre d'appels, et la même question ne doit pas les consommer deux fois.</li>
  *     <li>Si le LLM ne répond pas (quota, panne, clé refusée), une explication rédigée sans LLM la remplace.</li>
+ *     <li>Chaque explication est comptée par origine, et chaque appel au LLM mesuré ({@link ExplanationMetrics}).</li>
  * </ul>
  */
 @Service
@@ -32,9 +36,11 @@ public class PredictionExplanationService {
     private final GameHistory history;
     private final PredictionExplainer explainer;
     private final Map<Key, Explanation> cache;
+    private final ExplanationMetrics metrics;
 
     public PredictionExplanationService(GameOutcomePredictor predictor, GameHistory history,
-                                        ObjectProvider<PredictionExplainer> explainer, ExplanationProperties properties) {
+                                        ObjectProvider<PredictionExplainer> explainer, ExplanationProperties properties,
+                                        MeterRegistry registry) {
         this.predictor = predictor;
         this.history = history;
         this.explainer = explainer.getIfAvailable();
@@ -45,6 +51,7 @@ public class PredictionExplanationService {
                 return size() > capacity;
             }
         });
+        this.metrics = new ExplanationMetrics(registry, properties.provider());
         log.info("Explication des prédictions : {}", this.explainer == null
                 ? "sans LLM (hoopmind.ml.explanation.provider=none)" : properties.provider());
     }
@@ -58,18 +65,26 @@ public class PredictionExplanationService {
                 date, playoff, analysis);
 
         if (explainer == null) {
+            metrics.served(Source.TEMPLATE);
             return result(request, TemplateExplanation.of(request), false, false);
         }
         Key key = new Key(analysis.modelVersion(), seasonId, homeTeamId, awayTeamId, date, playoff);
         Explanation cached = cache.get(key);
         if (cached != null) {
+            metrics.served(Source.CACHE);
             return result(request, cached, true, false);
         }
+        long start = System.nanoTime();
         try {
             Explanation generated = explainer.explain(request);
+            metrics.call(Duration.ofNanos(System.nanoTime() - start), null);
+            metrics.tokens(generated);
+            metrics.served(Source.LLM);
             cache.put(key, generated);
             return result(request, generated, false, false);
         } catch (LlmException e) {
+            metrics.call(Duration.ofNanos(System.nanoTime() - start), e);
+            metrics.served(Source.FALLBACK);
             log.warn("Explication par LLM impossible, explication sans LLM à la place : {}", e.getMessage());
             return result(request, TemplateExplanation.of(request), false, true);
         }

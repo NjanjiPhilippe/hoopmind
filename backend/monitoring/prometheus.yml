@@ -1,0 +1,14 @@
+# Prometheus du profil « monitoring » (docker-compose.yml) : lit les métriques de l'API toutes les 15 secondes.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: hoopmind-backend
+    metrics_path: /actuator/prometheus
+    basic_auth:
+      username: prometheus
+      # Même valeur que METRICS_PASSWORD dans .env, montée comme secret par docker compose
+      password_file: /run/secrets/metrics_password
+    static_configs:
+      - targets: ['backend:8083']
