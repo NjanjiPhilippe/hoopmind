@@ -4,7 +4,7 @@
   <section class="relative overflow-hidden bg-neutral-950 py-16 text-white sm:py-24">
     @if (!photoMissing()) {
       <img [src]="photo.src" alt="" aria-hidden="true" referrerpolicy="no-referrer"
-           class="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-35 grayscale-[30%]"
+           class="absolute inset-0 h-full w-full object-cover object-[center_30%] opacity-25 grayscale-[30%]"
            (error)="photoMissing.set(true)" />
       <div class="absolute inset-0 bg-gradient-to-b from-neutral-950/60 via-neutral-950/40 to-neutral-950/80"></div>
       <a [href]="photo.page" target="_blank" rel="noopener"

@@ -17,13 +17,13 @@ dégradé bleu, ne disait rien du projet.
 - **Noir plutôt que bleu** pour les grandes surfaces : bandeau de l'accueil, panneau gauche de la connexion, pied
   de page (`neutral-950`, sans la teinte bleutée de `gray`).
 - **Connexion et inscription en deux panneaux** (`AuthLayoutComponent`) : à gauche, sur fond noir, le logo, une
-  accroche et une photo de Kobe Bryant au dunk, très transparente (35 %) ; à droite, la carte. Sous `lg`, il ne
+  accroche et une photo de Kobe Bryant au dunk, très transparente (25 %) ; à droite, la carte. Sous `lg`, il ne
   reste que la carte, sur fond noir.
 - **Photo par lien** : l'image est chargée depuis Wikimedia Commons (`Special:FilePath`, qui suit les
   renommages), avec un crédit cliquable vers sa page. Rien n'est copié dans le dépôt. Si elle ne charge pas, le
   panneau reste noir.
 - **Accueil** : le bandeau noir porte « The Last Shot » de Michael Jordan (finale 1998), chargée par lien de la
-  même façon, à 35 % d'opacité, avec un crédit cliquable.
+  même façon, à 25 % d'opacité, avec un crédit cliquable.
 - **Retour à l'accueil** depuis la connexion et l'inscription : un lien « Retour à l'accueil » au-dessus de la carte,
   et le logo (sur la carte et sur le panneau) mène aussi à l'accueil.
 - **Icônes au trait** (`app-icon`) à la place des émojis (accueil, tableau de bord admin, page Données) : même rendu

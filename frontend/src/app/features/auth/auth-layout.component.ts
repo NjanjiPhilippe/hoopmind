@@ -24,7 +24,7 @@ const HERO_PHOTO = {
       <aside class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-neutral-950 p-12 text-white lg:flex xl:w-[55%]">
         @if (!photoMissing()) {
           <img [src]="photo.src" alt="" aria-hidden="true" referrerpolicy="no-referrer"
-               class="absolute inset-0 h-full w-full object-cover object-top opacity-35 grayscale-[30%]"
+               class="absolute inset-0 h-full w-full object-cover object-top opacity-25 grayscale-[30%]"
                (error)="photoMissing.set(true)" />
           <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-neutral-950/70"></div>
         }
