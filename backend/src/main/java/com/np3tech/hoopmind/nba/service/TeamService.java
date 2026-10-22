@@ -1,6 +1,5 @@
 package com.np3tech.hoopmind.nba.service;
 
-import com.np3tech.hoopmind.nba.dto.TeamFormDTO;
 import com.np3tech.hoopmind.nba.entity.Team;
 import com.np3tech.hoopmind.nba.entity.enummeration.Conference;
 import com.np3tech.hoopmind.nba.entity.enummeration.Division;
@@ -16,6 +15,5 @@ public interface TeamService {
     List<Team> getTeamsByConference(Conference conference);
     List<Team> getTeamsByDivision(Division division);
     void deleteTeam(Long id);
-    TeamFormDTO getTeamForm(Long id, int nbGames);
 
 }

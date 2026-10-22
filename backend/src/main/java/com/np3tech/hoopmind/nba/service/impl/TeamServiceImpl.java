@@ -1,6 +1,5 @@
 package com.np3tech.hoopmind.nba.service.impl;
 
-import com.np3tech.hoopmind.nba.dto.TeamFormDTO;
 import com.np3tech.hoopmind.nba.entity.Team;
 import com.np3tech.hoopmind.nba.entity.enummeration.Conference;
 import com.np3tech.hoopmind.nba.entity.enummeration.Division;
@@ -125,10 +124,5 @@ public class TeamServiceImpl implements TeamService {
         }
 
         teamRepository.deleteById(id);
-    }
-
-    @Override
-    public TeamFormDTO getTeamForm(Long id, int nbGames) {
-        return null;
     }
 }
