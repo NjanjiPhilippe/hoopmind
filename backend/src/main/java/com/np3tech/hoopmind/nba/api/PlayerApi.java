@@ -7,6 +7,11 @@ import com.np3tech.hoopmind.nba.entity.enummeration.PlayerStatus;
 import com.np3tech.hoopmind.nba.entity.enummeration.Position;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +32,7 @@ public interface PlayerApi {
 
     @Operation(summary = "Get all players")
     @GetMapping
-    ResponseEntity<List<PlayerResponse>> getAllPlayers();
+    ResponseEntity<PagedModel<PlayerResponse>> getAllPlayers(@ParameterObject @PageableDefault(size = 20, sort = "lastName") Pageable pageable);
 
     @Operation(summary = "Update player")
     @PutMapping("/{id}")
@@ -43,11 +48,13 @@ public interface PlayerApi {
 
     @Operation(summary = "Get players by position")
     @GetMapping("/position/{position}")
-    ResponseEntity<List<PlayerResponse>> getPlayersByPosition(@PathVariable Position position);
+    ResponseEntity<PagedModel<PlayerResponse>> getPlayersByPosition(@PathVariable Position position,
+                                                                @ParameterObject @PageableDefault(size = 20, sort = "lastName") Pageable pageable);
 
     @Operation(summary = "Get players by status")
     @GetMapping("/status/{status}")
-    ResponseEntity<List<PlayerResponse>> getPlayersByStatus(@PathVariable PlayerStatus status);
+    ResponseEntity<PagedModel<PlayerResponse>> getPlayersByStatus(@PathVariable PlayerStatus status,
+                                                              @ParameterObject @PageableDefault(size = 20, sort = "lastName") Pageable pageable);
 
     @Operation(summary = "Search players by name")
     @GetMapping("/search")

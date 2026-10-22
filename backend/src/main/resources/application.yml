@@ -44,6 +44,12 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+  # Listes paginées : 100 éléments au plus par page, quel que soit le paramètre size envoyé.
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+
   mvc:
     problemdetails:
       enabled: true

@@ -17,6 +17,7 @@ import java.time.Duration;
  * @param maxTokens          longueur maximale de la réponse, raisonnement du modèle compris
  * @param cacheSize          nombre d'explications gardées en mémoire (une par match, date et version du modèle)
  * @param maxConcurrentCalls appels simultanés au LLM au plus (les suivants attendent leur tour)
+ * @param maxCallsPerUserPerHour appels au LLM permis à chaque utilisateur par heure ; au-delà, explication sans LLM
  */
 @ConfigurationProperties("hoopmind.ml.explanation")
 public record ExplanationProperties(
@@ -27,7 +28,8 @@ public record ExplanationProperties(
         @DefaultValue("20s") Duration timeout,
         @DefaultValue("2048") int maxTokens,
         @DefaultValue("500") int cacheSize,
-        @DefaultValue("4") int maxConcurrentCalls
+        @DefaultValue("4") int maxConcurrentCalls,
+        @DefaultValue("20") int maxCallsPerUserPerHour
 ) {
 
     public boolean hasApiKey() {

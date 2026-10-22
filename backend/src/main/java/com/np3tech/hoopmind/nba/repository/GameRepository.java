@@ -4,6 +4,8 @@ import com.np3tech.hoopmind.nba.entity.Game;
 import com.np3tech.hoopmind.nba.entity.Season;
 import com.np3tech.hoopmind.nba.entity.Team;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,8 +36,15 @@ public interface GameRepository extends JpaRepository<Game, Long>, JpaSpecificat
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
     List<Game> findAll(Specification<Game> spec);
 
+    @Override
+    @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
+    Page<Game> findAll(Pageable pageable);
+
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
     List<Game> findByStatus(GameStatus status);
+
+    @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
+    Page<Game> findByStatus(GameStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
     List<Game> findBySeason(Season season);
@@ -43,7 +52,8 @@ public interface GameRepository extends JpaRepository<Game, Long>, JpaSpecificat
     List<Game> findByStatusAndScheduledDate(GameStatus status, LocalDateTime now);
 
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
-    List<Game> findByHomeTeamOrAwayTeam(Team homeTeam, Team awayTeam);
+    @Query("SELECT g FROM Game g WHERE g.homeTeam = :team OR g.awayTeam = :team")
+    Page<Game> findByTeam(@Param("team") Team team, Pageable pageable);
 
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})
     List<Game> findByScheduledDateBetween(LocalDateTime start, LocalDateTime end);

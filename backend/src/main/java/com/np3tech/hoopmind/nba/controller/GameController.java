@@ -12,6 +12,9 @@ import com.np3tech.hoopmind.nba.service.search.GameSearchService;
 import com.np3tech.hoopmind.nba.service.GameService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,9 +37,7 @@ public class GameController implements GameApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GameResponse> createGame(GameCreateRequest request) {
         log.info("Creating game: {} vs {}", request.getHomeTeamId(), request.getAwayTeamId());
-
-        Game game = gameMapper.toEntity(request);
-        Game createdGame = gameService.createGame(game);
+        Game createdGame = gameService.createGame(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(gameMapper.toResponse(createdGame));
@@ -51,22 +52,15 @@ public class GameController implements GameApi {
     }
 
     @Override
-    public ResponseEntity<List<GameResponse>> getAllGames() {
-        log.debug("Fetching all games");
-
-        List<Game> games = gameService.getAllGames();
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<GameResponse>> getAllGames(Pageable pageable) {
+        return ResponseEntity.ok(toPage(gameService.getAllGames(pageable)));
     }
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GameResponse> updateGame(Long id, GameUpdateRequest request) {
         log.info("Updating game with id: {}", id);
-
-        Game gameUpdate = gameMapper.toEntity(request);
-        Game updatedGame = gameService.updateGame(id, gameUpdate);
+        Game updatedGame = gameService.updateGame(id, request);
 
         return ResponseEntity.ok(gameMapper.toResponse(updatedGame));
     }
@@ -81,13 +75,8 @@ public class GameController implements GameApi {
     }
 
     @Override
-    public ResponseEntity<List<GameResponse>> getGamesByStatus(GameStatus status) {
-        log.debug("Fetching games by status: {}", status);
-
-        List<Game> games = gameService.getGamesByStatus(status);
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<GameResponse>> getGamesByStatus(GameStatus status, Pageable pageable) {
+        return ResponseEntity.ok(toPage(gameService.getGamesByStatus(status, pageable)));
     }
 
     @Override
@@ -101,13 +90,8 @@ public class GameController implements GameApi {
     }
 
     @Override
-    public ResponseEntity<List<GameResponse>> getGamesByTeam(Long teamId) {
-        log.debug("Fetching games for team: {}", teamId);
-
-        List<Game> games = gameService.getGamesByTeam(teamId);
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<GameResponse>> getGamesByTeam(Long teamId, Pageable pageable) {
+        return ResponseEntity.ok(toPage(gameService.getGamesByTeam(teamId, pageable)));
     }
 
     @Override
@@ -149,6 +133,11 @@ public class GameController implements GameApi {
         Game game = gameService.getGameById(id);
 
         return ResponseEntity.ok(gameMapper.toResponse(game));
+    }
+
+    private PagedModel<GameResponse> toPage(Page<Game> games) {
+        Map<Long, GameResult> results = gameService.getResults(games.getContent());
+        return new PagedModel<>(games.map(game -> gameMapper.toResponse(game, results.get(game.getId()))));
     }
 
     /** Les scores des matchs joués sont chargés en une requête pour toute la liste. */
