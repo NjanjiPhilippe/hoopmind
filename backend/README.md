@@ -18,7 +18,7 @@ set -a && . ./.env && set +a
 - Les tâches planifiées sur les matchs (statuts, rappels, statistiques) sont désactivées par défaut : `NBA_SCHEDULER_ENABLED=true` les active.
 - Spark démarre en mode `local[*]` dans la JVM. `SPARK_ENABLED=false` démarre l'API sans Spark ;
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
-- Tout en conteneurs : `docker compose --profile app up -d --build`.
+- Tout en conteneurs : `docker compose --profile app up -d --build` (base, API en profil `prod` et frontend nginx sur http://localhost:8081 ; l'API et PostgreSQL ne sont ouverts que sur la machine locale).
 
 ### Charger les données NBA
 

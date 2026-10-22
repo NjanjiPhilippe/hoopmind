@@ -132,6 +132,10 @@ springdoc:
 
 server:
   port: ${SERVER_PORT:8083}
+  # Derrière nginx, l'adresse du client arrive dans X-Forwarded-For. Tomcat ne la lit que si la requête vient
+  # d'une adresse privée (le conteneur nginx) : un client ne peut pas choisir son adresse en envoyant l'en-tête
+  # lui-même. Sans ce réglage, tous les clients auraient l'adresse de nginx (voir ADR 0007).
+  forward-headers-strategy: native
   error:
     include-stacktrace: never
   compression:
