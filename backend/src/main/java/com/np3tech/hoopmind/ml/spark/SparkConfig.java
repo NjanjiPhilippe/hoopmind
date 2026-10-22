@@ -67,6 +67,8 @@ public class SparkConfig {
                 .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                 .set("spark.kryoserializer.buffer.max", "512m")
                 .set("spark.sql.warehouse.dir", "spark-warehouse")
+                // Pas d'interface web Spark (port 4040) : rien ne la consulte et elle ne doit pas être exposée.
+                .set("spark.ui.enabled", "false")
                 .set("spark.driver.host", driverHost)
                 .set("spark.driver.port", driverPort)
                 // Ajouter les options Java pour driver et executors

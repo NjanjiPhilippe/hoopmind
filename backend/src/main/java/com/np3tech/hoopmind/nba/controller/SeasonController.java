@@ -30,9 +30,7 @@ public class SeasonController implements SeasonApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SeasonResponse> createSeason(SeasonCreateRequest request) {
         log.info("Creating season: {}", request.getName());
-
-        Season season = seasonMapper.toEntity(request);
-        Season createdSeason = seasonService.createSeason(season);
+        Season createdSeason = seasonService.createSeason(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(seasonMapper.toResponse(createdSeason));
@@ -70,9 +68,7 @@ public class SeasonController implements SeasonApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SeasonResponse> updateSeason(Long id, SeasonUpdateRequest request) {
         log.info("Updating season with id: {}", id);
-
-        Season seasonUpdate = seasonMapper.toEntity(request);
-        Season updatedSeason = seasonService.updateSeason(id, seasonUpdate);
+        Season updatedSeason = seasonService.updateSeason(id, request);
 
         return ResponseEntity.ok(seasonMapper.toResponse(updatedSeason));
     }

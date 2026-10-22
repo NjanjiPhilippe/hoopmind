@@ -31,9 +31,7 @@ public class PredictionController implements PredictionApi {
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<MatchPredictionResponse> createPrediction(MatchPredictionCreateRequest request) {
         log.info("Creating prediction for game: {}", request.getGameId());
-
-        MatchPrediction prediction = matchPredictionMapper.toEntity(request);
-        MatchPrediction createdPrediction = matchPredictionService.createPrediction(prediction);
+        MatchPrediction createdPrediction = matchPredictionService.createPrediction(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(matchPredictionMapper.toResponse(createdPrediction));
