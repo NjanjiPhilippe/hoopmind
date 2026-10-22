@@ -19,6 +19,9 @@ final class SparkTestSession {
                 .appName("hoopmind-tests")
                 .config("spark.ui.enabled", "false")
                 .config("spark.sql.shuffle.partitions", "4")
+                // Sinon Spark installe sa fabrique d'URL dans la JVM partagée par tous les tests, et le Tomcat d'un
+                // test lancé ensuite sur un vrai port ne peut plus installer la sienne (« factory already defined »).
+                .config("spark.sql.defaultUrlStreamHandlerFactory.enabled", "false")
                 .getOrCreate();
     }
 
