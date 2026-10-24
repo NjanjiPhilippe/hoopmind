@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.ml.explanation;
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.scoring.TeamForm;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -26,6 +27,7 @@ public final class ExplanationPrompt {
             l'extérieur. Les facteurs sont déjà triés du plus influent au moins influent.
 
             Règles :
+            - En début de saison, dis en une phrase que la forme s'appuie encore en partie sur la saison passée.
             - N'utilise que les chiffres fournis. N'invente ni blessure, ni joueur, ni statistique.
             - Ne modifie pas la probabilité et ne la contredis pas.
             - Un facteur marqué « correction du modèle » favorise une équipe alors que ses valeurs sont meilleures \
@@ -56,7 +58,15 @@ public final class ExplanationPrompt {
         text.append("Probabilité de victoire selon le modèle : ").append(home).append(' ')
                 .append(ExplanationFacts.percent(prediction.homeWinProbability())).append(", ").append(away).append(' ')
                 .append(ExplanationFacts.percent(prediction.awayWinProbability())).append(".\n");
-        text.append("Favori : ").append(prediction.homeTeamWins() ? home : away).append(".\n\n");
+        text.append("Favori : ").append(prediction.homeTeamWins() ? home : away).append(".\n");
+        text.append("Matchs joués cette saison avant ce match : ").append(home).append(' ')
+                .append(analysis.homeGamesPlayed()).append(", ").append(away).append(' ')
+                .append(analysis.awayGamesPlayed()).append(".\n");
+        if (Math.min(analysis.homeGamesPlayed(), analysis.awayGamesPlayed()) < TeamForm.PRIOR_GAMES) {
+            text.append("Début de saison : la forme de chaque équipe mêle ses matchs de cette saison et son bilan de ")
+                    .append("la saison passée, qui compte comme ").append(TeamForm.PRIOR_GAMES).append(" matchs.\n");
+        }
+        text.append('\n');
         text.append("Facteurs, du plus influent au moins influent :\n");
         for (PredictionFactor factor : ExplanationFacts.byInfluence(analysis.factors())) {
             text.append("- ").append(ExplanationFacts.label(factor.feature())).append(" : ");

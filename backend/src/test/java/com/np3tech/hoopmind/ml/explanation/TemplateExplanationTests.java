@@ -37,7 +37,7 @@ class TemplateExplanationTests {
                         new PredictionFactor("last10_win_pct_diff", 0.6, 0.1, 0.71),
                         new PredictionFactor("win_pct_diff", 0.74, 0.07, -0.38),
                         new PredictionFactor("rest_days_diff", 1, 2, -0.04),
-                        new PredictionFactor("is_playoff", 0, 0, 0)));
+                        new PredictionFactor("is_playoff", 0, 0, 0)), 30, 30);
 
         String text = TemplateExplanation.of(new ExplanationRequest("Boston Celtics", "San Antonio Spurs", Fixtures.DAY,
                 false, analysis)).text();

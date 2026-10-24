@@ -596,6 +596,98 @@
         }
       }
     },
+    "/api/v1/games/{id}/result": {
+      "put": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Enregistrer le score d'un match",
+        "description": "Saisie manuelle par un administrateur, quand l'import n'est pas disponible. Crée ou corrige le score final et marque le match comme terminé ; la forme des équipes en tient compte dès la prédiction suivante.",
+        "operationId": "recordGameResult",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameResultRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Score enregistré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Score invalide (négatif, égalité…)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Match introuvable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Retirer le score d'un match",
+        "description": "Le match redevient « à venir ».",
+        "operationId": "deleteGameResult",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Game ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Score retiré"
+          },
+          "404": {
+            "description": "Match introuvable ou sans score"
+          }
+        }
+      }
+    },
     "/api/v1/admin/users/{id}/status": {
       "put": {
         "tags": [
@@ -1259,6 +1351,45 @@
         }
       }
     },
+    "/api/v1/admin/imports/stats-nba/jobs": {
+      "post": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Compléter les matchs récents depuis stats.nba.com",
+        "description": "Lit sur stats.nba.com (public, sans clé) les matchs de saison régulière et de playoffs, de la saison fromYear jusqu'à la saison en cours, puis les importe. Suivre l'avancement avec GET /stats-nba/status.",
+        "operationId": "startStatsNbaImport",
+        "parameters": [
+          {
+            "name": "fromYear",
+            "in": "query",
+            "description": "Année de début de la première saison (2023 pour 2023-24) ; par défaut la dernière saison en base",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsNbaJobStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/imports/nba-database/jobs": {
       "post": {
         "tags": [
@@ -1308,19 +1439,29 @@
         ]
       }
     },
-    "/api/v1/admin/imports/stats-nba/jobs": {
+    "/api/v1/admin/imports/eoin-moore/jobs": {
       "post": {
         "tags": [
           "Import des données"
         ],
-        "summary": "Compléter les matchs récents depuis stats.nba.com",
-        "description": "Lit sur stats.nba.com (public, sans clé) les matchs de saison régulière et de playoffs, de la saison fromYear jusqu'à la saison en cours, puis les importe. Suivre l'avancement avec GET /stats-nba/status.",
-        "operationId": "startStatsNbaImport",
+        "summary": "Importer des saisons récentes depuis les fichiers d'Eoin Moore",
+        "description": "Lit Games.csv et TeamStatistics.csv (Kaggle eoinamoore/historical-nba-data-and-player-box-scores) et importe les matchs de saison régulière, de play-in et de playoffs des saisons fromYear à toYear. Suivre l'avancement avec GET /eoin-moore/status.",
+        "operationId": "startEoinMooreImport",
         "parameters": [
           {
             "name": "fromYear",
             "in": "query",
-            "description": "Année de début de la première saison (2023 pour 2023-24) ; par défaut la dernière saison en base",
+            "description": "Année de début de la première saison (2023 pour 2023-24) ; par défaut celle qui suit la dernière saison en base",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "toYear",
+            "in": "query",
+            "description": "Année de début de la dernière saison ; par défaut fromYear",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1334,7 +1475,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatsNbaJobStatus"
+                  "$ref": "#/components/schemas/EoinMooreJobStatus"
                 }
               }
             }
@@ -2090,7 +2231,7 @@
           "Spark Analytics"
         ],
         "summary": "Prédire le vainqueur d'un match",
-        "description": "Forme des deux équipes avant la date du match (matchs déjà joués de la saison), puis le modèle entraîné. Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
+        "description": "Forme des deux équipes avant la date du match (matchs déjà joués de la saison, complétés en début de saison par le bilan de la saison passée), puis le modèle entraîné. Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a joué aucun match ni cette saison avant cette date, ni la saison passée.",
         "operationId": "predictGameOutcome",
         "parameters": [
           {
@@ -2169,7 +2310,7 @@
           "Spark Analytics"
         ],
         "summary": "Prédire le vainqueur d'un match et expliquer pourquoi",
-        "description": "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
+        "description": "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a joué aucun match ni cette saison avant cette date, ni la saison passée.",
         "operationId": "explainGameOutcome",
         "parameters": [
           {
@@ -3435,6 +3576,33 @@
         ]
       }
     },
+    "/api/v1/admin/imports/stats-nba/status": {
+      "get": {
+        "tags": [
+          "Import des données"
+        ],
+        "summary": "Complément depuis stats.nba.com : saisons visées et dernier import",
+        "description": "Saisons qu'un import lirait (de la dernière saison en base à la saison en cours) et avancement du dernier import.",
+        "operationId": "getStatsNbaStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsNbaStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/imports/nba-database/status": {
       "get": {
         "tags": [
@@ -3462,21 +3630,21 @@
         ]
       }
     },
-    "/api/v1/admin/imports/stats-nba/status": {
+    "/api/v1/admin/imports/eoin-moore/status": {
       "get": {
         "tags": [
           "Import des données"
         ],
-        "summary": "Complément depuis stats.nba.com : saisons visées et dernier import",
-        "description": "Saisons qu'un import lirait (de la dernière saison en base à la saison en cours) et avancement du dernier import.",
-        "operationId": "getStatsNbaStatus",
+        "summary": "Saisons récentes (fichiers d'Eoin Moore) : fichiers et dernier import",
+        "description": "Présence de Games.csv et TeamStatistics.csv dans le dossier du serveur, saison proposée et avancement du dernier import.",
+        "operationId": "getEoinMooreStatus",
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StatsNbaStatus"
+                  "$ref": "#/components/schemas/EoinMooreStatus"
                 }
               }
             }
@@ -3650,82 +3818,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PagedModelAuditEvent"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/imports/eoin-moore/jobs": {
-      "post": {
-        "tags": [
-          "Import des données"
-        ],
-        "summary": "Importer des saisons récentes depuis les fichiers d'Eoin Moore",
-        "description": "Lit Games.csv et TeamStatistics.csv (Kaggle eoinamoore/historical-nba-data-and-player-box-scores) et importe les matchs de saison régulière, de play-in et de playoffs des saisons fromYear à toYear. Suivre l'avancement avec GET /eoin-moore/status.",
-        "operationId": "startEoinMooreImport",
-        "parameters": [
-          {
-            "name": "fromYear",
-            "in": "query",
-            "description": "Année de début de la première saison (2023 pour 2023-24) ; par défaut celle qui suit la dernière saison en base",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "toYear",
-            "in": "query",
-            "description": "Année de début de la dernière saison ; par défaut fromYear",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EoinMooreJobStatus"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/admin/imports/eoin-moore/status": {
-      "get": {
-        "tags": [
-          "Import des données"
-        ],
-        "summary": "Saisons récentes (fichiers d'Eoin Moore) : fichiers et dernier import",
-        "description": "Présence de Games.csv et TeamStatistics.csv dans le dossier du serveur, saison proposée et avancement du dernier import.",
-        "operationId": "getEoinMooreStatus",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EoinMooreStatus"
                 }
               }
             }
@@ -4312,6 +4404,34 @@
             "type": "string"
           }
         }
+      },
+      "GameResultRequest": {
+        "type": "object",
+        "properties": {
+          "homeTeamScore": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 250,
+            "minimum": 0
+          },
+          "awayTeamScore": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 250,
+            "minimum": 0
+          },
+          "overtimePeriods": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Nombre de prolongations (0 par défaut)",
+            "maximum": 10,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "awayTeamScore",
+          "homeTeamScore"
+        ]
       },
       "UpdateStatusRequest": {
         "type": "object",
@@ -5024,6 +5144,53 @@
           }
         }
       },
+      "StatsNbaJobStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "FETCHING",
+              "IMPORTING",
+              "SUCCEEDED",
+              "FAILED",
+              "INTERRUPTED"
+            ]
+          },
+          "fromSeason": {
+            "type": "string"
+          },
+          "toSeason": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "fetched": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ImportReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "JobStatus": {
         "type": "object",
         "properties": {
@@ -5063,6 +5230,45 @@
           "totalBytes": {
             "type": "integer",
             "format": "int64"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ImportReport"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "EoinMooreJobStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "READING",
+              "IMPORTING",
+              "SUCCEEDED",
+              "FAILED",
+              "INTERRUPTED"
+            ]
+          },
+          "fromSeason": {
+            "type": "string"
+          },
+          "toSeason": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
           },
           "report": {
             "$ref": "#/components/schemas/ImportReport"
@@ -5317,6 +5523,14 @@
           },
           "fallback": {
             "type": "boolean"
+          },
+          "homeGamesPlayed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awayGamesPlayed": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -5375,6 +5589,34 @@
           }
         }
       },
+      "PagedModelPlayerResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerResponse"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "PagedModelGameResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GameResponse"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
       "PagedModelUserProfile": {
         "type": "object",
         "properties": {
@@ -5386,6 +5628,20 @@
           },
           "page": {
             "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "StatsNbaStatus": {
+        "type": "object",
+        "properties": {
+          "fromSeason": {
+            "type": "string"
+          },
+          "toSeason": {
+            "type": "string"
+          },
+          "job": {
+            "$ref": "#/components/schemas/StatsNbaJobStatus"
           }
         }
       },
@@ -5430,6 +5686,50 @@
           },
           "job": {
             "$ref": "#/components/schemas/JobStatus"
+          }
+        }
+      },
+      "EoinMooreFile": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "EoinMooreStatus": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "games": {
+            "$ref": "#/components/schemas/EoinMooreFile"
+          },
+          "teamStatistics": {
+            "$ref": "#/components/schemas/EoinMooreFile"
+          },
+          "defaultFromYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxSeasons": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "job": {
+            "$ref": "#/components/schemas/EoinMooreJobStatus"
           }
         }
       },
@@ -5538,178 +5838,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AuditEvent"
-            }
-          },
-          "page": {
-            "$ref": "#/components/schemas/PageMetadata"
-          }
-        }
-      },
-      "StatsNbaJobStatus": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "phase": {
-            "type": "string",
-            "enum": [
-              "FETCHING",
-              "IMPORTING",
-              "SUCCEEDED",
-              "FAILED",
-              "INTERRUPTED"
-            ]
-          },
-          "fromSeason": {
-            "type": "string"
-          },
-          "toSeason": {
-            "type": "string"
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "finishedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "fetched": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "requests": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "report": {
-            "$ref": "#/components/schemas/ImportReport"
-          },
-          "error": {
-            "type": "string"
-          }
-        }
-      },
-      "StatsNbaStatus": {
-        "type": "object",
-        "properties": {
-          "fromSeason": {
-            "type": "string"
-          },
-          "toSeason": {
-            "type": "string"
-          },
-          "job": {
-            "$ref": "#/components/schemas/StatsNbaJobStatus"
-          }
-        }
-      },
-      "EoinMooreJobStatus": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "phase": {
-            "type": "string",
-            "enum": [
-              "READING",
-              "IMPORTING",
-              "SUCCEEDED",
-              "FAILED",
-              "INTERRUPTED"
-            ]
-          },
-          "fromSeason": {
-            "type": "string"
-          },
-          "toSeason": {
-            "type": "string"
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "finishedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "report": {
-            "$ref": "#/components/schemas/ImportReport"
-          },
-          "error": {
-            "type": "string"
-          }
-        }
-      },
-      "EoinMooreFile": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "present": {
-            "type": "boolean"
-          },
-          "sizeBytes": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "modifiedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "EoinMooreStatus": {
-        "type": "object",
-        "properties": {
-          "directory": {
-            "type": "string"
-          },
-          "games": {
-            "$ref": "#/components/schemas/EoinMooreFile"
-          },
-          "teamStatistics": {
-            "$ref": "#/components/schemas/EoinMooreFile"
-          },
-          "defaultFromYear": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "maxSeasons": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "job": {
-            "$ref": "#/components/schemas/EoinMooreJobStatus"
-          }
-        }
-      },
-      "PagedModelPlayerResponse": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlayerResponse"
-            }
-          },
-          "page": {
-            "$ref": "#/components/schemas/PageMetadata"
-          }
-        }
-      },
-      "PagedModelGameResponse": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GameResponse"
             }
           },
           "page": {

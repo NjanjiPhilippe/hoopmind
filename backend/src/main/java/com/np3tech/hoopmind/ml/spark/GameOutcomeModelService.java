@@ -10,6 +10,8 @@ import com.np3tech.hoopmind.ml.spark.GameOutcomeTrainer.Evaluation;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
@@ -23,6 +25,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
+
+import static org.apache.spark.sql.functions.col;
 
 /**
  * Entraînement et suivi du modèle de prédiction des matchs, à partir des données importées. Spark ne sert qu'à
@@ -62,7 +67,11 @@ public class GameOutcomeModelService implements GameOutcomeModel {
 
         GameOutcomeTrainer.Result result;
         try {
-            result = GameOutcomeTrainer.train(GameFeatureBuilder.gameFeatures(loader.teamGames(years)));
+            // La saison qui précède la première sert seulement de point de départ à la forme (bilan de la saison passée).
+            List<Integer> loaded = Stream.concat(Stream.of(years.getFirst() - 1), years.stream()).toList();
+            Dataset<Row> features = GameFeatureBuilder.gameFeatures(loader.teamGames(loaded))
+                    .filter(col("season_year").isin(years.toArray()));
+            result = GameOutcomeTrainer.train(features);
         } catch (IllegalStateException e) {
             throw new AppException(e.getMessage(), HttpStatus.UNPROCESSABLE_CONTENT, "NO_TRAINING_DATA");
         }

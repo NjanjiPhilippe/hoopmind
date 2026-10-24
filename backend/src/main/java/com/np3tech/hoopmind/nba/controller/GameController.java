@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.nba.controller;
 
 import com.np3tech.hoopmind.nba.api.GameApi;
 import com.np3tech.hoopmind.nba.dto.request.GameCreateRequest;
+import com.np3tech.hoopmind.nba.dto.request.GameResultRequest;
 import com.np3tech.hoopmind.nba.dto.request.GameUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.GameResponse;
 import com.np3tech.hoopmind.nba.entity.Game;
@@ -133,6 +134,20 @@ public class GameController implements GameApi {
         Game game = gameService.getGameById(id);
 
         return ResponseEntity.ok(gameMapper.toResponse(game));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<GameResponse> recordGameResult(Long id, GameResultRequest request) {
+        GameResult result = gameService.recordResult(id, request);
+        return ResponseEntity.ok(gameMapper.toResponse(gameService.getGameById(id), result));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteGameResult(Long id) {
+        gameService.deleteResult(id);
+        return ResponseEntity.noContent().build();
     }
 
     private PagedModel<GameResponse> toPage(Page<Game> games) {

@@ -27,7 +27,7 @@ final class SparkTestSession {
                         Integer points, Integer pointsAllowed) {
         Integer won = points == null ? null : points > pointsAllowed ? 1 : 0;
         Double possessions = points == null ? null : 100.0;
-        return RowFactory.create(gameId, season, Date.valueOf(date), teamId, home ? 1 : 0, 0, won, points, pointsAllowed,
+        return RowFactory.create(gameId, season, Integer.parseInt(season.substring(0, 4)), Date.valueOf(date), teamId, home ? 1 : 0, 0, won, points, pointsAllowed,
                 possessions, possessions);
     }
 }

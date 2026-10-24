@@ -189,6 +189,10 @@
 
           <p class="text-sm text-gray-600">
             Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de play-in ou de playoffs}.
+            @if (earlySeason(p.result)) {
+              Début de saison ({{ p.result.homeGamesPlayed }} et {{ p.result.awayGamesPlayed }} matchs joués) : leur bilan de la saison passée
+              compte encore comme 10 matchs.
+            }
           </p>
 
           @if (p.result.explanation?.text; as text) {

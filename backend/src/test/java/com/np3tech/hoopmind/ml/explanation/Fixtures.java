@@ -21,7 +21,7 @@ final class Fixtures {
                         new PredictionFactor("last10_win_pct_diff", 0.7, 0.6, 0.02),
                         new PredictionFactor("net_rating_diff", 9.4, 1.2, 0.48),
                         new PredictionFactor("rest_days_diff", 1, 3, -0.22),
-                        new PredictionFactor("is_playoff", 0, 0, -0.01)));
+                        new PredictionFactor("is_playoff", 0, 0, -0.01)), 30, 29);
     }
 
     static ExplanationRequest request() {

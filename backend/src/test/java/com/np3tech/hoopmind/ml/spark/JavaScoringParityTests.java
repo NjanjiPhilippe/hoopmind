@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.ml.spark;
 import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
 import com.np3tech.hoopmind.ml.scoring.ScoringCard;
 import com.np3tech.hoopmind.ml.scoring.TeamForm;
+import com.np3tech.hoopmind.ml.scoring.TeamPrior;
 import com.np3tech.hoopmind.nba.GameRecord;
 import com.np3tech.hoopmind.nba.GameRecord.BoxScore;
 import org.apache.spark.ml.linalg.Vector;
@@ -33,17 +34,20 @@ class JavaScoringParityTests {
     @Test
     void javaFormMatchesSparkFeaturesForEveryGame() {
         Dataset<Row> games = GameFeatureBuilder.gameFeatures(teamGames(history));
-        Map<String, List<GameRecord>> bySeason = history.stream().collect(Collectors.groupingBy(GameRecord::season));
+        Map<Integer, List<GameRecord>> bySeason = history.stream().collect(Collectors.groupingBy(GameRecord::seasonYear));
         Map<Long, GameRecord> byId = history.stream().collect(Collectors.toMap(GameRecord::gameId, Function.identity()));
 
         List<Row> rows = games.collectAsList();
         assertThat(rows).hasSize(history.size());
         for (Row row : rows) {
             GameRecord game = byId.get(row.<Long>getAs("game_id"));
-            List<GameRecord> season = bySeason.get(game.season());
+            List<GameRecord> season = bySeason.get(game.seasonYear());
+            List<GameRecord> previous = bySeason.getOrDefault(game.seasonYear() - 1, List.of());
             double[] java = GameOutcomeFeatures.of(
-                    TeamForm.before(season, game.homeTeamId(), game.date(), game.gameId()),
-                    TeamForm.before(season, game.awayTeamId(), game.date(), game.gameId()),
+                    TeamForm.before(season, game.homeTeamId(), game.date(), game.gameId(),
+                            TeamPrior.of(previous, game.homeTeamId())),
+                    TeamForm.before(season, game.awayTeamId(), game.date(), game.gameId(),
+                            TeamPrior.of(previous, game.awayTeamId())),
                     game.playoff());
             for (int i = 0; i < java.length; i++) {
                 String feature = GameOutcomeFeatures.NAMES.get(i);

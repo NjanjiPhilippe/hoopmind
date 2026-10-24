@@ -26,9 +26,22 @@ class ExplanationPromptTests {
     }
 
     @Test
+    void saysWhenTheFormStillReliesOnLastSeason() {
+        GameOutcomeAnalysis early = new GameOutcomeAnalysis(Fixtures.analysis().prediction(), "v1", 0.1,
+                Fixtures.analysis().factors(), 2, 3);
+
+        assertThat(ExplanationPrompt.user(new ExplanationRequest("Boston Celtics", "New York Knicks", Fixtures.DAY,
+                false, early)))
+                .contains("Matchs joués cette saison avant ce match : Boston Celtics 2, New York Knicks 3.")
+                .contains("Début de saison");
+        assertThat(ExplanationPrompt.user(new ExplanationRequest("Boston Celtics", "New York Knicks", Fixtures.DAY,
+                false, Fixtures.analysis()))).doesNotContain("Début de saison");
+    }
+
+    @Test
     void marksModelCorrections() {
         GameOutcomeAnalysis analysis = new GameOutcomeAnalysis(Fixtures.analysis().prediction(), "v1", 0.1,
-                List.of(new PredictionFactor("win_pct_diff", 0.74, 0.07, -0.38)));
+                List.of(new PredictionFactor("win_pct_diff", 0.74, 0.07, -0.38)), 30, 30);
 
         assertThat(ExplanationPrompt.user(new ExplanationRequest("Boston Celtics", "San Antonio Spurs", Fixtures.DAY,
                 false, analysis))).contains("(en faveur de San Antonio Spurs, correction du modèle)");
