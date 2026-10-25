@@ -30,9 +30,7 @@ public class TeamController implements TeamApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TeamResponse> createTeam(TeamCreateRequest request) {
         log.info("Creating team: {}", request.getName());
-
-        Team team = teamMapper.toEntity(request);
-        Team createdTeam = teamService.createTeam(team);
+        Team createdTeam = teamService.createTeam(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(teamMapper.toResponse(createdTeam));
@@ -62,9 +60,7 @@ public class TeamController implements TeamApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TeamResponse> updateTeam(Long id, TeamUpdateRequest request) {
         log.info("Updating team with id: {}", id);
-
-        Team teamUpdate = teamMapper.toEntity(request);
-        Team updatedTeam = teamService.updateTeam(id, teamUpdate);
+        Team updatedTeam = teamService.updateTeam(id, request);
 
         return ResponseEntity.ok(teamMapper.toResponse(updatedTeam));
     }

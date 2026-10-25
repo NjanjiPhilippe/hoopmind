@@ -30,9 +30,7 @@ public class InjuryReportController implements InjuryReportApi {
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<InjuryReportResponse> createInjuryReport(InjuryReportCreateRequest request) {
         log.info("Creating injury report for player: {}", request.getPlayerId());
-
-        InjuryReport injuryReport = injuryReportMapper.toEntity(request);
-        InjuryReport created = injuryReportService.createInjuryReport(injuryReport);
+        InjuryReport created = injuryReportService.createInjuryReport(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(injuryReportMapper.toResponse(created));
@@ -50,9 +48,7 @@ public class InjuryReportController implements InjuryReportApi {
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<InjuryReportResponse> updateInjuryReport(Long id, InjuryReportUpdateRequest request) {
         log.info("Updating injury report with id: {}", id);
-
-        InjuryReport injuryUpdate = injuryReportMapper.toEntity(request);
-        InjuryReport updated = injuryReportService.updateInjuryReport(id, injuryUpdate);
+        InjuryReport updated = injuryReportService.updateInjuryReport(id, request);
 
         return ResponseEntity.ok(injuryReportMapper.toResponse(updated));
     }

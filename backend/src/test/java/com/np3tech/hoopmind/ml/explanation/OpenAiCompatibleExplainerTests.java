@@ -97,6 +97,6 @@ class OpenAiCompatibleExplainerTests {
 
     private ExplanationProperties properties(String key) {
         return new ExplanationProperties("openai-compatible", llm.url("/v1beta/openai"), key, "gemini-2.5-flash",
-                Duration.ofSeconds(5), 2048, 10, 4);
+                Duration.ofSeconds(5), 2048, 10, 4, 20);
     }
 }
