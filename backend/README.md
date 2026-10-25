@@ -15,7 +15,6 @@ set -a && . ./.env && set +a
 
 - `JWT_SECRET` : `openssl rand -base64 48`
 - Au premier démarrage, un administrateur est créé à partir de `HOOPMIND_ADMIN_*` s'il n'en existe aucun.
-- Les tâches planifiées sur les matchs (statuts, rappels, statistiques) sont désactivées par défaut : `NBA_SCHEDULER_ENABLED=true` les active.
 - Spark démarre en mode `local[*]` dans la JVM. `SPARK_ENABLED=false` démarre l'API sans Spark ;
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
 - Tout en conteneurs : `docker compose --profile app up -d --build`.
