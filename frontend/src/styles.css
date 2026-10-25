@@ -5,16 +5,19 @@
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
 
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
+  /* Orange clair « ballon de basket » : 500 pour le logo et les accents, 600 pour les boutons (texte blanc en
+     gras : 3:1, seuil WCAG des composants), 700 et plus pour le texte et les liens sur fond blanc (4,7:1, AA). */
+  --color-primary-50: #fff7ef;
+  --color-primary-100: #ffecd9;
+  --color-primary-200: #ffd5b0;
+  --color-primary-300: #ffb57c;
+  --color-primary-400: #fd9a52;
+  --color-primary-500: #f7873a;
+  --color-primary-600: #ef6c1a;
+  --color-primary-700: #c2510e;
+  --color-primary-800: #9f4312;
+  --color-primary-900: #7f3712;
+  --color-primary-950: #451a08;
 
   --color-nba-blue: #1d428a;
   --color-nba-red: #c8102e;
@@ -50,11 +53,11 @@ body {
 /* Composants */
 @layer components {
 .btn-primary {
-  background-color: #2563eb;
+  background-color: var(--color-primary-600);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
-  font-weight: 500;
+  font-weight: 600;
   transition: background-color 0.2s;
   border: none;
   cursor: pointer;
@@ -64,12 +67,12 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: #1d4ed8;
+  background-color: var(--color-primary-700);
 }
 
 .btn-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(239, 108, 26, 0.45);
 }
 
 .btn-primary:disabled {
@@ -96,8 +99,8 @@ body {
 }
 
 .btn-outline {
-  border: 2px solid #2563eb;
-  color: #2563eb;
+  border: 2px solid var(--color-primary-600);
+  color: var(--color-primary-700);
   background-color: transparent;
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
@@ -110,7 +113,7 @@ body {
 }
 
 .btn-outline:hover {
-  background-color: #eff6ff;
+  background-color: var(--color-primary-50);
 }
 
 .card {
@@ -136,7 +139,7 @@ body {
 .input-field:focus {
   outline: none;
   border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(239, 108, 26, 0.45);
 }
 
 .badge {
@@ -174,7 +177,7 @@ body {
   animation: spin 1s linear infinite;
   border-radius: 9999px;
   border: 4px solid #e5e7eb;
-  border-top-color: #2563eb;
+  border-top-color: var(--color-primary-500);
 }
 
 @keyframes spin {
