@@ -1,15 +1,20 @@
 package com.np3tech.hoopmind.auth.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -21,6 +26,7 @@ import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
+@EnableConfigurationProperties(MetricsScrapeProperties.class)
 class SecurityConfig {
 
     static final String[] DOCS_PATHS = {"/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**", "/swagger-ui.html"};
@@ -29,6 +35,36 @@ class SecurityConfig {
             "/api/v1/games/**", "/api/v1/teams/**", "/api/v1/players/**", "/api/v1/seasons/**",
             "/api/v1/stats/**", "/api/v1/injuries/**", "/api/v1/reports/**"
     };
+
+    /**
+     * Métriques Prometheus : lues par Prometheus avec ses propres identifiants HTTP Basic
+     * ({@code hoopmind.monitoring.scrape}), distincts des comptes HoopMind. Sans mot de passe configuré, fermées.
+     */
+    @Bean
+    @Order(0)
+    SecurityFilterChain metricsSecurityFilterChain(HttpSecurity http, MetricsScrapeProperties scrape) throws Exception {
+        AuthenticationManager scraper = authentication -> {
+            if (!scrape.matches(authentication.getName(), String.valueOf(authentication.getCredentials()))) {
+                throw new BadCredentialsException("Identifiants de collecte des métriques invalides");
+            }
+            return UsernamePasswordAuthenticationToken.authenticated(authentication.getName(), null,
+                    AuthorityUtils.createAuthorityList("ROLE_METRICS"));
+        };
+        return http
+                .securityMatcher("/actuator/prometheus")
+                .authorizeHttpRequests(auth -> {
+                    if (scrape.enabled()) {
+                        auth.anyRequest().hasRole("METRICS");
+                    } else {
+                        auth.anyRequest().denyAll();
+                    }
+                })
+                .authenticationManager(scraper)
+                .httpBasic(basic -> basic.realmName("HoopMind metrics"))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .build();
+    }
 
     /**
      * Documentation Swagger : réservée aux administrateurs, en HTTP Basic avec leurs identifiants HoopMind

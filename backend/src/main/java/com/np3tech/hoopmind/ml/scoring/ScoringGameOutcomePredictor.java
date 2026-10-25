@@ -7,6 +7,9 @@ import com.np3tech.hoopmind.ml.PredictionFactor;
 import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.GameRecord;
 import com.np3tech.hoopmind.shared.exception.AppException;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -18,20 +21,55 @@ import java.util.List;
  * Prédit un match en Java pur, en quelques millisecondes : forme des deux équipes à la date du match (même calcul
  * qu'à l'entraînement), puis la régression logistique entraînée par Spark, appliquée avec sa carte de score.
  * Spark n'est nécessaire que pour entraîner ; les prédictions fonctionnent même s'il est désactivé.
+ * <p>
+ * Monitoring ({@code /actuator/prometheus}) : {@code hoopmind.ml.predictions} mesure chaque prédiction (par version
+ * du modèle et résultat, {@code ok} ou le code d'erreur), et {@code hoopmind.ml.home.win.probability} répartit les
+ * probabilités prédites. Une répartition qui se déplace sans nouvel entraînement signale une dérive des données.
  */
 @Component
 class ScoringGameOutcomePredictor implements GameOutcomePredictor {
 
     private final GameHistory history;
     private final ScoringCardStore cards;
+    private final MeterRegistry registry;
 
-    ScoringGameOutcomePredictor(GameHistory history, ScoringCardStore cards) {
+    ScoringGameOutcomePredictor(GameHistory history, ScoringCardStore cards, MeterRegistry registry) {
         this.history = history;
         this.cards = cards;
+        this.registry = registry;
     }
 
     @Override
     public GameOutcomeAnalysis analyze(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
+        Timer.Sample sample = Timer.start(registry);
+        String version = "none";
+        String outcome = "ok";
+        try {
+            GameOutcomeAnalysis analysis = score(seasonId, homeTeamId, awayTeamId, date, playoff);
+            version = analysis.modelVersion();
+            DistributionSummary.builder("hoopmind.ml.home.win.probability")
+                    .description("Probabilité de victoire à domicile prédite")
+                    .tag("model_version", version)
+                    .serviceLevelObjectives(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+                    .register(registry).record(analysis.prediction().homeWinProbability());
+            return analysis;
+        } catch (AppException e) {
+            outcome = e.getErrorCode();
+            throw e;
+        } catch (RuntimeException e) {
+            outcome = "error";
+            throw e;
+        } finally {
+            sample.stop(Timer.builder("hoopmind.ml.predictions")
+                    .description("Prédictions de match calculées")
+                    .tag("model_version", version)
+                    .tag("outcome", outcome)
+                    .publishPercentileHistogram()
+                    .register(registry));
+        }
+    }
+
+    private GameOutcomeAnalysis score(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
         ScoringCard card = cards.current().orElseThrow(() -> new AppException(
                 "Le modèle n'est pas encore entraîné (POST /api/v1/spark/ml/train/game-outcome/jobs).",
                 HttpStatus.CONFLICT, "MODEL_NOT_TRAINED"));

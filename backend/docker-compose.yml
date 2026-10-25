@@ -2,6 +2,7 @@
 #   docker compose up -d postgres          # base seule, l'API tourne depuis l'IDE ou ./mvnw spring-boot:run
 #   docker compose --profile app up -d --build   # base + API + frontend (http://localhost:8081)
 #   docker compose --profile app --profile spark-cluster up -d   # + cluster Spark (SPARK_MASTER=spark://spark-master:7077)
+#   docker compose --profile app --profile monitoring up -d      # + Prometheus (localhost:9090) et Grafana (localhost:3000)
 services:
   postgres:
     image: postgres:17-alpine
@@ -75,6 +76,42 @@ services:
     depends_on:
       - spark-master
 
+  # Monitoring : Prometheus lit /actuator/prometheus avec METRICS_PASSWORD, Grafana affiche le tableau de bord
+  # « HoopMind » (monitoring/grafana/dashboards/hoopmind.json). Ports ouverts sur la machine locale seulement.
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    secrets:
+      - metrics_password
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/hoopmind.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
+secrets:
+  metrics_password:
+    environment: METRICS_PASSWORD
+
 volumes:
   postgres_data:
   spark_models:
+  prometheus_data:
+  grafana_data:

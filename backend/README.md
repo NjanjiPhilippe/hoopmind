@@ -225,6 +225,31 @@ La limite est assumée : nous maintenons nous-mêmes les formats d'API, et il n'
 Si un assistant conversationnel avec outils est ajouté, Spring AI (ou les SDK officiels) redeviendra le bon choix.
 Le détail, avec les alternatives, est dans l'[ADR 0015](docs/adr/0015-explication-par-llm.md).
 
+## Monitoring
+
+```bash
+# dans .env : METRICS_PASSWORD (openssl rand -base64 24)
+docker compose --profile app --profile monitoring up -d --build
+```
+
+Grafana (http://localhost:3000, `admin` / `GRAFANA_ADMIN_PASSWORD`) ouvre directement le tableau de bord
+« HoopMind », sur trois niveaux :
+
+- **Application** : requêtes par route, temps de réponse p95, erreurs 5xx, mémoire de la JVM.
+- **Explications par LLM** : origine de chaque explication (LLM, cache, texte de secours), durée des appels,
+  échecs par type, tokens consommés par heure.
+- **Modèle de prédiction** : prédictions par résultat, durée, version du modèle servie, et répartition des
+  probabilités prédites, qui signale une dérive des données.
+
+![Tableau de bord Grafana](docs/captures/monitoring/grafana.png)
+
+*Capture prise sur une API locale sans données NBA ni modèle entraîné : les prédictions échouent avec
+`MODEL_NOT_TRAINED`, donc les panneaux du LLM et des probabilités restent vides tant que le modèle n'est pas
+entraîné.*
+
+Prometheus (http://localhost:9090) lit `/actuator/prometheus`, protégé par HTTP Basic (`prometheus` /
+`METRICS_PASSWORD`) et fermé sans mot de passe. Détail des métriques dans l'[ADR 0019](docs/adr/0019-monitoring.md).
+
 ## Versions
 
 Java 21 · Spring Boot 4.1.1 · Spring Security 7.1 · Hibernate 7.4 · Liquibase 5 · springdoc-openapi 3.1 · Spring Modulith 2.1 ·

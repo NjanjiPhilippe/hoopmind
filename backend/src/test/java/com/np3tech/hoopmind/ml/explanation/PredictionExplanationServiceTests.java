@@ -3,6 +3,8 @@ package com.np3tech.hoopmind.ml.explanation;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.GameRecord;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 
@@ -27,6 +29,7 @@ class PredictionExplanationServiceTests {
 
     private final GameOutcomePredictor predictor = (season, home, away, date, playoff) -> Fixtures.analysis();
     private final AtomicInteger calls = new AtomicInteger();
+    private final MeterRegistry registry = new SimpleMeterRegistry();
 
     @Test
     void withoutProviderExplainsWithoutLlm() {
@@ -39,13 +42,14 @@ class PredictionExplanationServiceTests {
                 .containsExactly("net_rating_diff", "win_pct_diff", "rest_days_diff", "last10_win_pct_diff", "is_playoff");
         assertThat(result.explanation().provider()).isEqualTo("template");
         assertThat(result.fallback()).isFalse();
+        assertThat(served("template")).isEqualTo(1);
     }
 
     @Test
     void keepsGeneratedExplanationsToSaveTheQuota() {
         PredictionExplanationService service = service(request -> {
             calls.incrementAndGet();
-            return new Explanation("Boston favori.", "openai-compatible", "gemini-2.5-flash");
+            return new Explanation("Boston favori.", "openai-compatible", "gemini-2.5-flash", 300, 50);
         });
 
         ExplainedPrediction first = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
@@ -56,6 +60,12 @@ class PredictionExplanationServiceTests {
         assertThat(second.cached()).isTrue();
         assertThat(second.explanation().text()).isEqualTo("Boston favori.");
         assertThat(calls).as("une autre date est une autre question").hasValue(2);
+        assertThat(served("llm")).isEqualTo(2);
+        assertThat(served("cache")).isEqualTo(1);
+        assertThat(registry.get("hoopmind.llm.calls").tag("outcome", "success").timer().count()).isEqualTo(2);
+        assertThat(registry.get("hoopmind.llm.tokens").tag("model", "gemini-2.5-flash").tag("direction", "input")
+                .counter().count()).isEqualTo(600);
+        assertThat(registry.get("hoopmind.llm.tokens").tag("direction", "output").counter().count()).isEqualTo(100);
     }
 
     @Test
@@ -72,6 +82,12 @@ class PredictionExplanationServiceTests {
         assertThat(result.explanation().provider()).isEqualTo("template");
         assertThat(result.explanation().text()).startsWith("Le modèle voit Boston Celtics gagner");
         assertThat(calls).as("un échec n'est pas gardé en mémoire").hasValue(2);
+        assertThat(served("fallback")).isEqualTo(2);
+        assertThat(registry.get("hoopmind.llm.calls").tag("outcome", "unavailable").timer().count()).isEqualTo(2);
+    }
+
+    private double served(String source) {
+        return registry.get("hoopmind.explanations").tag("source", source).counter().count();
     }
 
     @Test
@@ -110,7 +126,7 @@ class PredictionExplanationServiceTests {
         }
         return new PredictionExplanationService(predictor, new Teams(), beans.getBeanProvider(PredictionExplainer.class),
                 new ExplanationProperties("test", null, null, null, Duration.ofSeconds(5), 2048, 10, 4,
-                        maxCallsPerUserPerHour), clock);
+                        maxCallsPerUserPerHour), clock, registry);
     }
 
     private static final class MutableClock extends Clock {

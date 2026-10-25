@@ -63,7 +63,10 @@ public class AnthropicExplainer implements PredictionExplainer {
         } catch (RestClientException e) {
             throw LlmHttp.translate(PROVIDER, e);
         }
-        return new Explanation(text(response), PROVIDER, model);
+        String text = text(response);
+        Usage usage = response.usage();
+        return new Explanation(text, PROVIDER, model,
+                usage == null ? null : usage.inputTokens(), usage == null ? null : usage.outputTokens());
     }
 
     /** Seuls les blocs de texte comptent (le raisonnement éventuel du modèle arrive dans d'autres blocs). */
@@ -92,7 +95,11 @@ public class AnthropicExplainer implements PredictionExplainer {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record MessagesResponse(List<Block> content, @JsonProperty("stop_reason") String stopReason) {
+    record MessagesResponse(List<Block> content, @JsonProperty("stop_reason") String stopReason, Usage usage) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Usage(@JsonProperty("input_tokens") Integer inputTokens, @JsonProperty("output_tokens") Integer outputTokens) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

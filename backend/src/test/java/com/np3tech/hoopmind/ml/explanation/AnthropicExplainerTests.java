@@ -30,7 +30,7 @@ class AnthropicExplainerTests {
         Explanation explanation = explainer(null).explain(Fixtures.request());
 
         assertThat(explanation).isEqualTo(new Explanation("Boston part favori. Le repos joue pour New York.",
-                "anthropic", "claude-haiku-5-5"));
+                "anthropic", "claude-haiku-5-5", 400, 60));
         FakeLlmServer.Received request = llm.received.getFirst();
         assertThat(request.path()).isEqualTo("/v1/messages");
         assertThat(request.headers().getFirst("x-api-key")).isEqualTo("secret");

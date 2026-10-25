@@ -68,7 +68,10 @@ public class OpenAiCompatibleExplainer implements PredictionExplainer {
         } catch (RestClientException e) {
             throw LlmHttp.translate(PROVIDER, e);
         }
-        return new Explanation(text(response), PROVIDER, properties.model());
+        String text = text(response);
+        Usage usage = response.usage();
+        return new Explanation(text, PROVIDER, properties.model(),
+                usage == null ? null : usage.promptTokens(), usage == null ? null : usage.completionTokens());
     }
 
     private static String text(ChatResponse response) {
@@ -92,7 +95,12 @@ public class OpenAiCompatibleExplainer implements PredictionExplainer {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ChatResponse(List<Choice> choices) {
+    record ChatResponse(List<Choice> choices, Usage usage) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Usage(@JsonProperty("prompt_tokens") Integer promptTokens,
+                 @JsonProperty("completion_tokens") Integer completionTokens) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

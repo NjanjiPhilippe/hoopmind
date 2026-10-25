@@ -18,7 +18,7 @@ class OpenAiCompatibleExplainerTests {
     private static final String ANSWER = """
             {"id": "x", "choices": [{"index": 0, "finish_reason": "stop",
               "message": {"role": "assistant", "content": "  Boston part favori grâce à son net rating.  "}}],
-             "usage": {"total_tokens": 321}}""";
+             "usage": {"prompt_tokens": 280, "completion_tokens": 41, "total_tokens": 321}}""";
 
     private final FakeLlmServer llm = new FakeLlmServer();
 
@@ -34,7 +34,7 @@ class OpenAiCompatibleExplainerTests {
         Explanation explanation = explainer("secret").explain(Fixtures.request());
 
         assertThat(explanation).isEqualTo(new Explanation("Boston part favori grâce à son net rating.",
-                "openai-compatible", "gemini-2.5-flash"));
+                "openai-compatible", "gemini-2.5-flash", 280, 41));
         FakeLlmServer.Received request = llm.received.getFirst();
         assertThat(request.path()).isEqualTo("/v1beta/openai/chat/completions");
         assertThat(request.headers().getFirst("Authorization")).isEqualTo("Bearer secret");
