@@ -47,7 +47,10 @@ lui, ce que vérifie un test d'intégration.
 
 - **En mémoire** : l'état est perdu au redémarrage et n'est pas partagé entre plusieurs instances.
 - **L'adresse IP est `request.getRemoteAddr()`** : derrière un reverse proxy, tous les clients ont l'adresse du
-  proxy. Il faudra alors activer `server.forward-headers-strategy` **uniquement** avec un proxy de confiance (sinon
-  un attaquant choisit son adresse via `X-Forwarded-For`).
+  proxy. *Mise à jour (octobre 2026)* : le frontend est servi par nginx, qui relaie `/api`. Sans correction, 5 échecs
+  sur un compte (tapés par n'importe qui) bloquaient ce compte pour tout le monde, et 50 échecs bloquaient toutes les
+  connexions. `server.forward-headers-strategy: native` est donc activé : Tomcat ne lit `X-Forwarded-For` que pour
+  une requête venue d'une adresse privée (le conteneur nginx), et nginx remplace l'en-tête au lieu de compléter
+  celui du client. Le port du backend n'est publié que sur `127.0.0.1` pour qu'on ne puisse pas contourner nginx.
 - Plusieurs utilisateurs derrière la même adresse (NAT d'entreprise) partagent le compteur « IP seule ». Le seuil
   de 50 laisse de la marge.

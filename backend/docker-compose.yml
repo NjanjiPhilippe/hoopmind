@@ -1,6 +1,6 @@
 # Démarrage local : cp .env.example .env (puis remplir), puis
 #   docker compose up -d postgres          # base seule, l'API tourne depuis l'IDE ou ./mvnw spring-boot:run
-#   docker compose --profile app up -d     # base + API
+#   docker compose --profile app up -d --build   # base + API + frontend (http://localhost:8081)
 #   docker compose --profile app --profile spark-cluster up -d   # + cluster Spark (SPARK_MASTER=spark://spark-master:7077)
 services:
   postgres:
@@ -10,8 +10,9 @@ services:
       POSTGRES_DB: hoopmind
       POSTGRES_USER: ${DB_USERNAME:-hoopmind}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?définir DB_PASSWORD dans .env}
+    # Publiée seulement sur la machine locale (IDE, psql) : jamais sur le réseau.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,6 +27,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/hoopmind
       SPARK_DRIVER_HOST: backend
       NBA_DATABASE_PATH: /app/data/nba.sqlite
@@ -34,11 +36,24 @@ services:
       # Base NBA (téléchargée depuis la page « Données » ou par scripts/download-nba-database.sh) et modèle entraîné
       - ./data:/app/data
       - spark_models:/app/models
+    # Les clients passent par nginx (service frontend). Le port n'est ouvert que sur la machine locale, pour
+    # appeler l'API directement en développement : depuis le réseau, personne ne peut contourner nginx.
     ports:
-      - "8083:8083"
+      - "127.0.0.1:8083:8083"
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Application Angular servie par nginx, qui relaie /api vers le backend et lui transmet l'adresse du client
+  # (X-Forwarded-For, voir frontend/nginx.conf). Ouvrir http://localhost:8081.
+  frontend:
+    profiles: [app]
+    build: ../frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
 
   spark-master:
     profiles: [spark-cluster]
