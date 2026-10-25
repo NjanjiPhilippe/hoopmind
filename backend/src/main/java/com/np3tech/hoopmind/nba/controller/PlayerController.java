@@ -11,6 +11,8 @@ import com.np3tech.hoopmind.nba.entity.enummeration.Position;
 import com.np3tech.hoopmind.nba.service.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,9 +32,7 @@ public class PlayerController implements PlayerApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlayerResponse> createPlayer(PlayerCreateRequest request) {
         log.info("Creating player: {} {}", request.getFirstName(), request.getLastName());
-
-        Player player = playerMapper.toEntity(request);
-        Player createdPlayer = playerService.createPlayer(player);
+        Player createdPlayer = playerService.createPlayer(request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(playerMapper.toResponse(createdPlayer));
@@ -47,24 +47,15 @@ public class PlayerController implements PlayerApi {
     }
 
     @Override
-    public ResponseEntity<List<PlayerResponse>> getAllPlayers() {
-        log.debug("Fetching all players");
-
-        List<Player> players = playerService.getAllPlayers();
-        List<PlayerResponse> responses = players.stream()
-                .map(playerMapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<PlayerResponse>> getAllPlayers(Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(playerService.getAllPlayers(pageable).map(playerMapper::toResponse)));
     }
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlayerResponse> updatePlayer(Long id, PlayerUpdateRequest request) {
         log.info("Updating player with id: {}", id);
-
-        Player playerUpdate = playerMapper.toEntity(request);
-        Player updatedPlayer = playerService.updatePlayer(id, playerUpdate);
+        Player updatedPlayer = playerService.updatePlayer(id, request);
 
         return ResponseEntity.ok(playerMapper.toResponse(updatedPlayer));
     }
@@ -91,27 +82,13 @@ public class PlayerController implements PlayerApi {
     }
 
     @Override
-    public ResponseEntity<List<PlayerResponse>> getPlayersByPosition(Position position) {
-        log.debug("Fetching players by position: {}", position);
-
-        List<Player> players = playerService.getPlayersByPosition(position);
-        List<PlayerResponse> responses = players.stream()
-                .map(playerMapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<PlayerResponse>> getPlayersByPosition(Position position, Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(playerService.getPlayersByPosition(position, pageable).map(playerMapper::toResponse)));
     }
 
     @Override
-    public ResponseEntity<List<PlayerResponse>> getPlayersByStatus(PlayerStatus status) {
-        log.debug("Fetching players by status: {}", status);
-
-        List<Player> players = playerService.getPlayersByStatus(status);
-        List<PlayerResponse> responses = players.stream()
-                .map(playerMapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<PagedModel<PlayerResponse>> getPlayersByStatus(PlayerStatus status, Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(playerService.getPlayersByStatus(status, pageable).map(playerMapper::toResponse)));
     }
 
     @Override

@@ -25,10 +25,6 @@
       "description": "Game management APIs"
     },
     {
-      "name": "Spark Analytics",
-      "description": "Advanced analytics and ML predictions with Apache Spark"
-    },
-    {
       "name": "Reports",
       "description": "Reporting and analytics APIs"
     },
@@ -748,126 +744,6 @@
         }
       }
     },
-    "/api/v1/spark/ml/train/score-prediction": {
-      "post": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Train Score Prediction model",
-        "description": "Entraîne un modèle de régression pour prédire les scores des matchs. Utile pour les paris over/under et prédictions de scores exacts.",
-        "operationId": "trainScorePredictionModel",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/ml/train/random-forest": {
-      "post": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Train Random Forest model",
-        "description": "Entraîne un modèle Random Forest pour prédire les résultats des matchs. Utilise 80% des données pour l'entraînement et 20% pour la validation. Retourne les métriques de performance (accuracy, precision, recall, F1, AUC).",
-        "operationId": "trainRandomForestModel",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison pour l'entraînement",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/ml/train/logistic-regression": {
-      "post": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Train Logistic Regression model",
-        "description": "Entraîne un modèle de régression logistique plus simple et rapide. Bon pour comprendre l'importance de chaque statistique.",
-        "operationId": "trainLogisticRegressionModel",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
     "/api/v1/spark/ml/train/game-outcome/jobs": {
       "post": {
         "tags": [
@@ -1040,16 +916,52 @@
         ],
         "summary": "Get all players",
         "operationId": "getAllPlayers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "lastName,ASC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PlayerResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelPlayerResponse"
                 }
               }
             }
@@ -1123,18 +1035,54 @@
           "Games"
         ],
         "summary": "Get all games",
-        "description": "Retrieves all games",
+        "description": "Paginated, most recent first (at most 100 per page)",
         "operationId": "getAllGames",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "scheduledDate,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GameResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelGameResponse"
                 }
               }
             }
@@ -2109,208 +2057,6 @@
         }
       }
     },
-    "/api/v1/statistics/team/{teamId}": {
-      "get": {
-        "tags": [
-          "statistics-controller"
-        ],
-        "operationId": "getTeamStatisticsOverview",
-        "parameters": [
-          {
-            "name": "teamId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "season",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseStatisticsOverviewDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/statistics/season/top-teams": {
-      "get": {
-        "tags": [
-          "statistics-controller"
-        ],
-        "operationId": "getTopTeams",
-        "parameters": [
-          {
-            "name": "year",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseListTeamStatisticDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/statistics/season/top-scorers": {
-      "get": {
-        "tags": [
-          "statistics-controller"
-        ],
-        "operationId": "getTopScorers_1",
-        "parameters": [
-          {
-            "name": "year",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseListPlayerStatisticDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/statistics/season/top-assistants": {
-      "get": {
-        "tags": [
-          "statistics-controller"
-        ],
-        "operationId": "getTopAssistants",
-        "parameters": [
-          {
-            "name": "year",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseListPlayerStatisticDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/statistics/conference": {
-      "get": {
-        "tags": [
-          "statistics-controller"
-        ],
-        "operationId": "getConferenceStandings",
-        "parameters": [
-          {
-            "name": "conference",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "year",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseListTeamStatisticDTO"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/spark/ml/train/game-outcome/status": {
       "get": {
         "tags": [
@@ -2423,7 +2169,7 @@
           "Spark Analytics"
         ],
         "summary": "Prédire le vainqueur d'un match et expliquer pourquoi",
-        "description": "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true). 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
+        "description": "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a encore joué aucun match avant cette date.",
         "operationId": "explainGameOutcome",
         "parameters": [
           {
@@ -2511,319 +2257,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrainingReport"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/team-trends": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze team trends",
-        "description": "Analyse les tendances des équipes sur la saison: performances moyennes, avantage du terrain, stats domicile vs extérieur. Utilise l'agrégation Spark pour traiter rapidement des milliers de matchs.",
-        "operationId": "analyzeTeamTrends",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/team-momentum": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze team momentum",
-        "description": "Analyse la dynamique actuelle d'une équipe. Forme récente, séries de victoires/défaites, tendances.",
-        "operationId": "analyzeTeamMomentum",
-        "parameters": [
-          {
-            "name": "teamId",
-            "in": "query",
-            "description": "ID de l'équipe",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/performance-by-period": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze performance by period",
-        "description": "Compare les performances en début, milieu et fin de saison. Identifie les équipes qui progressent ou déclinent. Utile pour ajuster les prédictions selon la forme actuelle.",
-        "operationId": "analyzePerformanceByPeriod",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/insights": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Generate insights",
-        "description": "Génère des insights automatiques basés sur les données: facteurs clés de victoire, équipes en forme, prédictibilité de la saison.",
-        "operationId": "generateInsights",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/injury-impact": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze injury impact",
-        "description": "Mesure l'impact des blessures sur les performances des équipes. Compare les taux de victoires avec et sans joueurs clés blessés.",
-        "operationId": "analyzeInjuryImpact",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/head-to-head": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze head-to-head",
-        "description": "Analyse l'historique des confrontations entre deux équipes. Statistiques des matchups, tendances, avantages spécifiques.",
-        "operationId": "analyzeHeadToHead",
-        "parameters": [
-          {
-            "name": "team1Id",
-            "in": "query",
-            "description": "ID de l'équipe 1",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "team2Id",
-            "in": "query",
-            "description": "ID de l'équipe 2",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {}
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/api/v1/spark/analytics/correlations": {
-      "get": {
-        "tags": [
-          "Spark Analytics"
-        ],
-        "summary": "Analyze correlations",
-        "description": "Calcule les corrélations entre différentes statistiques et les victoires. Identifie quelles stats sont les plus importantes pour gagner. Corrélation: -1 (négative) à 1 (positive), 0 = pas de relation.",
-        "operationId": "analyzeCorrelations",
-        "parameters": [
-          {
-            "name": "seasonId",
-            "in": "query",
-            "description": "ID de la saison",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "number",
-                    "format": "double"
-                  }
                 }
               }
             }
@@ -3240,6 +2673,43 @@
                 "SUSPENDED"
               ]
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "lastName,ASC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
@@ -3248,10 +2718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PlayerResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelPlayerResponse"
                 }
               }
             }
@@ -3315,6 +2782,43 @@
                 "CENTER"
               ]
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "lastName,ASC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
@@ -3323,10 +2827,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PlayerResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelPlayerResponse"
                 }
               }
             }
@@ -3557,6 +3058,43 @@
               "type": "integer",
               "format": "int64"
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "scheduledDate,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
@@ -3565,10 +3103,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GameResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelGameResponse"
                 }
               }
             }
@@ -3600,6 +3135,43 @@
                 "CANCELLED"
               ]
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "scheduledDate,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
@@ -3608,10 +3180,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GameResponse"
-                  }
+                  "$ref": "#/components/schemas/PagedModelGameResponse"
                 }
               }
             }
@@ -3687,7 +3256,7 @@
           "Games"
         ],
         "summary": "Get games by date range",
-        "description": "Retrieves games within a date range",
+        "description": "Retrieves games within a date range of at most 31 days",
         "operationId": "getGamesByDateRange",
         "parameters": [
           {
@@ -5703,262 +5272,6 @@
           }
         }
       },
-      "ApiResponseStatisticsOverviewDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/StatisticsOverviewDTO"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "PlayerStatisticDTO": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "playerId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "playerName": {
-            "type": "string"
-          },
-          "season": {
-            "type": "string"
-          },
-          "gamesPlayed": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "minutesPerGame": {
-            "type": "number"
-          },
-          "pointsPerGame": {
-            "type": "number"
-          },
-          "reboundsPerGame": {
-            "type": "number"
-          },
-          "assistsPerGame": {
-            "type": "number"
-          },
-          "stealsPerGame": {
-            "type": "number"
-          },
-          "blocksPerGame": {
-            "type": "number"
-          },
-          "fieldGoalPercentage": {
-            "type": "number"
-          },
-          "threePointPercentage": {
-            "type": "number"
-          },
-          "freeThrowPercentage": {
-            "type": "number"
-          },
-          "turnoversPerGame": {
-            "type": "number"
-          },
-          "statDate": {
-            "type": "string",
-            "format": "date"
-          }
-        }
-      },
-      "StatisticsOverviewDTO": {
-        "type": "object",
-        "properties": {
-          "season": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "teamStats": {
-            "$ref": "#/components/schemas/TeamStatisticDTO"
-          },
-          "topScorers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlayerStatisticDTO"
-            }
-          },
-          "topRebounders": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlayerStatisticDTO"
-            }
-          },
-          "topAssistants": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlayerStatisticDTO"
-            }
-          },
-          "recentForm": {
-            "$ref": "#/components/schemas/TeamFormDTO"
-          }
-        }
-      },
-      "TeamFormDTO": {
-        "type": "object",
-        "properties": {
-          "teamId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "teamName": {
-            "type": "string"
-          },
-          "matchesAnalyzed": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "wins": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "losses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "winRate": {
-            "type": "number",
-            "format": "double"
-          },
-          "form": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "averagePointsScored": {
-            "type": "number",
-            "format": "double"
-          },
-          "averagePointsAllowed": {
-            "type": "number",
-            "format": "double"
-          },
-          "pointDifferential": {
-            "type": "number",
-            "format": "double"
-          },
-          "onWinStreak": {
-            "type": "boolean"
-          }
-        }
-      },
-      "TeamStatisticDTO": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "teamId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "teamName": {
-            "type": "string"
-          },
-          "season": {
-            "type": "string"
-          },
-          "wins": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "losses": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "winPercentage": {
-            "type": "number"
-          },
-          "pointsPerGame": {
-            "type": "number"
-          },
-          "pointsAllowedPerGame": {
-            "type": "number"
-          },
-          "fieldGoalPercentage": {
-            "type": "number"
-          },
-          "threePointPercentage": {
-            "type": "number"
-          },
-          "freeThrowPercentage": {
-            "type": "number"
-          },
-          "reboundsPerGame": {
-            "type": "number"
-          },
-          "assistsPerGame": {
-            "type": "number"
-          },
-          "homeRecord": {
-            "type": "string"
-          },
-          "awayRecord": {
-            "type": "string"
-          }
-        }
-      },
-      "ApiResponseListTeamStatisticDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TeamStatisticDTO"
-            }
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ApiResponseListPlayerStatisticDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlayerStatisticDTO"
-            }
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "GameOutcomePrediction": {
         "type": "object",
         "properties": {
@@ -6373,6 +5686,34 @@
           },
           "job": {
             "$ref": "#/components/schemas/EoinMooreJobStatus"
+          }
+        }
+      },
+      "PagedModelPlayerResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayerResponse"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "PagedModelGameResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GameResponse"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
           }
         }
       }

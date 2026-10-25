@@ -110,7 +110,7 @@ class NbaReadApiTests {
                 .bodyJson().extractingPath("$.result.awayTeamScore").isEqualTo(100);
         assertThat(mvc.get().uri("/api/v1/games/team/{id}", bostonId).header(HttpHeaders.AUTHORIZATION, bearer))
                 .hasStatusOk()
-                .bodyJson().extractingPath("$[*].id").asArray()
+                .bodyJson().extractingPath("$.content[*].id").asArray()
                 .contains(bostonHome, newYorkHome)
                 .doesNotContain(withoutBoston);
     }
