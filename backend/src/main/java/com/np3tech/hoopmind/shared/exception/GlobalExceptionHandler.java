@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.shared.exception;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -65,6 +66,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
         log.warn("Violation d'intégrité : {}", ex.getMostSpecificCause().getMessage());
         return problem(HttpStatus.CONFLICT, "conflict", "L'opération entre en conflit avec des données existantes");
+    }
+
+    /** Deux modifications concurrentes de la même ligne ({@code @Version}) : la seconde doit relire et réessayer. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ProblemDetail handleOptimisticLocking(OptimisticLockingFailureException ex) {
+        return problem(HttpStatus.CONFLICT, "concurrent-update",
+                "Ces données ont été modifiées entre-temps : rechargez-les puis recommencez");
     }
 
     @ExceptionHandler(Exception.class)

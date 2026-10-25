@@ -9,6 +9,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,9 +45,9 @@ public interface GameApi {
             @Parameter(description = "Game ID") @PathVariable Long id
     );
 
-    @Operation(summary = "Get all games", description = "Retrieves all games")
+    @Operation(summary = "Get all games", description = "Paginated, most recent first (at most 100 per page)")
     @GetMapping
-    ResponseEntity<List<GameResponse>> getAllGames();
+    ResponseEntity<PagedModel<GameResponse>> getAllGames(@ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable);
 
     @Operation(summary = "Update game", description = "Updates an existing game")
     @ApiResponses(value = {
@@ -65,8 +70,9 @@ public interface GameApi {
 
     @Operation(summary = "Get games by status", description = "Retrieves games filtered by status")
     @GetMapping("/status/{status}")
-    ResponseEntity<List<GameResponse>> getGamesByStatus(
-            @Parameter(description = "Game status") @PathVariable GameStatus status
+    ResponseEntity<PagedModel<GameResponse>> getGamesByStatus(
+            @Parameter(description = "Game status") @PathVariable GameStatus status,
+            @ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable
     );
 
     @Operation(summary = "Get games by season", description = "Retrieves games for a specific season")
@@ -77,11 +83,12 @@ public interface GameApi {
 
     @Operation(summary = "Get games by team", description = "Retrieves games for a specific team")
     @GetMapping("/team/{teamId}")
-    ResponseEntity<List<GameResponse>> getGamesByTeam(
-            @Parameter(description = "Team ID") @PathVariable Long teamId
+    ResponseEntity<PagedModel<GameResponse>> getGamesByTeam(
+            @Parameter(description = "Team ID") @PathVariable Long teamId,
+            @ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable
     );
 
-    @Operation(summary = "Get games by date range", description = "Retrieves games within a date range")
+    @Operation(summary = "Get games by date range", description = "Retrieves games within a date range of at most 31 days")
     @GetMapping("/date-range")
     ResponseEntity<List<GameResponse>> getGamesByDateRange(
             @Parameter(description = "Start date") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,

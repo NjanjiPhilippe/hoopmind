@@ -8,6 +8,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -21,6 +22,8 @@ import java.util.Map;
  *     <li>Une explication générée est gardée en mémoire (match, date, version du modèle) : les offres gratuites
  *     limitent le nombre d'appels, et la même question ne doit pas les consommer deux fois.</li>
  *     <li>Si le LLM ne répond pas (quota, panne, clé refusée), une explication rédigée sans LLM la remplace.</li>
+ *     <li>Chaque utilisateur a droit à un nombre d'appels au LLM par heure ({@link LlmCallQuota}) ; au-delà, il
+ *     reçoit aussi l'explication rédigée sans LLM.</li>
  * </ul>
  */
 @Service
@@ -32,9 +35,11 @@ public class PredictionExplanationService {
     private final GameHistory history;
     private final PredictionExplainer explainer;
     private final Map<Key, Explanation> cache;
+    private final LlmCallQuota quota;
 
     public PredictionExplanationService(GameOutcomePredictor predictor, GameHistory history,
-                                        ObjectProvider<PredictionExplainer> explainer, ExplanationProperties properties) {
+                                        ObjectProvider<PredictionExplainer> explainer, ExplanationProperties properties,
+                                        Clock clock) {
         this.predictor = predictor;
         this.history = history;
         this.explainer = explainer.getIfAvailable();
@@ -45,11 +50,13 @@ public class PredictionExplanationService {
                 return size() > capacity;
             }
         });
+        this.quota = new LlmCallQuota(properties.maxCallsPerUserPerHour(), clock);
         log.info("Explication des prédictions : {}", this.explainer == null
                 ? "sans LLM (hoopmind.ml.explanation.provider=none)" : properties.provider());
     }
 
-    public ExplainedPrediction explain(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
+    /** @param requester identifiant de l'utilisateur qui demande, pour sa limite d'appels au LLM */
+    public ExplainedPrediction explain(String requester, long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
         GameOutcomeAnalysis analysis = predictor.analyze(seasonId, homeTeamId, awayTeamId, date, playoff);
         Map<Long, String> names = history.teamNames(List.of(homeTeamId, awayTeamId));
         ExplanationRequest request = new ExplanationRequest(
@@ -64,6 +71,10 @@ public class PredictionExplanationService {
         Explanation cached = cache.get(key);
         if (cached != null) {
             return result(request, cached, true, false);
+        }
+        if (!quota.tryAcquire(requester)) {
+            log.info("Limite d'appels au LLM atteinte pour l'utilisateur {} : explication sans LLM", requester);
+            return result(request, TemplateExplanation.of(request), false, true);
         }
         try {
             Explanation generated = explainer.explain(request);
