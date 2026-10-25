@@ -85,7 +85,7 @@
         }
 
         <details class="group" [open]="manual()" (toggle)="manual.set($any($event.target).open)">
-          <summary class="cursor-pointer text-sm font-medium text-primary-600 hover:underline">Ou imaginer une autre affiche</summary>
+          <summary class="cursor-pointer text-sm font-medium text-primary-700 hover:underline">Ou imaginer une autre affiche</summary>
         <form class="space-y-5 border-t border-gray-100 pt-4" (submit)="$event.preventDefault(); predict()" novalidate>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
             <div>
@@ -189,6 +189,10 @@
 
           <p class="text-sm text-gray-600">
             Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de play-in ou de playoffs}.
+            @if (earlySeason(p.result)) {
+              Début de saison ({{ p.result.homeGamesPlayed }} et {{ p.result.awayGamesPlayed }} matchs joués) : leur bilan de la saison passée
+              compte encore comme 10 matchs.
+            }
           </p>
 
           @if (p.result.explanation?.text; as text) {

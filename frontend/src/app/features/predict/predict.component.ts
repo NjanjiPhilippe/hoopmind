@@ -220,4 +220,9 @@ export class PredictComponent {
       throw e;
     }
   }
+
+  /** Moins de 10 matchs joués par une des équipes : sa forme repose encore surtout sur la saison passée. */
+  protected earlySeason(result: ExplainedPrediction): boolean {
+    return Math.min(result.homeGamesPlayed ?? 0, result.awayGamesPlayed ?? 0) < 10;
+  }
 }

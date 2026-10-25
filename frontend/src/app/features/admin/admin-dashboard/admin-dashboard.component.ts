@@ -13,6 +13,7 @@ import { currentValue } from '../../../core/util/resource';
 import { NavbarComponent } from '../../../shared/components/navbar/navbar.component';
 import { AUDIT_ACTION_LABELS } from '../audit/audit-labels';
 import { gainOverBaseline, phaseLabel } from '../data/data-labels';
+import { IconComponent } from '../../../shared/components/icon/icon.component';
 
 /**
  * Tableau de bord de l'administration : un chiffre réel par rubrique (comptes, données, modèle, journal) et un lien
@@ -20,7 +21,7 @@ import { gainOverBaseline, phaseLabel } from '../data/data-labels';
  */
 @Component({
   selector: 'app-admin-dashboard',
-  imports: [DatePipe, DecimalPipe, PercentPipe, RouterLink, NavbarComponent],
+  imports: [DatePipe, DecimalPipe, PercentPipe, RouterLink, NavbarComponent, IconComponent],
   templateUrl: './admin-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

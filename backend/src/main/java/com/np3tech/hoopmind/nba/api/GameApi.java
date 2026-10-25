@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.nba.api;
 
 import com.np3tech.hoopmind.nba.dto.request.GameCreateRequest;
+import com.np3tech.hoopmind.nba.dto.request.GameResultRequest;
 import com.np3tech.hoopmind.nba.dto.request.GameUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.GameResponse;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
@@ -9,6 +10,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,9 +46,9 @@ public interface GameApi {
             @Parameter(description = "Game ID") @PathVariable Long id
     );
 
-    @Operation(summary = "Get all games", description = "Retrieves all games")
+    @Operation(summary = "Get all games", description = "Paginated, most recent first (at most 100 per page)")
     @GetMapping
-    ResponseEntity<List<GameResponse>> getAllGames();
+    ResponseEntity<PagedModel<GameResponse>> getAllGames(@ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable);
 
     @Operation(summary = "Update game", description = "Updates an existing game")
     @ApiResponses(value = {
@@ -65,8 +71,9 @@ public interface GameApi {
 
     @Operation(summary = "Get games by status", description = "Retrieves games filtered by status")
     @GetMapping("/status/{status}")
-    ResponseEntity<List<GameResponse>> getGamesByStatus(
-            @Parameter(description = "Game status") @PathVariable GameStatus status
+    ResponseEntity<PagedModel<GameResponse>> getGamesByStatus(
+            @Parameter(description = "Game status") @PathVariable GameStatus status,
+            @ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable
     );
 
     @Operation(summary = "Get games by season", description = "Retrieves games for a specific season")
@@ -77,11 +84,12 @@ public interface GameApi {
 
     @Operation(summary = "Get games by team", description = "Retrieves games for a specific team")
     @GetMapping("/team/{teamId}")
-    ResponseEntity<List<GameResponse>> getGamesByTeam(
-            @Parameter(description = "Team ID") @PathVariable Long teamId
+    ResponseEntity<PagedModel<GameResponse>> getGamesByTeam(
+            @Parameter(description = "Team ID") @PathVariable Long teamId,
+            @ParameterObject @PageableDefault(size = 20, sort = "scheduledDate", direction = Sort.Direction.DESC) Pageable pageable
     );
 
-    @Operation(summary = "Get games by date range", description = "Retrieves games within a date range")
+    @Operation(summary = "Get games by date range", description = "Retrieves games within a date range of at most 31 days")
     @GetMapping("/date-range")
     ResponseEntity<List<GameResponse>> getGamesByDateRange(
             @Parameter(description = "Start date") @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -102,4 +110,27 @@ public interface GameApi {
             @Parameter(description = "Game ID") @PathVariable Long id,
             @Parameter(description = "New status") @RequestParam GameStatus status
     );
+
+    @Operation(summary = "Enregistrer le score d'un match",
+            description = "Saisie manuelle par un administrateur, quand l'import n'est pas disponible. Crée ou corrige "
+                    + "le score final et marque le match comme terminé ; la forme des équipes en tient compte dès la "
+                    + "prédiction suivante.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Score enregistré"),
+            @ApiResponse(responseCode = "400", description = "Score invalide (négatif, égalité…)"),
+            @ApiResponse(responseCode = "404", description = "Match introuvable")
+    })
+    @PutMapping("/{id}/result")
+    ResponseEntity<GameResponse> recordGameResult(
+            @Parameter(description = "Game ID") @PathVariable Long id,
+            @Valid @RequestBody GameResultRequest request
+    );
+
+    @Operation(summary = "Retirer le score d'un match", description = "Le match redevient « à venir ».")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Score retiré"),
+            @ApiResponse(responseCode = "404", description = "Match introuvable ou sans score")
+    })
+    @DeleteMapping("/{id}/result")
+    ResponseEntity<Void> deleteGameResult(@Parameter(description = "Game ID") @PathVariable Long id);
 }

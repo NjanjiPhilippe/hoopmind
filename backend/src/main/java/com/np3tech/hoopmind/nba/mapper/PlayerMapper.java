@@ -1,61 +1,13 @@
 package com.np3tech.hoopmind.nba.mapper;
 
-import com.np3tech.hoopmind.nba.dto.request.PlayerCreateRequest;
-import com.np3tech.hoopmind.nba.dto.request.PlayerUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.PlayerResponse;
 import com.np3tech.hoopmind.nba.dto.response.TeamSummaryResponse;
 import com.np3tech.hoopmind.nba.entity.Player;
 import com.np3tech.hoopmind.nba.entity.Team;
-import com.np3tech.hoopmind.nba.service.TeamService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class PlayerMapper {
-
-    private final TeamService teamService;
-
-    public Player toEntity(PlayerCreateRequest request) {
-        Team team = teamService.getTeamById(request.getTeamId());
-
-        return Player.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .position(request.getPosition())
-                .jerseyNumber(request.getJerseyNumber())
-                .team(team)
-                .birthDate(request.getBirthDate())
-                .birthPlace(request.getBirthPlace())
-                .nationality(request.getNationality())
-                .height(request.getHeight())
-                .weight(request.getWeight())
-                .experience(request.getExperience())
-                .college(request.getCollege())
-                .draftYear(request.getDraftYear())
-                .draftRound(request.getDraftRound())
-                .draftNumber(request.getDraftNumber())
-                .photoUrl(request.getPhotoUrl())
-                .build();
-    }
-
-    public Player toEntity(PlayerUpdateRequest request) {
-        Player.PlayerBuilder builder = Player.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .position(request.getPosition())
-                .jerseyNumber(request.getJerseyNumber())
-                .height(request.getHeight())
-                .weight(request.getWeight())
-                .photoUrl(request.getPhotoUrl());
-
-        if (request.getTeamId() != null) {
-            Team team = teamService.getTeamById(request.getTeamId());
-            builder.team(team);
-        }
-
-        return builder.build();
-    }
 
     public PlayerResponse toResponse(Player player) {
         return PlayerResponse.builder()

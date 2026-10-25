@@ -15,10 +15,9 @@ set -a && . ./.env && set +a
 
 - `JWT_SECRET` : `openssl rand -base64 48`
 - Au premier démarrage, un administrateur est créé à partir de `HOOPMIND_ADMIN_*` s'il n'en existe aucun.
-- Les tâches planifiées sur les matchs (statuts, rappels, statistiques) sont désactivées par défaut : `NBA_SCHEDULER_ENABLED=true` les active.
 - Spark démarre en mode `local[*]` dans la JVM. `SPARK_ENABLED=false` démarre l'API sans Spark ;
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
-- Tout en conteneurs : `docker compose --profile app up -d --build`.
+- Tout en conteneurs : `docker compose --profile app up -d --build` (base, API en profil `prod` et frontend nginx sur http://localhost:8081 ; l'API et PostgreSQL ne sont ouverts que sur la machine locale).
 
 ### Charger les données NBA
 
@@ -173,6 +172,10 @@ Une régression logistique Spark ML prédit la probabilité de victoire de l'éq
   jours de repos) et les écarts entre les deux équipes. Elles sont calculées avec des fenêtres Spark
   (`rowsBetween(unboundedPreceding, -1)`) : le modèle ne voit jamais le résultat qu'il doit prédire,
   contrairement à un bilan de fin de saison qui le contient déjà.
+- **Début de saison** : le bilan de la saison passée compte comme 10 matchs, puis s'efface à mesure que l'équipe joue
+  (prédictions possibles dès le premier jour). Sans import, un administrateur saisit les scores de la saison en cours
+  (*Admin › Saisie des résultats*, `PUT /api/v1/games/{id}/result`) : la forme en tient compte à la prédiction suivante.
+  Voir [ADR 0022](docs/adr/0022-forme-de-debut-de-saison.md).
 - **Évaluation dans le temps** : le modèle apprend sur les saisons les plus anciennes et il est testé sur la plus récente.
   Le nombre de saisons se règle avec `ML_TRAINING_SEASONS` (5 par défaut) ou `?seasons=`, pour comparer la précision selon l'historique utilisé.
 - **Références** : la précision est comparée à deux règles simples sur les mêmes matchs, « l'équipe à domicile gagne » et

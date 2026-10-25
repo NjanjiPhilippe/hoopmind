@@ -32,9 +32,37 @@ class TeamFormTests {
         TeamForm later = TeamForm.before(season, CELTICS, DAY.plusDays(3), null);
         assertThat(later.gamesPlayed()).isEqualTo(2);
         assertThat(later.winPct()).isEqualTo(0.5);
-        assertThat(later.offensiveRating()).isCloseTo(112.5, within(1e-9));
-        assertThat(later.netRating()).isCloseTo(7.5, within(1e-9));
+        // 112,5 sur deux matchs, ramené vers 110 (valeur neutre) qui compte comme 10 matchs.
+        assertThat(later.offensiveRating()).isCloseTo((112.5 * 2 + 110 * 10) / 12, within(1e-9));
+        assertThat(later.netRating()).isCloseTo(7.5 * 2 / 12, within(1e-9));
         assertThat(later.restDays()).as("dernier match la veille").isEqualTo(1.0);
+    }
+
+    @Test
+    void lastSeasonFillsTheFormAtTheStartOfTheSeason() {
+        // Saison passée : les Celtics gagnent 3 matchs sur 4, à 100 possessions par match.
+        List<GameRecord> lastSeason = List.of(
+                game(11, DAY.minusYears(1), CELTICS, LAKERS, 110, 100),
+                game(12, DAY.minusYears(1).plusDays(2), LAKERS, CELTICS, 100, 120),
+                game(13, DAY.minusYears(1).plusDays(4), CELTICS, LAKERS, 100, 90),
+                game(14, DAY.minusYears(1).plusDays(6), LAKERS, CELTICS, 110, 90));
+        TeamPrior prior = TeamPrior.of(lastSeason, CELTICS);
+        assertThat(prior.gamesPlayed()).isEqualTo(4);
+        assertThat(prior.winPct()).isEqualTo(0.75);
+        assertThat(prior.offensiveRating()).isCloseTo(105.0, within(1e-9));
+        assertThat(prior.defensiveRating()).isCloseTo(100.0, within(1e-9));
+
+        TeamForm opening = TeamForm.before(season, CELTICS, DAY, null, prior);
+        assertThat(opening.gamesPlayed()).isZero();
+        assertThat(opening.winPct()).isEqualTo(0.75);
+        assertThat(opening.last10WinPct()).isEqualTo(0.75);
+        assertThat(opening.netRating()).isCloseTo(5.0, within(1e-9));
+
+        // Après une victoire et une défaite : (1 + 10 × 0,75) / 12 et (1 + 8 × 0,75) / 10.
+        TeamForm later = TeamForm.before(season, CELTICS, DAY.plusDays(3), null, prior);
+        assertThat(later.winPct()).isCloseTo(8.5 / 12, within(1e-9));
+        assertThat(later.last10WinPct()).isCloseTo(0.7, within(1e-9));
+        assertThat(TeamPrior.of(lastSeason, 99)).isEqualTo(TeamPrior.NONE);
     }
 
     @Test

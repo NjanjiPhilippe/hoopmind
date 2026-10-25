@@ -8,7 +8,11 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +25,7 @@ class PredictionExplanationServiceTests {
 
     private static final long CELTICS = 1;
     private static final long KNICKS = 2;
+    private static final String USER = "42";
 
     private final GameOutcomePredictor predictor = (season, home, away, date, playoff) -> Fixtures.analysis();
     private final AtomicInteger calls = new AtomicInteger();
@@ -28,7 +33,7 @@ class PredictionExplanationServiceTests {
 
     @Test
     void withoutProviderExplainsWithoutLlm() {
-        ExplainedPrediction result = service(null).explain(10, CELTICS, KNICKS, Fixtures.DAY, false);
+        ExplainedPrediction result = service(null).explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
 
         assertThat(result.homeTeam()).isEqualTo("Boston Celtics");
         assertThat(result.awayTeam()).isEqualTo("New York Knicks");
@@ -47,9 +52,9 @@ class PredictionExplanationServiceTests {
             return new Explanation("Boston favori.", "openai-compatible", "gemini-2.5-flash", 300, 50);
         });
 
-        ExplainedPrediction first = service.explain(10, CELTICS, KNICKS, Fixtures.DAY, false);
-        ExplainedPrediction second = service.explain(10, CELTICS, KNICKS, Fixtures.DAY, false);
-        service.explain(10, CELTICS, KNICKS, Fixtures.DAY.plusDays(1), false);
+        ExplainedPrediction first = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
+        ExplainedPrediction second = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
+        service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY.plusDays(1), false);
 
         assertThat(first.cached()).isFalse();
         assertThat(second.cached()).isTrue();
@@ -70,8 +75,8 @@ class PredictionExplanationServiceTests {
             throw new LlmUnavailableException("quota", null);
         });
 
-        ExplainedPrediction result = service.explain(10, CELTICS, KNICKS, Fixtures.DAY, false);
-        service.explain(10, CELTICS, KNICKS, Fixtures.DAY, false);
+        ExplainedPrediction result = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
+        service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
 
         assertThat(result.fallback()).isTrue();
         assertThat(result.explanation().provider()).isEqualTo("template");
@@ -85,13 +90,67 @@ class PredictionExplanationServiceTests {
         return registry.get("hoopmind.explanations").tag("source", source).counter().count();
     }
 
+    @Test
+    void eachUserHasAnHourlyLimitOfLlmCallsThenGetsTheTemplate() {
+        MutableClock clock = new MutableClock();
+        PredictionExplanationService service = service(request -> {
+            calls.incrementAndGet();
+            return new Explanation("Boston favori.", "openai-compatible", "gemini-2.5-flash");
+        }, 2, clock);
+
+        service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
+        service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY.plusDays(1), false);
+        ExplainedPrediction limited = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY.plusDays(2), false);
+        ExplainedPrediction cached = service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY, false);
+        ExplainedPrediction otherUser = service.explain("43", 10, CELTICS, KNICKS, Fixtures.DAY.plusDays(2), false);
+
+        assertThat(limited.fallback()).isTrue();
+        assertThat(limited.explanation().provider()).isEqualTo("template");
+        assertThat(cached.cached()).as("une explication déjà générée ne coûte rien").isTrue();
+        assertThat(otherUser.fallback()).as("la limite est propre à chaque utilisateur").isFalse();
+        assertThat(calls).hasValue(3);
+
+        clock.advance(LlmCallQuota.WINDOW);
+        assertThat(service.explain(USER, 10, CELTICS, KNICKS, Fixtures.DAY.plusDays(3), false).fallback())
+                .as("une heure plus tard").isFalse();
+    }
+
     private PredictionExplanationService service(PredictionExplainer explainer) {
+        return service(explainer, 20, Clock.systemUTC());
+    }
+
+    private PredictionExplanationService service(PredictionExplainer explainer, int maxCallsPerUserPerHour, Clock clock) {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         if (explainer != null) {
             beans.addBean("explainer", explainer);
         }
         return new PredictionExplanationService(predictor, new Teams(), beans.getBeanProvider(PredictionExplainer.class),
-                new ExplanationProperties("test", null, null, null, Duration.ofSeconds(5), 2048, 10, 4), registry);
+                new ExplanationProperties("test", null, null, null, Duration.ofSeconds(5), 2048, 10, 4,
+                        maxCallsPerUserPerHour), clock, registry);
+    }
+
+    private static final class MutableClock extends Clock {
+
+        private Instant now = Instant.parse("2026-10-22T20:00:00Z");
+
+        void advance(Duration duration) {
+            now = now.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
+        }
     }
 
     private static final class Teams implements GameHistory {

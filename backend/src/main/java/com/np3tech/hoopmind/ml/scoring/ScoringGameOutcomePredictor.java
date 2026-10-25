@@ -75,12 +75,18 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
                 HttpStatus.CONFLICT, "MODEL_NOT_TRAINED"));
         int seasonYear = history.seasonYear(seasonId).orElseThrow(() -> new AppException(
                 "Saison introuvable : " + seasonId, HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND"));
-        List<GameRecord> games = history.teamGames(seasonYear, List.of(homeTeamId, awayTeamId));
+        List<Long> teams = List.of(homeTeamId, awayTeamId);
+        List<GameRecord> games = history.teamGames(seasonYear, teams);
+        List<GameRecord> previousSeason = history.teamGames(seasonYear - 1, teams);
 
-        TeamForm home = TeamForm.before(games, homeTeamId, date, null);
-        TeamForm away = TeamForm.before(games, awayTeamId, date, null);
-        if (home.gamesPlayed() == 0 || away.gamesPlayed() == 0) {
-            throw new AppException("Ces équipes n'ont pas encore joué de match dans cette saison avant cette date.",
+        TeamPrior homePrior = TeamPrior.of(previousSeason, homeTeamId);
+        TeamPrior awayPrior = TeamPrior.of(previousSeason, awayTeamId);
+        TeamForm home = TeamForm.before(games, homeTeamId, date, null, homePrior);
+        TeamForm away = TeamForm.before(games, awayTeamId, date, null, awayPrior);
+        // En début de saison, le bilan de la saison passée suffit ; sans aucun des deux, il n'y a rien à comparer.
+        if (home.gamesPlayed() == 0 && homePrior.gamesPlayed() == 0
+                || away.gamesPlayed() == 0 && awayPrior.gamesPlayed() == 0) {
+            throw new AppException("Aucun match joué par ces équipes avant cette date, ni cette saison ni la précédente.",
                     HttpStatus.UNPROCESSABLE_CONTENT, "NO_TEAM_FORM");
         }
         double[] features = GameOutcomeFeatures.of(home, away, playoff);
@@ -88,7 +94,7 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
         GameOutcomePrediction prediction =
                 new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability, card.model());
         return new GameOutcomeAnalysis(prediction, card.version(), card.intercept(),
-                factors(home, away, playoff, card.contributions(features)));
+                factors(home, away, playoff, card.contributions(features)), home.gamesPlayed(), away.gamesPlayed());
     }
 
     /** Valeurs de chaque côté, dans l'ordre de {@link GameOutcomeFeatures#NAMES}. */

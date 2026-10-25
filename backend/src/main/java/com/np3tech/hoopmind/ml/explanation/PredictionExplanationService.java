@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.ml.explanation;
 
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
+import com.np3tech.hoopmind.ml.PredictionFactor;
 import com.np3tech.hoopmind.ml.explanation.ExplanationMetrics.Source;
 import com.np3tech.hoopmind.nba.GameHistory;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -24,6 +26,8 @@ import java.util.Map;
  *     <li>Une explication générée est gardée en mémoire (match, date, version du modèle) : les offres gratuites
  *     limitent le nombre d'appels, et la même question ne doit pas les consommer deux fois.</li>
  *     <li>Si le LLM ne répond pas (quota, panne, clé refusée), une explication rédigée sans LLM la remplace.</li>
+ *     <li>Chaque utilisateur a droit à un nombre d'appels au LLM par heure ({@link LlmCallQuota}) ; au-delà, il
+ *     reçoit aussi l'explication rédigée sans LLM.</li>
  *     <li>Chaque explication est comptée par origine, et chaque appel au LLM mesuré ({@link ExplanationMetrics}).</li>
  * </ul>
  */
@@ -36,11 +40,12 @@ public class PredictionExplanationService {
     private final GameHistory history;
     private final PredictionExplainer explainer;
     private final Map<Key, Explanation> cache;
+    private final LlmCallQuota quota;
     private final ExplanationMetrics metrics;
 
     public PredictionExplanationService(GameOutcomePredictor predictor, GameHistory history,
                                         ObjectProvider<PredictionExplainer> explainer, ExplanationProperties properties,
-                                        MeterRegistry registry) {
+                                        Clock clock, MeterRegistry registry) {
         this.predictor = predictor;
         this.history = history;
         this.explainer = explainer.getIfAvailable();
@@ -51,12 +56,14 @@ public class PredictionExplanationService {
                 return size() > capacity;
             }
         });
+        this.quota = new LlmCallQuota(properties.maxCallsPerUserPerHour(), clock);
         this.metrics = new ExplanationMetrics(registry, properties.provider());
         log.info("Explication des prédictions : {}", this.explainer == null
                 ? "sans LLM (hoopmind.ml.explanation.provider=none)" : properties.provider());
     }
 
-    public ExplainedPrediction explain(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
+    /** @param requester identifiant de l'utilisateur qui demande, pour sa limite d'appels au LLM */
+    public ExplainedPrediction explain(String requester, long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
         GameOutcomeAnalysis analysis = predictor.analyze(seasonId, homeTeamId, awayTeamId, date, playoff);
         Map<Long, String> names = history.teamNames(List.of(homeTeamId, awayTeamId));
         ExplanationRequest request = new ExplanationRequest(
@@ -68,11 +75,16 @@ public class PredictionExplanationService {
             metrics.served(Source.TEMPLATE);
             return result(request, TemplateExplanation.of(request), false, false);
         }
-        Key key = new Key(analysis.modelVersion(), seasonId, homeTeamId, awayTeamId, date, playoff);
+        Key key = new Key(analysis.modelVersion(), seasonId, homeTeamId, awayTeamId, date, playoff, analysis.factors());
         Explanation cached = cache.get(key);
         if (cached != null) {
             metrics.served(Source.CACHE);
             return result(request, cached, true, false);
+        }
+        if (!quota.tryAcquire(requester)) {
+            log.info("Limite d'appels au LLM atteinte pour l'utilisateur {} : explication sans LLM", requester);
+            metrics.served(Source.FALLBACK);
+            return result(request, TemplateExplanation.of(request), false, true);
         }
         long start = System.nanoTime();
         try {
@@ -93,10 +105,12 @@ public class PredictionExplanationService {
     private static ExplainedPrediction result(ExplanationRequest request, Explanation explanation, boolean cached,
                                               boolean fallback) {
         return new ExplainedPrediction(request.homeTeam(), request.awayTeam(), request.analysis().prediction(),
-                ExplanationFacts.byInfluence(request.analysis().factors()), explanation, cached, fallback);
+                ExplanationFacts.byInfluence(request.analysis().factors()), explanation, cached, fallback,
+                request.analysis().homeGamesPlayed(), request.analysis().awayGamesPlayed());
     }
 
+    /** Les facteurs en font partie : un résultat saisi ou importé change la forme, donc l'explication. */
     private record Key(String modelVersion, long seasonId, long homeTeamId, long awayTeamId, LocalDate date,
-                       boolean playoff) {
+                       boolean playoff, List<PredictionFactor> factors) {
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.criteria.Predicate;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class GameSearchService {
     private final GameRepository gameRepository;
+    private final Clock clock;
 
     /**
      * Search games with multiple filter criteria
@@ -84,7 +86,7 @@ public class GameSearchService {
      * Get upcoming games for a team
      */
     public List<Game> getUpcomingGamesForTeam(Long teamId, int limit) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         Specification<Game> spec = (root, query, cb) -> {
             Predicate teamPredicate = cb.or(
@@ -108,7 +110,7 @@ public class GameSearchService {
      * Get recent games for a team
      */
     public List<Game> getRecentGamesForTeam(Long teamId, int limit) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         Specification<Game> spec = (root, query, cb) -> {
             Predicate teamPredicate = cb.or(
@@ -132,8 +134,8 @@ public class GameSearchService {
      * Get games scheduled for today
      */
     public List<Game> getTodaysGames() {
-        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+        LocalDateTime startOfDay = LocalDateTime.now(clock).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime endOfDay = LocalDateTime.now(clock).withHour(23).withMinute(59).withSecond(59);
 
         return gameRepository.findByScheduledDateBetween(startOfDay, endOfDay);
     }

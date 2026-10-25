@@ -58,11 +58,11 @@ class AnthropicExplainerTests {
     @Test
     void requiresAKey() {
         assertThatThrownBy(() -> new AnthropicExplainer(new ExplanationProperties("anthropic", null, " ", null,
-                Duration.ofSeconds(5), 2048, 10, 4))).isInstanceOf(IllegalStateException.class);
+                Duration.ofSeconds(5), 2048, 10, 4, 20))).isInstanceOf(IllegalStateException.class);
     }
 
     private AnthropicExplainer explainer(String model) {
         return new AnthropicExplainer(new ExplanationProperties("anthropic", llm.url("/v1"), "secret", model,
-                Duration.ofSeconds(5), 2048, 10, 4));
+                Duration.ofSeconds(5), 2048, 10, 4, 20));
     }
 }

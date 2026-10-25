@@ -19,6 +19,9 @@ final class SparkTestSession {
                 .appName("hoopmind-tests")
                 .config("spark.ui.enabled", "false")
                 .config("spark.sql.shuffle.partitions", "4")
+                // Sinon Spark installe sa fabrique d'URL dans la JVM partagée par tous les tests, et le Tomcat d'un
+                // test lancé ensuite sur un vrai port ne peut plus installer la sienne (« factory already defined »).
+                .config("spark.sql.defaultUrlStreamHandlerFactory.enabled", "false")
                 .getOrCreate();
     }
 
@@ -27,7 +30,7 @@ final class SparkTestSession {
                         Integer points, Integer pointsAllowed) {
         Integer won = points == null ? null : points > pointsAllowed ? 1 : 0;
         Double possessions = points == null ? null : 100.0;
-        return RowFactory.create(gameId, season, Date.valueOf(date), teamId, home ? 1 : 0, 0, won, points, pointsAllowed,
+        return RowFactory.create(gameId, season, Integer.parseInt(season.substring(0, 4)), Date.valueOf(date), teamId, home ? 1 : 0, 0, won, points, pointsAllowed,
                 possessions, possessions);
     }
 }
