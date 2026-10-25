@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.ml.explanation;
 
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
+import com.np3tech.hoopmind.ml.PredictionFactor;
 import com.np3tech.hoopmind.nba.GameHistory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -67,7 +68,7 @@ public class PredictionExplanationService {
         if (explainer == null) {
             return result(request, TemplateExplanation.of(request), false, false);
         }
-        Key key = new Key(analysis.modelVersion(), seasonId, homeTeamId, awayTeamId, date, playoff);
+        Key key = new Key(analysis.modelVersion(), seasonId, homeTeamId, awayTeamId, date, playoff, analysis.factors());
         Explanation cached = cache.get(key);
         if (cached != null) {
             return result(request, cached, true, false);
@@ -89,10 +90,12 @@ public class PredictionExplanationService {
     private static ExplainedPrediction result(ExplanationRequest request, Explanation explanation, boolean cached,
                                               boolean fallback) {
         return new ExplainedPrediction(request.homeTeam(), request.awayTeam(), request.analysis().prediction(),
-                ExplanationFacts.byInfluence(request.analysis().factors()), explanation, cached, fallback);
+                ExplanationFacts.byInfluence(request.analysis().factors()), explanation, cached, fallback,
+                request.analysis().homeGamesPlayed(), request.analysis().awayGamesPlayed());
     }
 
+    /** Les facteurs en font partie : un résultat saisi ou importé change la forme, donc l'explication. */
     private record Key(String modelVersion, long seasonId, long homeTeamId, long awayTeamId, LocalDate date,
-                       boolean playoff) {
+                       boolean playoff, List<PredictionFactor> factors) {
     }
 }

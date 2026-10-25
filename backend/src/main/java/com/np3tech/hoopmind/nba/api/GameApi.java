@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.nba.api;
 
 import com.np3tech.hoopmind.nba.dto.request.GameCreateRequest;
+import com.np3tech.hoopmind.nba.dto.request.GameResultRequest;
 import com.np3tech.hoopmind.nba.dto.request.GameUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.GameResponse;
 import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
@@ -109,4 +110,27 @@ public interface GameApi {
             @Parameter(description = "Game ID") @PathVariable Long id,
             @Parameter(description = "New status") @RequestParam GameStatus status
     );
+
+    @Operation(summary = "Enregistrer le score d'un match",
+            description = "Saisie manuelle par un administrateur, quand l'import n'est pas disponible. Crée ou corrige "
+                    + "le score final et marque le match comme terminé ; la forme des équipes en tient compte dès la "
+                    + "prédiction suivante.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Score enregistré"),
+            @ApiResponse(responseCode = "400", description = "Score invalide (négatif, égalité…)"),
+            @ApiResponse(responseCode = "404", description = "Match introuvable")
+    })
+    @PutMapping("/{id}/result")
+    ResponseEntity<GameResponse> recordGameResult(
+            @Parameter(description = "Game ID") @PathVariable Long id,
+            @Valid @RequestBody GameResultRequest request
+    );
+
+    @Operation(summary = "Retirer le score d'un match", description = "Le match redevient « à venir ».")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Score retiré"),
+            @ApiResponse(responseCode = "404", description = "Match introuvable ou sans score")
+    })
+    @DeleteMapping("/{id}/result")
+    ResponseEntity<Void> deleteGameResult(@Parameter(description = "Game ID") @PathVariable Long id);
 }

@@ -41,17 +41,36 @@ class GameFeatureBuilderTests {
         // Deuxième match : les Lakers (à domicile) n'ont qu'une défaite derrière eux.
         Row second = rows.get(1);
         assertThat(second.<Long>getAs("home_team_id")).isEqualTo(LAKERS);
-        assertThat(second.<Double>getAs("home_win_pct")).isZero();
-        assertThat(second.<Double>getAs("away_win_pct")).isEqualTo(1.0);
-        assertThat(second.<Double>getAs("home_net_rating")).isCloseTo(-20.0, within(1e-9));
+        // Sans saison passée, le point de départ neutre (50 %, 110) compte comme 10 matchs.
+        assertThat(second.<Double>getAs("home_win_pct")).isCloseTo(5.0 / 11, within(1e-9));
+        assertThat(second.<Double>getAs("away_win_pct")).isCloseTo(6.0 / 11, within(1e-9));
+        assertThat(second.<Double>getAs("home_net_rating")).isCloseTo(-20.0 / 11, within(1e-9));
         assertThat(second.<Double>getAs("rest_days_diff")).isZero();
 
         // Match à venir : bilan 1-1 pour les deux équipes, aucun résultat connu.
         Row upcoming = rows.get(2);
         assertThat(upcoming.<Long>getAs("home_games_played")).isEqualTo(2);
         assertThat(upcoming.<Double>getAs("home_win_pct")).isEqualTo(0.5);
-        assertThat(upcoming.<Double>getAs("home_offensive_rating")).isCloseTo(112.5, within(1e-9));
+        assertThat(upcoming.<Double>getAs("home_offensive_rating")).isCloseTo((112.5 * 2 + 110 * 10) / 12, within(1e-9));
         assertThat(upcoming.<Double>getAs("home_rest_days")).isEqualTo(7.0);
         assertThat(upcoming.<Object>getAs("home_won")).isNull();
+    }
+
+    @Test
+    void lastSeasonIsTheStartingPointOfTheNextOne() {
+        // 2023-24 : les Celtics gagnent les deux matchs, 120-100 puis 110-100.
+        Dataset<Row> twoSeasons = teamGames.union(SparkTestSession.get().createDataFrame(List.of(
+                teamGame(101, "2023-2024", DAY.minusYears(1), CELTICS, true, 120, 100),
+                teamGame(101, "2023-2024", DAY.minusYears(1), LAKERS, false, 100, 120),
+                teamGame(102, "2023-2024", DAY.minusYears(1).plusDays(2), LAKERS, true, 100, 110),
+                teamGame(102, "2023-2024", DAY.minusYears(1).plusDays(2), CELTICS, false, 110, 100)
+        ), GameFeatureBuilder.TEAM_GAME_SCHEMA));
+
+        Row opening = GameFeatureBuilder.gameFeatures(twoSeasons).filter("game_id = 1").first();
+        assertThat(opening.<Integer>getAs("season_year")).isEqualTo(2024);
+        assertThat(opening.<Long>getAs("home_games_played")).isZero();
+        assertThat(opening.<Double>getAs("home_win_pct")).isEqualTo(1.0);
+        assertThat(opening.<Double>getAs("away_last10_win_pct")).isZero();
+        assertThat(opening.<Double>getAs("home_net_rating")).isCloseTo(15.0, within(1e-9));
     }
 }

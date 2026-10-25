@@ -25,3 +25,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0018](0018-saisons-recentes-eoin-moore.md) | Les saisons récentes viennent des fichiers d'Eoin Moore, play-in compris | Acceptée |
 | [0020](0020-suppression-du-code-herite.md) | Suppression du code hérité inutilisé, matrice des droits testée | Acceptée |
 | [0021](0021-api-nba-services-et-pagination.md) | API NBA : services qui reçoivent les requêtes, pagination, horloge, limite LLM | Acceptée |
+| [0022](0022-forme-de-debut-de-saison.md) | Forme de début de saison à partir de la saison passée, saisie des scores par l'administrateur | Proposée |

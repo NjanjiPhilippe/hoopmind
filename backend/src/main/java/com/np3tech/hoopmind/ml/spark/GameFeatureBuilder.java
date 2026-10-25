@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.ml.spark;
 
 import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
+import com.np3tech.hoopmind.ml.scoring.TeamForm;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -29,6 +30,9 @@ import static org.apache.spark.sql.functions.when;
  * Pour chaque match, la forme de chaque équipe est calculée <b>uniquement à partir de ses matchs précédents de la même
  * saison</b> (fenêtre {@code rowsBetween(unboundedPreceding, -1)}). Utiliser le bilan de fin de saison ferait « tricher »
  * le modèle : ce bilan contient déjà le résultat du match à prédire.
+ * <p>
+ * En début de saison, cette forme est complétée par le bilan de la saison précédente (voir {@link TeamForm}) : il
+ * faut donc charger aussi la saison qui précède la première saison voulue, puis filtrer sur {@code season_year}.
  */
 public final class GameFeatureBuilder {
 
@@ -36,6 +40,8 @@ public final class GameFeatureBuilder {
     public static final StructType TEAM_GAME_SCHEMA = new StructType(new StructField[]{
             DataTypes.createStructField("game_id", DataTypes.LongType, false),
             DataTypes.createStructField("season", DataTypes.StringType, false),
+            // année de début (2024 pour 2024-25) : relie une saison à la précédente
+            DataTypes.createStructField("season_year", DataTypes.IntegerType, false),
             DataTypes.createStructField("game_date", DataTypes.DateType, false),
             DataTypes.createStructField("team_id", DataTypes.LongType, false),
             DataTypes.createStructField("is_home", DataTypes.IntegerType, false),
@@ -66,9 +72,11 @@ public final class GameFeatureBuilder {
     public static final String LABEL = "home_won";
 
     /** Valeurs neutres quand une équipe n'a pas encore joué (début de saison). */
-    private static final double NEUTRAL_WIN_PCT = 0.5;
-    private static final double NEUTRAL_RATING = 110.0;
+    private static final double NEUTRAL_WIN_PCT = TeamForm.NEUTRAL_WIN_PCT;
+    private static final double NEUTRAL_RATING = TeamForm.NEUTRAL_RATING;
     private static final double NEUTRAL_POINTS = 110.0;
+    private static final int PRIOR_GAMES = TeamForm.PRIOR_GAMES;
+    private static final int LAST_GAMES = 10;
     private static final int MAX_REST_DAYS = 7;
 
     private GameFeatureBuilder() {
@@ -83,21 +91,65 @@ public final class GameFeatureBuilder {
         WindowSpec before = ordered.rowsBetween(Window.unboundedPreceding(), -1);
         WindowSpec lastTen = ordered.rowsBetween(-10, -1);
 
-        Dataset<Row> form = teamGames
+        Dataset<Row> withBoxPoints = teamGames
                 .withColumn("box_points", when(col("possessions").isNotNull(), col("points")))
-                .withColumn("box_points_allowed", when(col("opponent_possessions").isNotNull(), col("points_allowed")))
+                .withColumn("box_points_allowed", when(col("opponent_possessions").isNotNull(), col("points_allowed")));
+        Dataset<Row> form = withBoxPoints
                 .withColumn("games_played", count("won").over(before))
-                .withColumn("win_pct", avg("won").over(before))
-                .withColumn("last10_win_pct", avg("won").over(lastTen))
+                .withColumn("wins", coalesce(sum("won").over(before), lit(0L)))
+                .withColumn("last10_played", count("won").over(lastTen))
+                .withColumn("last10_wins", coalesce(sum("won").over(lastTen), lit(0L)))
+                .withColumn("box_games", count("possessions").over(before))
                 .withColumn("points_per_game", avg("points").over(before))
                 .withColumn("points_allowed_per_game", avg("points_allowed").over(before))
-                .withColumn("offensive_rating", rating(sum("box_points").over(before), sum("possessions").over(before)))
-                .withColumn("defensive_rating",
+                .withColumn("current_offensive_rating",
+                        rating(sum("box_points").over(before), sum("possessions").over(before)))
+                .withColumn("current_defensive_rating",
                         rating(sum("box_points_allowed").over(before), sum("opponent_possessions").over(before)))
                 .withColumn("rest_days", least(
                         coalesce(datediff(col("game_date"), lag("game_date", 1).over(ordered)), lit(MAX_REST_DAYS)),
                         lit(MAX_REST_DAYS)));
-        return pairTeams(withNeutralValues(form));
+        return pairTeams(withNeutralValues(withPriors(form, previousSeasonRecords(withBoxPoints))));
+    }
+
+    /**
+     * Bilan de chaque équipe sur toute une saison (matchs joués, playoffs compris), rattaché à la saison suivante :
+     * {@code season_year} est celle où ce bilan sert de point de départ.
+     */
+    private static Dataset<Row> previousSeasonRecords(Dataset<Row> teamGames) {
+        return teamGames.filter(col("won").isNotNull())
+                .groupBy("season_year", "team_id")
+                .agg(avg("won").as("prior_win_pct"),
+                        rating(sum("box_points"), sum("possessions")).as("prior_offensive_rating"),
+                        rating(sum("box_points_allowed"), sum("opponent_possessions")).as("prior_defensive_rating"))
+                .select(col("season_year").plus(1).as("prior_season_year"), col("team_id").as("prior_team_id"),
+                        coalesce(col("prior_win_pct"), lit(NEUTRAL_WIN_PCT)).as("prior_win_pct"),
+                        coalesce(col("prior_offensive_rating"), lit(NEUTRAL_RATING)).as("prior_offensive_rating"),
+                        coalesce(col("prior_defensive_rating"), lit(NEUTRAL_RATING)).as("prior_defensive_rating"));
+    }
+
+    /** Mêmes formules que {@link TeamForm} : la saison passée pèse comme {@value TeamForm#PRIOR_GAMES} matchs. */
+    private static Dataset<Row> withPriors(Dataset<Row> form, Dataset<Row> priors) {
+        Column priorWinPct = coalesce(col("prior_win_pct"), lit(NEUTRAL_WIN_PCT));
+        Column priorOffensive = coalesce(col("prior_offensive_rating"), lit(NEUTRAL_RATING));
+        Column priorDefensive = coalesce(col("prior_defensive_rating"), lit(NEUTRAL_RATING));
+        return form.join(priors, col("season_year").equalTo(col("prior_season_year"))
+                        .and(col("team_id").equalTo(col("prior_team_id"))), "left")
+                .withColumn("win_pct", col("wins").plus(priorWinPct.multiply(PRIOR_GAMES))
+                        .divide(col("games_played").plus(PRIOR_GAMES)))
+                .withColumn("last10_win_pct", col("last10_wins")
+                        .plus(lit(LAST_GAMES).minus(col("last10_played")).multiply(priorWinPct))
+                        .divide(LAST_GAMES))
+                .withColumn("offensive_rating", blendRating(col("current_offensive_rating"), priorOffensive))
+                .withColumn("defensive_rating", blendRating(col("current_defensive_rating"), priorDefensive))
+                .drop("prior_season_year", "prior_team_id", "prior_win_pct", "prior_offensive_rating",
+                        "prior_defensive_rating", "wins", "last10_played", "last10_wins", "current_offensive_rating",
+                        "current_defensive_rating");
+    }
+
+    private static Column blendRating(Column rating, Column prior) {
+        return when(rating.isNull(), prior).otherwise(rating.multiply(col("box_games")).plus(prior.multiply(PRIOR_GAMES))
+                .divide(col("box_games").plus(PRIOR_GAMES)));
     }
 
     private static Column rating(Column points, Column possessions) {
@@ -121,6 +173,7 @@ public final class GameFeatureBuilder {
         Dataset<Row> home = prefixed(form.filter(col("is_home").equalTo(1)), "home_")
                 .withColumnRenamed("home_game_id", "game_id")
                 .withColumnRenamed("home_season", "season")
+                .withColumnRenamed("home_season_year", "season_year")
                 .withColumnRenamed("home_game_date", "game_date")
                 .withColumnRenamed("home_is_playoff", "is_playoff")
                 .withColumn(LABEL, col("home_won").cast(DataTypes.DoubleType));

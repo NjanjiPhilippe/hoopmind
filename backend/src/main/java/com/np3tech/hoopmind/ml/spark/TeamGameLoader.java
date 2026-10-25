@@ -47,6 +47,7 @@ class TeamGameLoader {
         return RowFactory.create(
                 game.gameId(),
                 game.season(),
+                game.seasonYear(),
                 Date.valueOf(game.date()),
                 home ? game.homeTeamId() : game.awayTeamId(),
                 home ? 1 : 0,

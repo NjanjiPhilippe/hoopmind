@@ -1,0 +1,132 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header>
+      <a routerLink="/admin" class="text-sm font-medium text-primary-600 hover:underline">← Administration</a>
+      <h1 class="mt-2 text-3xl font-bold text-gray-900">Saisie des résultats</h1>
+      <p class="mt-1 text-gray-600">
+        Quand l'import n'est pas disponible, saisissez vous-même les scores de la saison en cours. HoopMind en déduit la forme
+        des équipes (victoires, 10 derniers matchs) à chaque prédiction ; en début de saison, elle est complétée par leur bilan de la saison passée.
+      </p>
+    </header>
+
+    @if (catalog.empty()) {
+      <div class="card text-sm text-gray-600">
+        Aucune saison en base. Importez d'abord les données depuis la page <a routerLink="/admin/data" class="font-medium text-primary-600 hover:underline">Données</a>.
+      </div>
+    } @else {
+      <section class="card space-y-4" aria-labelledby="day-title">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label class="text-sm">
+            <span class="mb-1 block font-medium text-gray-700">Saison</span>
+            <select class="input-field" (change)="seasonId.set(+$any($event.target).value)">
+              @for (season of catalog.seasons(); track season.id) {
+                <option [value]="season.id" [selected]="season.id === seasonId()">{{ season.name }}</option>
+              }
+            </select>
+          </label>
+          <div class="text-sm">
+            <label for="day" class="mb-1 block font-medium text-gray-700">Jour</label>
+            <div class="flex gap-2">
+              <button type="button" class="btn-secondary px-3" (click)="previousDay()" aria-label="Jour précédent">‹</button>
+              <input id="day" type="date" class="input-field" [value]="day()" (change)="day.set($any($event.target).value)" />
+              <button type="button" class="btn-secondary px-3" (click)="nextDay()" aria-label="Jour suivant">›</button>
+            </div>
+          </div>
+        </div>
+
+        @if (error()) {
+          <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ error() }}</p>
+        }
+        @if (notice()) {
+          <p class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700" role="status">{{ notice() }}</p>
+        }
+
+        <h2 id="day-title" class="text-lg font-bold">Matchs du jour</h2>
+        @if (games.isLoading() && !dayGames().length) {
+          <p class="text-sm text-gray-500">Chargement des matchs…</p>
+        } @else if (games.error()) {
+          <p class="text-sm text-red-600" role="alert">Les matchs sont indisponibles. Réessayez dans un instant.</p>
+        } @else if (dayGames().length === 0) {
+          <p class="text-sm text-gray-500">Aucun match ce jour-là. Ajoutez-le ci-dessous.</p>
+        } @else {
+          <ul class="divide-y divide-gray-100">
+            @for (game of dayGames(); track game.id) {
+              <li class="space-y-2 py-3">
+                <div class="flex items-center justify-between gap-2 text-sm">
+                  <span class="flex items-center gap-2 font-medium">
+                    <app-team-logo [team]="game.awayTeam" [size]="22" /> {{ game.awayTeam?.abbreviation }}
+                    <span class="text-gray-400">&#64;</span>
+                    <app-team-logo [team]="game.homeTeam" [size]="22" /> {{ game.homeTeam?.abbreviation }}
+                  </span>
+                  <span class="badge" [class.badge-success]="game.result" [class.badge-info]="!game.result">
+                    {{ game.result ? 'Terminé' : 'À venir' }}
+                  </span>
+                </div>
+                <form class="flex flex-wrap items-end gap-2" (submit)="$event.preventDefault(); save(game, home.value, away.value, overtime.value)">
+                  <label class="w-20 text-xs text-gray-600">
+                    {{ game.awayTeam?.abbreviation }}
+                    <input #away type="number" inputmode="numeric" min="0" max="250" class="input-field mt-1"
+                           [value]="game.result?.awayTeamScore ?? ''" [attr.aria-label]="'Score de ' + teamName(game.awayTeam)" />
+                  </label>
+                  <label class="w-20 text-xs text-gray-600">
+                    {{ game.homeTeam?.abbreviation }}
+                    <input #home type="number" inputmode="numeric" min="0" max="250" class="input-field mt-1"
+                           [value]="game.result?.homeTeamScore ?? ''" [attr.aria-label]="'Score de ' + teamName(game.homeTeam)" />
+                  </label>
+                  <label class="w-28 text-xs text-gray-600">
+                    Prolongations
+                    <select #overtime class="input-field mt-1">
+                      @for (n of [0, 1, 2, 3, 4]; track n) {
+                        <option [value]="n" [selected]="n === (game.result?.overtime ? 1 : 0)">{{ n === 0 ? 'Aucune' : n }}</option>
+                      }
+                    </select>
+                  </label>
+                  <button type="submit" class="btn-primary text-sm" [disabled]="busyGameId() === game.id">
+                    {{ game.result ? 'Corriger' : 'Enregistrer' }}
+                  </button>
+                  @if (game.result) {
+                    <button type="button" class="btn-outline text-sm" [disabled]="busyGameId() === game.id" (click)="clear(game)">Retirer le score</button>
+                  }
+                </form>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="card space-y-3" aria-labelledby="add-title">
+        <h2 id="add-title" class="text-lg font-bold">Ajouter un match ce jour-là</h2>
+        <p class="text-sm text-gray-600">Pour un match absent du calendrier importé. Il est ajouté à la saison choisie, en saison régulière.</p>
+        <form class="grid grid-cols-1 gap-3 sm:grid-cols-4" (submit)="$event.preventDefault(); add(homeTeam.value, awayTeam.value, time.value)">
+          <label class="text-sm">
+            <span class="mb-1 block font-medium text-gray-700">Extérieur</span>
+            <select #awayTeam class="input-field">
+              <option value="">Choisir…</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id">{{ teamName(team) }}</option>
+              }
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block font-medium text-gray-700">Domicile</span>
+            <select #homeTeam class="input-field">
+              <option value="">Choisir…</option>
+              @for (team of catalog.teams(); track team.id) {
+                <option [value]="team.id">{{ teamName(team) }}</option>
+              }
+            </select>
+          </label>
+          <label class="text-sm">
+            <span class="mb-1 block font-medium text-gray-700">Heure</span>
+            <input #time type="time" class="input-field" value="19:00" />
+          </label>
+          <div class="flex items-end">
+            <button type="submit" class="btn-primary w-full text-sm" [disabled]="adding()">Ajouter le match</button>
+          </div>
+        </form>
+      </section>
+    }
+  </main>
+</div>

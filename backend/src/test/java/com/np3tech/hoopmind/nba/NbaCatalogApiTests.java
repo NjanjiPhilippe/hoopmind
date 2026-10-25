@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +31,11 @@ class NbaCatalogApiTests {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    GameHistory history;
+
     private String admin;
+    private int seasonYear;
     private long seasonId;
     private long homeTeamId;
     private long awayTeamId;
@@ -40,6 +45,7 @@ class NbaCatalogApiTests {
         admin = TestAccounts.admin(mvc).bearer();
         // La base est partagée par les tests d'intégration : année et abréviations tirées au hasard.
         int year = ThreadLocalRandom.current().nextInt(3000, 9000);
+        seasonYear = year;
         seasonId = create("/api/v1/seasons", """
                 {"year":%d,"name":"%d-%d","startDate":"%d-10-20","endDate":"%d-04-15","status":"IN_PROGRESS"}
                 """.formatted(year, year, (year + 1) % 100, year, year + 1));
@@ -50,6 +56,7 @@ class NbaCatalogApiTests {
     /** D'autres tests comptent les 30 équipes de référence : on retire tout ce que ce test a créé. */
     @AfterEach
     void deleteCatalog() {
+        jdbc.update("DELETE FROM game_results WHERE game_id IN (SELECT id FROM games WHERE season_id = ?)", seasonId);
         jdbc.update("DELETE FROM games WHERE season_id = ?", seasonId);
         jdbc.update("DELETE FROM players WHERE team_id IN (?, ?)", homeTeamId, awayTeamId);
         jdbc.update("DELETE FROM teams WHERE id IN (?, ?)", homeTeamId, awayTeamId);
@@ -105,6 +112,47 @@ class NbaCatalogApiTests {
     }
 
     @Test
+    void anAdminEntersAndCorrectsAScoreThatTheFormUsesRightAway() throws Exception {
+        long gameId = create("/api/v1/games", game(homeTeamId, awayTeamId));
+
+        MvcTestResult recorded = putResult(gameId, """
+                {"homeTeamScore":98,"awayTeamScore":104,"overtimePeriods":1}
+                """);
+        assertThat(recorded).hasStatusOk();
+        assertThat(recorded).bodyJson().extractingPath("$.status").isEqualTo("COMPLETED");
+        assertThat(recorded).bodyJson().extractingPath("$.result.winner.id").isEqualTo((int) awayTeamId);
+        assertThat(recorded).bodyJson().extractingPath("$.result.overtime").isEqualTo(true);
+
+        // Correction : le même match, un autre score, toujours un seul résultat.
+        assertThat(putResult(gameId, """
+                {"homeTeamScore":110,"awayTeamScore":104}
+                """)).hasStatusOk().bodyJson().extractingPath("$.result.winner.id").isEqualTo((int) homeTeamId);
+        GameRecord game = history.teamGames(seasonYear, List.of(homeTeamId)).getFirst();
+        assertThat(game.played()).isTrue();
+        assertThat(game.homePoints()).isEqualTo(110);
+
+        assertThat(mvc.delete().uri("/api/v1/games/{id}/result", gameId).header(HttpHeaders.AUTHORIZATION, admin)
+                .exchange()).hasStatus(204);
+        assertThat(mvc.get().uri("/api/v1/games/{id}", gameId).exchange())
+                .bodyJson().extractingPath("$.status").isEqualTo("SCHEDULED");
+        assertThat(history.teamGames(seasonYear, List.of(homeTeamId)).getFirst().played()).isFalse();
+    }
+
+    @Test
+    void aScoreCannotBeATieAndOnlyAnAdminEntersIt() throws Exception {
+        long gameId = create("/api/v1/games", game(homeTeamId, awayTeamId));
+
+        assertThat(putResult(gameId, """
+                {"homeTeamScore":100,"awayTeamScore":100}
+                """)).hasStatus(400).bodyJson().extractingPath("$.code").isEqualTo("INVALID_GAME_RESULT");
+        assertThat(mvc.put().uri("/api/v1/games/{id}/result", gameId)
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.register(mvc).bearer())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"homeTeamScore":100,"awayTeamScore":90}
+                        """).exchange()).hasStatus(403);
+    }
+
+    @Test
     void theDateRangeIsLimitedToThirtyOneDays() {
         assertThat(mvc.get().uri("/api/v1/games/date-range?startDate=2025-01-01T00:00:00&endDate=2025-03-01T00:00:00")
                 .exchange())
@@ -127,6 +175,11 @@ class NbaCatalogApiTests {
                 {"homeTeamId":%d,"awayTeamId":%d,"seasonId":%d,"gameType":"REGULAR_SEASON",
                  "scheduledDate":"2025-01-10T19:30:00","venue":"Salle de test"}
                 """.formatted(home, away, seasonId);
+    }
+
+    private MvcTestResult putResult(long gameId, String body) {
+        return mvc.put().uri("/api/v1/games/{id}/result", gameId).header(HttpHeaders.AUTHORIZATION, admin)
+                .contentType(MediaType.APPLICATION_JSON).content(body).exchange();
     }
 
     private long create(String uri, String body) throws Exception {
