@@ -1,6 +1,8 @@
 package com.np3tech.hoopmind.ml.spark;
 
 import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
+import com.np3tech.hoopmind.ml.scoring.GameScoreCard;
+import com.np3tech.hoopmind.ml.scoring.GameScoreFeatures;
 import com.np3tech.hoopmind.ml.scoring.ScoringCard;
 import com.np3tech.hoopmind.ml.scoring.TeamForm;
 import com.np3tech.hoopmind.ml.scoring.TeamPrior;
@@ -54,7 +56,36 @@ class JavaScoringParityTests {
                 assertThat(java[i]).as("%s du match %d", feature, game.gameId())
                         .isCloseTo(row.<Double>getAs(feature), within(1e-9));
             }
+            double[] score = GameScoreFeatures.of(
+                    TeamForm.before(season, game.homeTeamId(), game.date(), game.gameId(),
+                            TeamPrior.of(previous, game.homeTeamId())),
+                    TeamForm.before(season, game.awayTeamId(), game.date(), game.gameId(),
+                            TeamPrior.of(previous, game.awayTeamId())),
+                    game.playoff());
+            for (int i = 0; i < score.length; i++) {
+                String feature = GameScoreFeatures.NAMES.get(i);
+                assertThat(score[i]).as("%s du match %d", feature, game.gameId())
+                        .isCloseTo(((Number) row.getAs(feature)).doubleValue(), within(1e-9));
+            }
         }
+    }
+
+    @Test
+    void scoreCardGivesTheSamePointsAsTheSparkPipeline() {
+        Dataset<Row> features = GameFeatureBuilder.gameFeatures(teamGames(history));
+        GameScoreTrainer.Result result = GameScoreTrainer.train(features);
+        GameScoreCard card = GameScoreTrainer.scoreCard(result.model(), "test", "v1", 9.5);
+
+        List<Row> predictions = result.model().transform(features.filter("home_won IS NOT NULL"))
+                .select("raw_score_features", GameScoreTrainer.HOME_PREDICTION, GameScoreTrainer.AWAY_PREDICTION)
+                .collectAsList();
+        assertThat(predictions).hasSizeGreaterThan(500);
+        for (Row prediction : predictions) {
+            double[] values = prediction.<Vector>getAs("raw_score_features").toArray();
+            assertThat(card.homePoints().linearPrediction(values)).isCloseTo(prediction.getDouble(1), within(1e-9));
+            assertThat(card.awayPoints().linearPrediction(values)).isCloseTo(prediction.getDouble(2), within(1e-9));
+        }
+        assertThat(card.marginError()).isEqualTo(9.5);
     }
 
     @Test

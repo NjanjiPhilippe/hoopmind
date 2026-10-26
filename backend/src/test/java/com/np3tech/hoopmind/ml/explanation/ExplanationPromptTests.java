@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.ml.explanation;
 
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -23,6 +24,19 @@ class ExplanationPromptTests {
         assertThat(prompt.indexOf("Net rating")).as("le facteur le plus influent en premier")
                 .isLessThan(prompt.indexOf("Pourcentage de victoires"));
         assertThat(prompt.indexOf("Pourcentage de victoires")).isLessThan(prompt.indexOf("Jours de repos"));
+    }
+
+    @Test
+    void addsTheEstimatedScoreAndThePointAveragesWhenAvailable() {
+        String prompt = ExplanationPrompt.user(Fixtures.requestWithScore(
+                ScorePrediction.of(114.4, 107.2, 10.3, 116.1, 108.5, 111.0, 112.4)));
+
+        assertThat(prompt)
+                .contains("Score estimé : Boston Celtics 114, New York Knicks 107 (écart de 7 points en faveur de Boston "
+                        + "Celtics, erreur moyenne du modèle 10 points sur l'écart).")
+                .contains("Boston Celtics 116,1 marqués, 108,5 encaissés ; New York Knicks 111,0 marqués, 112,4 encaissés.");
+        assertThat(prompt.indexOf("Score estimé")).isLessThan(prompt.indexOf("</donnees>"));
+        assertThat(ExplanationPrompt.user(Fixtures.request())).doesNotContain("Score estimé");
     }
 
     @Test

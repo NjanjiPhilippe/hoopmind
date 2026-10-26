@@ -4,10 +4,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tout ce qu'il faut pour appliquer la régression logistique entraînée, sans Spark : moyennes et écarts-types de
+ * Tout ce qu'il faut pour appliquer une régression entraînée par Spark (logistique pour le vainqueur, linéaire pour
+ * le score), sans Spark : moyennes et écarts-types de
  * la standardisation, poids et ordonnée à l'origine. Enregistrée en JSON à chaque entraînement.
  *
- * @param features variables dans l'ordre des tableaux (doit être {@link GameOutcomeFeatures#NAMES})
+ * @param features variables dans l'ordre des tableaux ({@link GameOutcomeFeatures#NAMES} ou {@link GameScoreFeatures#NAMES})
  */
 public record ScoringCard(String model, String version, List<String> features, double[] means, double[] stds,
                           double[] coefficients, double intercept) {
@@ -25,11 +26,16 @@ public record ScoringCard(String model, String version, List<String> features, d
 
     /** Probabilité de victoire de l'équipe à domicile, calculée comme le pipeline Spark (StandardScaler puis sigmoïde). */
     public double homeWinProbability(double[] features) {
-        double margin = intercept;
+        return 1 / (1 + Math.exp(-linearPrediction(features)));
+    }
+
+    /** Valeur prédite par une régression linéaire (modèle de score) : ordonnée à l'origine plus les contributions. */
+    public double linearPrediction(double[] features) {
+        double value = intercept;
         for (double contribution : contributions(features)) {
-            margin += contribution;
+            value += contribution;
         }
-        return 1 / (1 + Math.exp(-margin));
+        return value;
     }
 
     /**

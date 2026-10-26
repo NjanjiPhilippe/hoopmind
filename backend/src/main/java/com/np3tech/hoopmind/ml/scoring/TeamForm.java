@@ -15,16 +15,18 @@ import java.util.List;
  * <p>
  * Le bilan de la saison passée compte comme {@value #PRIOR_GAMES} matchs : après 10 matchs joués, il pèse encore
  * pour moitié, après 30 pour un quart. Sur les 10 derniers matchs, les places vides (moins de 10 matchs joués)
- * prennent le pourcentage de victoires de la saison passée.
+ * prennent le pourcentage de victoires de la saison passée. Les points marqués et encaissés par match (prédiction du
+ * score) mêlent de la même façon les matchs de la saison et la moyenne de la saison passée.
  */
 public record TeamForm(long gamesPlayed, double winPct, double last10WinPct, double offensiveRating,
-                       double defensiveRating, double restDays) {
+                       double defensiveRating, double restDays, double pointsPerGame, double pointsAllowedPerGame) {
 
     /** Poids du bilan de la saison passée, en nombre de matchs. */
     public static final int PRIOR_GAMES = 10;
     /** Valeurs neutres quand une équipe n'a joué ni cette saison ni la précédente. */
     public static final double NEUTRAL_WIN_PCT = 0.5;
     public static final double NEUTRAL_RATING = 110.0;
+    public static final double NEUTRAL_POINTS = 110.0;
     static final int MAX_REST_DAYS = 7;
     private static final int LAST_GAMES = 10;
 
@@ -57,6 +59,8 @@ public record TeamForm(long gamesPlayed, double winPct, double last10WinPct, dou
 
         long played = 0;
         long wins = 0;
+        long points = 0;
+        long pointsAllowed = 0;
         long boxScoreGames = 0;
         Double scoredWithBoxScore = null;
         double ownPossessions = 0;
@@ -71,6 +75,8 @@ public record TeamForm(long gamesPlayed, double winPct, double last10WinPct, dou
             if (game.played()) {
                 played++;
                 wins += scored > allowed ? 1 : 0;
+                points += scored;
+                pointsAllowed += allowed;
             }
             // Comme à l'entraînement : les possessions ne comptent que si les deux feuilles de match existent.
             if (own != null && opponent != null) {
@@ -94,7 +100,14 @@ public record TeamForm(long gamesPlayed, double winPct, double last10WinPct, dou
                 blendLastTen(lastTenWins, lastTenPlayed, prior.winPct()),
                 blendRating(rating(scoredWithBoxScore, ownPossessions), boxScoreGames, prior.offensiveRating()),
                 blendRating(rating(allowedWithBoxScore, opponentPossessions), boxScoreGames, prior.defensiveRating()),
-                restDays);
+                restDays,
+                blendPoints(points, played, prior.pointsPerGame()),
+                blendPoints(pointsAllowed, played, prior.pointsAllowedPerGame()));
+    }
+
+    /** (points des matchs joués + 10 × moyenne de la saison passée) / (matchs joués + 10). */
+    static double blendPoints(long points, long played, double priorPointsPerGame) {
+        return (points + PRIOR_GAMES * priorPointsPerGame) / (played + PRIOR_GAMES);
     }
 
     /** (victoires + 10 × % de la saison passée) / (matchs joués + 10). */

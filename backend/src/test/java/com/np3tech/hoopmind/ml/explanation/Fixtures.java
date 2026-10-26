@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.ml.explanation;
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,5 +27,16 @@ final class Fixtures {
 
     static ExplanationRequest request() {
         return new ExplanationRequest("Boston Celtics", "New York Knicks", DAY, false, analysis());
+    }
+
+    /** La même prédiction avec un score estimé. */
+    static ExplanationRequest requestWithScore(ScorePrediction score) {
+        GameOutcomeAnalysis analysis = analysis();
+        GameOutcomePrediction prediction = analysis.prediction();
+        return new ExplanationRequest("Boston Celtics", "New York Knicks", DAY, false, new GameOutcomeAnalysis(
+                new GameOutcomePrediction(prediction.homeTeamWins(), prediction.homeWinProbability(),
+                        prediction.awayWinProbability(), prediction.model(), score),
+                analysis.modelVersion(), analysis.intercept(), analysis.factors(), analysis.homeGamesPlayed(),
+                analysis.awayGamesPlayed()));
     }
 }

@@ -5,7 +5,7 @@
     <header>
       <h1 class="text-3xl font-bold text-gray-900">Prédire un match</h1>
       <p class="mt-1 text-gray-600">
-        Choisissez un match du calendrier : le modèle compare la forme des deux équipes sur les matchs joués avant ce jour et donne la probabilité de victoire de chacune.
+        Choisissez un match du calendrier : le modèle compare la forme des deux équipes sur les matchs joués avant ce jour, donne la probabilité de victoire de chacune et estime le score.
       </p>
     </header>
 
@@ -126,7 +126,7 @@
           </div>
 
           <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="!canPredict() || predicting()">
-            {{ predicting() ? 'Calcul…' : 'Prédire le vainqueur' }}
+            {{ predicting() ? 'Calcul…' : 'Prédire le match' }}
           </button>
         </form>
         </details>
@@ -167,6 +167,12 @@
                 Résultat réel : {{ home?.abbreviation }} {{ actual.homeScore }} - {{ actual.awayScore }} {{ away?.abbreviation }}@if (actual.overtime) { (prol.)},
                 victoire de {{ teamName(actual.homeWon ? home : away) }}.
               </span>
+              @if (p.score; as score) {
+                <span class="text-gray-700">
+                  Score estimé {{ home?.abbreviation }} {{ score.homePoints }} - {{ score.awayPoints }} {{ away?.abbreviation }} :
+                  écart manqué de {{ points(marginMiss(score, actual.homeScore, actual.awayScore)) }}.
+                </span>
+              }
             </div>
           }
 
@@ -186,6 +192,33 @@
               </div>
             </div>
           </div>
+
+          @if (p.score; as score) {
+            <section class="rounded-lg border border-gray-200 p-4" aria-labelledby="score-title">
+              <h3 id="score-title" class="text-sm font-semibold text-gray-900">Score estimé</h3>
+              <div class="mt-2 flex items-center justify-center gap-4 sm:gap-6" role="img"
+                   [attr.aria-label]="teamName(home) + ' ' + score.homePoints + ', ' + teamName(away) + ' ' + score.awayPoints">
+                <span class="flex items-center gap-2 text-sm font-medium"><app-team-logo [team]="home" [size]="32" />{{ home?.abbreviation }}</span>
+                <span class="text-3xl font-bold tabular-nums sm:text-4xl">
+                  <span [class.text-gray-400]="!score.homeLeads">{{ score.homePoints }}</span>
+                  <span class="px-1 text-gray-300">-</span>
+                  <span [class.text-gray-400]="score.homeLeads">{{ score.awayPoints }}</span>
+                </span>
+                <span class="flex items-center gap-2 text-sm font-medium">{{ away?.abbreviation }}<app-team-logo [team]="away" [size]="32" /></span>
+              </div>
+              <p class="mt-2 text-center text-sm text-gray-700">
+                {{ teamName(score.homeLeads ? home : away) }} de {{ points(score.margin) }} · total {{ score.total }} points
+              </p>
+              @if (!score.agreesWithFavorite) {
+                <p class="mt-1 text-center text-sm text-amber-700">Le score estimé donne l'avantage à l'autre équipe que le favori : match très serré.</p>
+              }
+              <p class="mt-2 text-xs text-gray-500">
+                Points marqués / encaissés par match avant ce jour : {{ home?.abbreviation }} {{ score.homePointsPerGame | number: '1.1-1' }} / {{ score.homePointsAllowedPerGame | number: '1.1-1' }},
+                {{ away?.abbreviation }} {{ score.awayPointsPerGame | number: '1.1-1' }} / {{ score.awayPointsAllowedPerGame | number: '1.1-1' }}.
+                Une estimation : en moyenne, l'écart réel s'en éloigne de {{ points(score.marginError) }}.
+              </p>
+            </section>
+          }
 
           <p class="text-sm text-gray-600">
             Forme des deux équipes calculée sur leurs matchs de la saison joués avant le {{ p.date }}@if (p.playoff) {, match de play-in ou de playoffs}.
@@ -248,6 +281,10 @@
             <p class="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
               Ce modèle a prédit le bon vainqueur dans {{ report.accuracy | percent: '1.0-0' }} des {{ report.testGames | number }} matchs de la saison {{ report.testSeason }},
               contre {{ report.betterRecordBaseline | percent: '1.0-0' }} pour la règle « le meilleur bilan gagne ».
+              @if (report.score; as score) {
+                Sur l'écart, il se trompe en moyenne de {{ score.marginMeanAbsoluteError | number: '1.1-1' }} points
+                (et de {{ score.pointsMeanAbsoluteError | number: '1.1-1' }} sur les points d'une équipe).
+              }
               Une probabilité proche de 50 % signifie que le match est indécis.
             </p>
           }

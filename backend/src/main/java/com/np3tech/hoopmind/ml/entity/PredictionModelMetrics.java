@@ -50,6 +50,17 @@ public class PredictionModelMetrics {
     @Column(name = "root_mean_squared_error", precision = 6, scale = 2)
     private BigDecimal rootMeanSquaredError;
 
+    /** Modèle de score : erreur moyenne sur les points d'une équipe et sur le total (MAE et RMSE portent sur l'écart). */
+    @Column(name = "points_mean_absolute_error", precision = 6, scale = 2)
+    private BigDecimal pointsMeanAbsoluteError;
+
+    @Column(name = "total_mean_absolute_error", precision = 6, scale = 2)
+    private BigDecimal totalMeanAbsoluteError;
+
+    /** Modèle de score : erreur moyenne sur l'écart de la règle simple, sans modèle. */
+    @Column(name = "baseline_mean_absolute_error", precision = 6, scale = 2)
+    private BigDecimal baselineMeanAbsoluteError;
+
     @Column(name = "confidence_score", precision = 5, scale = 4)
     private BigDecimal confidenceScore;
 

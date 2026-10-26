@@ -4,6 +4,7 @@ import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.GameOutcomePredictor;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.GameRecord;
 import com.np3tech.hoopmind.shared.exception.AppException;
@@ -19,12 +20,13 @@ import java.util.List;
 
 /**
  * Prédit un match en Java pur, en quelques millisecondes : forme des deux équipes à la date du match (même calcul
- * qu'à l'entraînement), puis la régression logistique entraînée par Spark, appliquée avec sa carte de score.
+ * qu'à l'entraînement), puis la régression logistique entraînée par Spark, appliquée avec sa carte de score. Si le
+ * modèle de score a été entraîné, ses deux régressions linéaires donnent aussi les points de chaque équipe.
  * Spark n'est nécessaire que pour entraîner ; les prédictions fonctionnent même s'il est désactivé.
  * <p>
  * Monitoring ({@code /actuator/prometheus}) : {@code hoopmind.ml.predictions} mesure chaque prédiction (par version
  * du modèle et résultat, {@code ok} ou le code d'erreur), et {@code hoopmind.ml.home.win.probability} répartit les
- * probabilités prédites. Une répartition qui se déplace sans nouvel entraînement signale une dérive des données.
+ * probabilités prédites, {@code hoopmind.ml.predicted.margin} les écarts de points prédits. Une répartition qui se déplace sans nouvel entraînement signale une dérive des données.
  */
 @Component
 class ScoringGameOutcomePredictor implements GameOutcomePredictor {
@@ -91,10 +93,23 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
         }
         double[] features = GameOutcomeFeatures.of(home, away, playoff);
         double probability = card.homeWinProbability(features);
-        GameOutcomePrediction prediction =
-                new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability, card.model());
+        GameOutcomePrediction prediction = new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability,
+                card.model(), cards.currentScore().map(score -> score(score, home, away, playoff)).orElse(null));
         return new GameOutcomeAnalysis(prediction, card.version(), card.intercept(),
                 factors(home, away, playoff, card.contributions(features)), home.gamesPlayed(), away.gamesPlayed());
+    }
+
+    private ScorePrediction score(GameScoreCard card, TeamForm home, TeamForm away, boolean playoff) {
+        double[] features = GameScoreFeatures.of(home, away, playoff);
+        ScorePrediction score = ScorePrediction.of(card.homePoints().linearPrediction(features),
+                card.awayPoints().linearPrediction(features), card.marginError(), home.pointsPerGame(),
+                home.pointsAllowedPerGame(), away.pointsPerGame(), away.pointsAllowedPerGame());
+        DistributionSummary.builder("hoopmind.ml.predicted.margin")
+                .description("Écart de points prédit, en valeur absolue")
+                .tag("model_version", card.version())
+                .serviceLevelObjectives(2, 5, 8, 12, 16, 20)
+                .register(registry).record(Math.abs(score.margin()));
+        return score;
     }
 
     /** Valeurs de chaque côté, dans l'ordre de {@link GameOutcomeFeatures#NAMES}. */

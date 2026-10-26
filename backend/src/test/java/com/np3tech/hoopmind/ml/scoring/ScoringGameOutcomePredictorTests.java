@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.ml.scoring;
 
 import com.np3tech.hoopmind.ml.MlProperties;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 import com.np3tech.hoopmind.nba.GameHistory;
 import com.np3tech.hoopmind.nba.GameRecord;
 import com.np3tech.hoopmind.nba.GameRecord.BoxScore;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 class ScoringGameOutcomePredictorTests {
 
@@ -47,6 +49,40 @@ class ScoringGameOutcomePredictorTests {
                 .timer().count()).isEqualTo(1);
         assertThat(registry.get("hoopmind.ml.home.win.probability").tag("model_version", "v7").summary().totalAmount())
                 .isEqualTo(probability);
+    }
+
+    @Test
+    void predictsTheScoreOnceTheScoreModelIsTrained() {
+        ScoringCardStore cards = store();
+        cards.save(new ScoringCard("logistic-regression", "v7", GameOutcomeFeatures.NAMES,
+                new double[]{0, 0, 0, 0, 0.1}, new double[]{0.2, 0.25, 8, 1.5, 0},
+                new double[]{0.9, 0.3, 0.6, 0.1, 0.4}, 0.15));
+        ScoringGameOutcomePredictor predictor = new ScoringGameOutcomePredictor(new Season(), cards, registry);
+        assertThat(predictor.predict(10, CELTICS, LAKERS, DAY.plusDays(5), false).score())
+                .as("modèle entraîné avant l'ajout du score").isNull();
+
+        // Sans standardisation (moyennes 0, écarts-types 1) : points = ordonnée + somme des poids × variables.
+        double[] zeros = new double[GameScoreFeatures.NAMES.size()];
+        double[] ones = {1, 1, 1, 1, 1, 1};
+        cards.save(new GameScoreCard("linear-regression", "v7",
+                new ScoringCard("linear-regression", "v7", GameScoreFeatures.NAMES, zeros, ones,
+                        new double[]{0.5, 0, 0, 0.5, 0, 0}, 1.5),
+                new ScoringCard("linear-regression", "v7", GameScoreFeatures.NAMES, zeros, ones,
+                        new double[]{0, 0.5, 0.5, 0, 0, 0}, -1.5),
+                11.2));
+        ScorePrediction score = predictor.predict(10, CELTICS, LAKERS, DAY.plusDays(5), false).score();
+
+        // Le faux historique renvoie les deux mêmes matchs pour chaque saison : Celtics 112,5 marqués et 105 encaissés
+        // par match, cette saison comme la précédente ; les Lakers l'inverse.
+        double celticsScored = 112.5;
+        double celticsAllowed = 105.0;
+        assertThat(score.homePointsPerGame()).isEqualTo(celticsScored);
+        assertThat(score.awayPointsPerGame()).isEqualTo(celticsAllowed);
+        assertThat(score.margin()).isCloseTo(3.0 + celticsScored - celticsAllowed, within(1e-9));
+        assertThat(score.homePoints()).isEqualTo((int) Math.round(1.5 + celticsScored));
+        assertThat(score.awayPoints()).isEqualTo((int) Math.round(-1.5 + celticsAllowed));
+        assertThat(score.marginError()).isEqualTo(11.2);
+        assertThat(registry.get("hoopmind.ml.predicted.margin").tag("model_version", "v7").summary().count()).isEqualTo(1);
     }
 
     @Test

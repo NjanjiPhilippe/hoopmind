@@ -33,8 +33,8 @@ class PredictionExplanationController {
     }
 
     @GetMapping("/predict/game/explanation")
-    @Operation(operationId = "explainGameOutcome", summary = "Prédire le vainqueur d'un match et expliquer pourquoi",
-            description = "Même prédiction que GET /predict/game, avec le poids de chaque facteur et une explication en "
+    @Operation(operationId = "explainGameOutcome", summary = "Prédire le vainqueur et le score d'un match et expliquer pourquoi",
+            description = "Même prédiction que GET /predict/game (score compris), avec le poids de chaque facteur et une explication en "
                     + "français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des "
                     + "seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui "
                     + "(fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a joué aucun "
