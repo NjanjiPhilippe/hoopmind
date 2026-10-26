@@ -1,0 +1,187 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header>
+      <a routerLink="/admin" class="text-sm font-medium text-primary-600 hover:underline">← Administration</a>
+      <h1 class="mt-2 text-3xl font-bold text-gray-900">Joueurs</h1>
+      <p class="mt-1 text-gray-600">Effectif de chaque équipe et statistiques de saison de chaque joueur (moyennes par match).</p>
+    </header>
+
+    @if (catalog.empty()) {
+      <div class="card text-sm text-gray-600">
+        Aucune équipe en base. Importez d'abord les données depuis la page <a routerLink="/admin/data" class="font-medium text-primary-600 hover:underline">Données</a>.
+      </div>
+    } @else {
+      <label class="block max-w-sm text-sm">
+        <span class="mb-1 block font-medium text-gray-700">Équipe</span>
+        <select class="input-field" (change)="teamId.set(+$any($event.target).value)">
+          @for (t of catalog.teams(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === teamId()">{{ teamName(t) }}</option>
+          }
+        </select>
+      </label>
+
+      @if (error(); as message) {
+        <p class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</p>
+      }
+      @if (notice(); as message) {
+        <p class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700" role="status">{{ message }}</p>
+      }
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <section class="card lg:col-span-3" aria-labelledby="roster-title">
+          <h2 id="roster-title" class="mb-3 flex items-center gap-2 text-lg font-bold">
+            <app-team-logo [team]="team()" [size]="26" /> Effectif
+          </h2>
+          @if (roster.isLoading() && players().length === 0) {
+            <p class="text-sm text-gray-500">Chargement…</p>
+          } @else if (players().length === 0) {
+            <p class="text-sm text-gray-500">Aucun joueur pour cette équipe : ajoutez-le avec le formulaire.</p>
+          } @else {
+            <ul class="divide-y divide-gray-100 text-sm">
+              @for (player of players(); track player.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2" [class.bg-primary-50]="selected()?.id === player.id">
+                  <span class="flex min-w-0 items-center gap-3">
+                    <span class="w-8 shrink-0 text-right font-mono text-gray-500">{{ player.jerseyNumber ?? '–' }}</span>
+                    <span>
+                      <span class="font-medium">{{ player.firstName }} {{ player.lastName }}</span>
+                      <span class="block text-xs text-gray-500">
+                        {{ positionLabel(player.position) }}@if (player.status !== 'ACTIVE') { · {{ statusLabel(player.status) }} }
+                        @if (player.height) { · {{ player.height }} cm }
+                      </span>
+                    </span>
+                  </span>
+                  <span class="flex gap-2">
+                    <button type="button" class="btn-secondary px-3 py-1 text-xs" (click)="selected.set(player)">Statistiques</button>
+                    <button type="button" class="btn-secondary px-3 py-1 text-xs" (click)="editing.set(player)">Modifier</button>
+                    <button type="button" class="btn-secondary px-3 py-1 text-xs" [disabled]="busy()" (click)="removePlayer(player)">Supprimer</button>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="card lg:col-span-2" aria-labelledby="player-form-title">
+          <h2 id="player-form-title" class="mb-3 text-lg font-bold">
+            @if (editing(); as player) { Modifier {{ player.firstName }} {{ player.lastName }} } @else { Ajouter un joueur }
+          </h2>
+          @let p = editing();
+          <form class="grid grid-cols-2 gap-3 text-sm" (submit)="savePlayer($event)">
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Prénom</span>
+              <input name="firstName" class="input-field" required maxlength="100" [value]="p?.firstName ?? ''" />
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Nom</span>
+              <input name="lastName" class="input-field" required maxlength="100" [value]="p?.lastName ?? ''" />
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Poste</span>
+              <select name="position" class="input-field">
+                @for (option of positions; track option.value) {
+                  <option [value]="option.value" [selected]="option.value === p?.position">{{ option.label }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Numéro</span>
+              <input name="jerseyNumber" class="input-field" type="number" min="0" max="99" [value]="p?.jerseyNumber ?? ''" />
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Taille (cm)</span>
+              <input name="height" class="input-field" inputmode="decimal" [value]="p?.height ?? ''" />
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Poids (kg)</span>
+              <input name="weight" class="input-field" inputmode="decimal" [value]="p?.weight ?? ''" />
+            </label>
+            @if (p) {
+              <label class="col-span-2">
+                <span class="mb-1 block font-medium text-gray-700">Statut</span>
+                <select name="status" class="input-field">
+                  @for (option of statuses; track option.value) {
+                    <option [value]="option.value" [selected]="option.value === p.status">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+            }
+            <div class="col-span-2 flex gap-2">
+              <button type="submit" class="btn-primary" [disabled]="busy()">{{ p ? 'Enregistrer' : 'Ajouter' }}</button>
+              @if (p) {
+                <button type="button" class="btn-secondary" (click)="editing.set(null)">Annuler</button>
+              }
+            </div>
+          </form>
+        </section>
+      </div>
+
+      @if (selected(); as player) {
+        <section class="card space-y-4" aria-labelledby="stats-title">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="stats-title" class="text-lg font-bold">Statistiques de {{ player.firstName }} {{ player.lastName }}</h2>
+            <button type="button" class="text-sm font-medium text-primary-700 hover:underline" (click)="selected.set(null)">Fermer</button>
+          </div>
+
+          @if ((currentValue(stats) ?? []).length > 0) {
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase text-gray-500">
+                  <tr><th class="py-1 pr-3">Saison</th><th class="pr-3">MJ</th><th class="pr-3">Pts</th><th class="pr-3">Reb</th><th class="pr-3">Pd</th><th class="pr-3">Tirs</th><th class="pr-3">3 pts</th><th></th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (row of currentValue(stats) ?? []; track row.season?.id) {
+                    <tr>
+                      <td class="py-1 pr-3 font-medium">{{ row.season?.name }}</td>
+                      <td class="pr-3">{{ row.gamesPlayed }}</td>
+                      <td class="pr-3">{{ row.pointsPerGame ?? '–' }}</td>
+                      <td class="pr-3">{{ row.totalReboundsPerGame ?? '–' }}</td>
+                      <td class="pr-3">{{ row.assistsPerGame ?? '–' }}</td>
+                      <td class="pr-3">@if (row.fieldGoalPercentage != null) { {{ row.fieldGoalPercentage * 100 | number: '1.1-1' }} % } @else { – }</td>
+                      <td class="pr-3">@if (row.threePointPercentage != null) { {{ row.threePointPercentage * 100 | number: '1.1-1' }} % } @else { – }</td>
+                      <td class="text-right">
+                        <button type="button" class="text-xs font-medium text-red-600 hover:underline" [disabled]="busy()" (click)="removeStats(row)">Retirer</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (!stats.isLoading()) {
+            <p class="text-sm text-gray-500">Aucune statistique saisie pour ce joueur.</p>
+          }
+
+          @let s = statsForSeason();
+          <form class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4" (submit)="saveStats($event)">
+            <label class="col-span-2">
+              <span class="mb-1 block font-medium text-gray-700">Saison</span>
+              <select class="input-field" (change)="statsSeasonId.set(+$any($event.target).value)">
+                @for (season of catalog.seasons(); track season.id) {
+                  <option [value]="season.id" [selected]="season.id === statsSeasonId()">{{ season.name }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Matchs joués</span>
+              <input name="gamesPlayed" class="input-field" type="number" min="0" max="110" required [value]="s?.gamesPlayed ?? ''" />
+            </label>
+            <label>
+              <span class="mb-1 block font-medium text-gray-700">Titularisations</span>
+              <input name="gamesStarted" class="input-field" type="number" min="0" max="110" [value]="s?.gamesStarted ?? ''" />
+            </label>
+            @for (field of statFields; track field.key) {
+              <label>
+                <span class="mb-1 block font-medium text-gray-700">{{ field.label }}</span>
+                <input [name]="field.key" class="input-field" inputmode="decimal" [value]="statValue(s, field.key, field.percent)" />
+              </label>
+            }
+            <div class="col-span-2 sm:col-span-4">
+              <button type="submit" class="btn-primary" [disabled]="busy()">{{ s ? 'Mettre à jour' : 'Enregistrer' }} la saison</button>
+            </div>
+          </form>
+        </section>
+      }
+    }
+  </main>
+</div>

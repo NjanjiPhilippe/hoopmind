@@ -22,6 +22,11 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./results/admin-results.component').then(m => m.AdminResultsComponent),
   },
   {
+    path: 'players',
+    title: 'Joueurs · HoopMind',
+    loadComponent: () => import('./players/admin-players.component').then(m => m.AdminPlayersComponent),
+  },
+  {
     path: 'audit',
     title: "Journal d'audit · HoopMind",
     loadComponent: () => import('./audit/admin-audit.component').then(m => m.AdminAuditComponent),

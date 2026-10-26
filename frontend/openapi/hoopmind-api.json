@@ -365,6 +365,90 @@
         }
       }
     },
+    "/api/v1/players/{id}/stats/{seasonId}": {
+      "put": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Saisir les statistiques d'un joueur sur une saison",
+        "description": "Crée ou remplace la ligne de cette saison. Moyennes par match ; pourcentages entre 0 et 1.",
+        "operationId": "savePlayerSeasonStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayerSeasonStatsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerSeasonStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Retirer les statistiques d'un joueur sur une saison",
+        "operationId": "deletePlayerSeasonStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seasonId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/games/{id}": {
       "get": {
         "tags": [
@@ -1594,6 +1678,42 @@
         ]
       }
     },
+    "/api/v1/players/{id}/stats": {
+      "get": {
+        "tags": [
+          "Players"
+        ],
+        "summary": "Statistiques d'un joueur, saison par saison",
+        "description": "La plus récente d'abord.",
+        "operationId": "getPlayerSeasonStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlayerSeasonStatsResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/players/team/{teamId}": {
       "get": {
         "tags": [
@@ -2245,10 +2365,14 @@
         "type": "object",
         "properties": {
           "firstName": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1
           },
           "lastName": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1
           },
           "position": {
             "type": "string",
@@ -2262,7 +2386,9 @@
           },
           "jerseyNumber": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "maximum": 99,
+            "minimum": 0
           },
           "teamId": {
             "type": "integer",
@@ -2270,14 +2396,29 @@
           },
           "height": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "maximum": 260
           },
           "weight": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "maximum": 200
           },
           "photoUrl": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE",
+              "INJURED",
+              "SUSPENDED"
+            ]
           }
         }
       },
@@ -2379,6 +2520,142 @@
             "type": "string"
           },
           "logoUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerSeasonStatsRequest": {
+        "type": "object",
+        "properties": {
+          "gamesPlayed": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 110,
+            "minimum": 0
+          },
+          "gamesStarted": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 110,
+            "minimum": 0
+          },
+          "minutesPerGame": {
+            "type": "number",
+            "maximum": 60,
+            "minimum": 0
+          },
+          "pointsPerGame": {
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0
+          },
+          "totalReboundsPerGame": {
+            "type": "number",
+            "maximum": 40,
+            "minimum": 0
+          },
+          "assistsPerGame": {
+            "type": "number",
+            "maximum": 30,
+            "minimum": 0
+          },
+          "stealsPerGame": {
+            "type": "number",
+            "maximum": 15,
+            "minimum": 0
+          },
+          "blocksPerGame": {
+            "type": "number",
+            "maximum": 15,
+            "minimum": 0
+          },
+          "turnoversPerGame": {
+            "type": "number",
+            "maximum": 15,
+            "minimum": 0
+          },
+          "fieldGoalPercentage": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0
+          },
+          "threePointPercentage": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0
+          },
+          "freeThrowPercentage": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "gamesPlayed"
+        ]
+      },
+      "PlayerSeasonStatsResponse": {
+        "type": "object",
+        "properties": {
+          "playerId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "season": {
+            "$ref": "#/components/schemas/SeasonSummaryResponse"
+          },
+          "gamesPlayed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gamesStarted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minutesPerGame": {
+            "type": "number"
+          },
+          "pointsPerGame": {
+            "type": "number"
+          },
+          "totalReboundsPerGame": {
+            "type": "number"
+          },
+          "assistsPerGame": {
+            "type": "number"
+          },
+          "stealsPerGame": {
+            "type": "number"
+          },
+          "blocksPerGame": {
+            "type": "number"
+          },
+          "turnoversPerGame": {
+            "type": "number"
+          },
+          "fieldGoalPercentage": {
+            "type": "number"
+          },
+          "threePointPercentage": {
+            "type": "number"
+          },
+          "freeThrowPercentage": {
+            "type": "number"
+          }
+        }
+      },
+      "SeasonSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
             "type": "string"
           }
         }
@@ -2496,22 +2773,6 @@
           },
           "overtime": {
             "type": "boolean"
-          }
-        }
-      },
-      "SeasonSummaryResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "year": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "name": {
-            "type": "string"
           }
         }
       },
@@ -2886,11 +3147,13 @@
         "properties": {
           "firstName": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 100,
+            "minLength": 0
           },
           "lastName": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 100,
+            "minLength": 0
           },
           "position": {
             "type": "string",
@@ -2904,7 +3167,9 @@
           },
           "jerseyNumber": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "maximum": 99,
+            "minimum": 0
           },
           "teamId": {
             "type": "integer",
@@ -2922,11 +3187,15 @@
           },
           "height": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "maximum": 260
           },
           "weight": {
             "type": "number",
-            "format": "double"
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "maximum": 200
           },
           "experience": {
             "type": "integer",

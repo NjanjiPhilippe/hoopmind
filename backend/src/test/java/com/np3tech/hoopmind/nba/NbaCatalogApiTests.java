@@ -58,6 +58,7 @@ class NbaCatalogApiTests {
     void deleteCatalog() {
         jdbc.update("DELETE FROM game_results WHERE game_id IN (SELECT id FROM games WHERE season_id = ?)", seasonId);
         jdbc.update("DELETE FROM games WHERE season_id = ?", seasonId);
+        jdbc.update("DELETE FROM player_stats WHERE season_id = ?", seasonId);
         jdbc.update("DELETE FROM players WHERE team_id IN (?, ?)", homeTeamId, awayTeamId);
         jdbc.update("DELETE FROM teams WHERE id IN (?, ?)", homeTeamId, awayTeamId);
         jdbc.update("DELETE FROM seasons WHERE id = ?", seasonId);
@@ -150,6 +151,62 @@ class NbaCatalogApiTests {
                 .contentType(MediaType.APPLICATION_JSON).content("""
                         {"homeTeamScore":100,"awayTeamScore":90}
                         """).exchange()).hasStatus(403);
+    }
+
+    @Test
+    void anAdminEntersAPlayerAndTheirSeasonStats() throws Exception {
+        long playerId = create("/api/v1/players", """
+                {"firstName":"Joueur","lastName":"Saisi","position":"POINT_GUARD","jerseyNumber":7,"teamId":%d,"height":191}
+                """.formatted(homeTeamId));
+
+        assertThat(putStats(playerId, admin, """
+                {"gamesPlayed":70,"gamesStarted":68,"pointsPerGame":24.6,"assistsPerGame":8.1,"fieldGoalPercentage":0.475}
+                """)).hasStatusOk().bodyJson().extractingPath("$.season.id").isEqualTo((int) seasonId);
+        // Une nouvelle saisie remplace la précédente.
+        assertThat(putStats(playerId, admin, """
+                {"gamesPlayed":72,"pointsPerGame":25.0}
+                """)).hasStatusOk();
+
+        MvcTestResult stats = mvc.get().uri("/api/v1/players/{id}/stats", playerId).exchange();
+        assertThat(stats).hasStatusOk();
+        assertThat(stats).bodyJson().extractingPath("$.length()").isEqualTo(1);
+        assertThat(stats).bodyJson().extractingPath("$[0].gamesPlayed").isEqualTo(72);
+        assertThat(stats).bodyJson().extractingPath("$[0].pointsPerGame").isEqualTo(25.0);
+
+        assertThat(mvc.put().uri("/api/v1/players/{id}", playerId).header(HttpHeaders.AUTHORIZATION, admin)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"status":"INJURED","jerseyNumber":11}
+                        """)).hasStatusOk().bodyJson().extractingPath("$.status").isEqualTo("INJURED");
+
+        // Supprimer le joueur supprime ses statistiques.
+        assertThat(mvc.delete().uri("/api/v1/players/{id}", playerId).header(HttpHeaders.AUTHORIZATION, admin)).hasStatus(204);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM player_stats WHERE player_id = ?", Integer.class, playerId)).isZero();
+    }
+
+    @Test
+    void playerStatsAreValidatedAndOnlyAnAdminEntersThem() throws Exception {
+        long playerId = create("/api/v1/players", """
+                {"firstName":"Joueur","lastName":"Contrôlé","position":"CENTER","teamId":%d}
+                """.formatted(homeTeamId));
+
+        assertThat(putStats(playerId, admin, """
+                {"gamesPlayed":10,"gamesStarted":12}
+                """)).hasStatus(400).bodyJson().extractingPath("$.code").isEqualTo("INVALID_PLAYER_STATS");
+        assertThat(putStats(playerId, admin, """
+                {"gamesPlayed":10,"fieldGoalPercentage":47.5}
+                """)).hasStatus(400);
+        assertThat(putStats(playerId, TestAccounts.register(mvc).bearer(), """
+                {"gamesPlayed":10}
+                """)).hasStatus(403);
+        assertThat(mvc.post().uri("/api/v1/players").header(HttpHeaders.AUTHORIZATION, admin)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"firstName":"Joueur","lastName":"Numéro","position":"CENTER","teamId":%d,"jerseyNumber":120}
+                        """.formatted(homeTeamId))).hasStatus(400);
+    }
+
+    private MvcTestResult putStats(long playerId, String bearer, String body) {
+        return mvc.put().uri("/api/v1/players/{id}/stats/{seasonId}", playerId, seasonId).header(HttpHeaders.AUTHORIZATION, bearer)
+                .contentType(MediaType.APPLICATION_JSON).content(body).exchange();
     }
 
     private String team(String name) {
