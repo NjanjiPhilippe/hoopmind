@@ -56,6 +56,51 @@
         </section>
       </div>
 
+      <div class="grid grid-cols-1 gap-6" [class.lg:grid-cols-2]="auth.isAdmin()">
+        <section class="card" aria-labelledby="mine-title">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 id="mine-title" class="text-lg font-bold">Mes dernières prédictions</h2>
+            <a routerLink="/predictions" class="text-sm font-medium text-primary-700 hover:underline">Toutes mes prédictions</a>
+          </div>
+          @if (myPredictions.isLoading()) {
+            <p class="text-sm text-gray-500">Chargement…</p>
+          } @else if ((currentValue(myPredictions)?.content ?? []).length === 0) {
+            <p class="text-sm text-gray-500">Vous n'avez encore rien prédit : choisissez un match à venir ci-dessous ou ouvrez la page Prédire.</p>
+          } @else {
+            <ul class="divide-y divide-gray-100 text-sm">
+              @for (entry of currentValue(myPredictions)?.content ?? []; track entry.id) {
+                @let summary = summarize(entry);
+                <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span class="w-20 shrink-0 text-gray-500">{{ entry.gameDate | date: 'd MMM' }}</span>
+                  <span class="flex-1">{{ entry.awayTeam }} <span class="text-gray-400">&#64;</span> {{ entry.homeTeam }}</span>
+                  <a routerLink="/predict" [queryParams]="predictParams(entry)" class="font-medium"
+                     [class.text-green-700]="summary.verdict === 'correct'" [class.text-red-700]="summary.verdict === 'wrong'"
+                     [class.text-primary-700]="summary.verdict === 'pending'">
+                    {{ summary.winner }} {{ summary.probability | percent: '1.0-0' }}
+                    @switch (summary.verdict) {
+                      @case ('correct') { · bon }
+                      @case ('wrong') { · raté }
+                    }
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        @if (auth.isAdmin()) {
+          <section class="card" aria-labelledby="admin-title">
+            <h2 id="admin-title" class="mb-3 text-lg font-bold">Administration</h2>
+            <ul class="grid grid-cols-2 gap-3 text-sm">
+              <li><a routerLink="/admin/data" class="block rounded-lg border border-gray-200 p-3 font-medium hover:border-primary-300 hover:bg-primary-50">Données et modèle</a></li>
+              <li><a routerLink="/admin/results" class="block rounded-lg border border-gray-200 p-3 font-medium hover:border-primary-300 hover:bg-primary-50">Saisie des résultats</a></li>
+              <li><a routerLink="/admin/users" class="block rounded-lg border border-gray-200 p-3 font-medium hover:border-primary-300 hover:bg-primary-50">Utilisateurs</a></li>
+              <li><a routerLink="/admin/audit" class="block rounded-lg border border-gray-200 p-3 font-medium hover:border-primary-300 hover:bg-primary-50">Journal d'audit</a></li>
+            </ul>
+          </section>
+        }
+      </div>
+
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section class="card" aria-labelledby="results-title">
           <div class="mb-3 flex items-center justify-between">

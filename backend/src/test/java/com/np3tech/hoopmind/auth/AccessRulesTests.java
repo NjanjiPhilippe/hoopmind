@@ -66,6 +66,7 @@ class AccessRulesTests {
             *      /api/v1/teams/**                         ADMIN
             *      /api/v1/players/**                       ADMIN
             *      /api/v1/seasons/**                       ADMIN
+            *      /api/v1/predictions/mine/**              USER
             *      /api/v1/spark/ml/train/**                ADMIN
             GET    /api/v1/spark/ml/**                      USER
             """;

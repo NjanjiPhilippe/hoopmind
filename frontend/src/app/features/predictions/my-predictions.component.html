@@ -1,0 +1,83 @@
+<div class="min-h-screen bg-gray-50">
+  <app-navbar />
+
+  <main class="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <header class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Mes prédictions</h1>
+        <p class="mt-1 text-gray-600">Chaque match que vous avez prédit, avec le verdict une fois qu'il est joué. Vous seul les voyez.</p>
+      </div>
+      <a routerLink="/predict" class="btn-primary">Prédire un match</a>
+    </header>
+
+    @if (score(); as s) {
+      <p class="text-sm text-gray-700">{{ s.correct }} bon(s) pronostic(s) sur {{ s.played }} match(s) joué(s) sur cette page.</p>
+    }
+
+    @if (error(); as message) {
+      <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert">{{ message }}</div>
+    }
+
+    @if (predictions.isLoading() && rows().length === 0) {
+      <p class="text-sm text-gray-500">Chargement…</p>
+    } @else if (predictions.error()) {
+      <p class="text-sm text-red-600" role="alert">Impossible de charger vos prédictions.</p>
+    } @else if (rows().length === 0) {
+      <section class="card space-y-3 text-center">
+        <p class="text-gray-600">Vous n'avez encore rien prédit.</p>
+        <a routerLink="/predict" class="btn-primary inline-block">Faire une première prédiction</a>
+      </section>
+    } @else {
+      <ul class="space-y-3">
+        @for (entry of rows(); track entry.id) {
+          @let summary = summarize(entry);
+          <li class="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0 space-y-1">
+              <p class="text-xs text-gray-500">
+                {{ entry.gameDate | date: 'EEEE d MMMM y' }}@if (entry.playoff) { · playoffs } · prédit le {{ entry.predictedAt | date: 'd MMM, HH:mm' }}
+              </p>
+              <p class="flex flex-wrap items-center gap-2 font-semibold text-gray-900">
+                <app-team-logo [team]="catalog.teamsById().get(entry.awayTeamId)" [size]="22" />
+                <span>{{ entry.awayTeam }}</span>
+                <span class="text-gray-400">&#64;</span>
+                <app-team-logo [team]="catalog.teamsById().get(entry.homeTeamId)" [size]="22" />
+                <span>{{ entry.homeTeam }}</span>
+              </p>
+              <p class="text-sm text-gray-700">
+                Favori : <span class="font-medium">{{ summary.winner }}</span> ({{ summary.probability | percent: '1.0-0' }})
+                @if (summary.predictedScore; as predicted) { · score prédit {{ predicted }} }
+              </p>
+            </div>
+
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+              @switch (summary.verdict) {
+                @case ('correct') {
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">Bon pronostic · {{ summary.actualScore }}</span>
+                }
+                @case ('wrong') {
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">Raté · {{ summary.actualScore }}</span>
+                }
+                @default {
+                  <span class="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700">Pas encore joué</span>
+                }
+              }
+              <a routerLink="/predict" [queryParams]="predictParams(entry)" class="btn-secondary text-sm">Revoir</a>
+              <button type="button" class="btn-secondary text-sm" [disabled]="busyId() === entry.id" (click)="remove(entry)"
+                      [attr.aria-label]="'Retirer la prédiction ' + entry.awayTeam + ' chez ' + entry.homeTeam">Retirer</button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      @if (pageInfo(); as info) {
+        @if (info.totalPages! > 1) {
+          <nav class="flex items-center justify-center gap-3 text-sm" aria-label="Pages">
+            <button type="button" class="btn-secondary" [disabled]="page() === 0" (click)="page.set(page() - 1)">Précédent</button>
+            <span>Page {{ page() + 1 }} / {{ info.totalPages }}</span>
+            <button type="button" class="btn-secondary" [disabled]="page() + 1 >= info.totalPages!" (click)="page.set(page() + 1)">Suivant</button>
+          </nav>
+        }
+      }
+    }
+  </main>
+</div>

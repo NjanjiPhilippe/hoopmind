@@ -29,3 +29,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0022](0022-forme-de-debut-de-saison.md) | Forme de début de saison à partir de la saison passée, saisie des scores par l'administrateur | Proposée |
 | [0023](0023-prediction-du-score.md) | Prédire le score : deux régressions linéaires sur les moyennes de points | Proposée |
 | [0024](0024-allegement-du-backend.md) | Allègement du backend : routes inutilisées, stats.nba.com, module ML fermé | Proposée |
+| [0025](0025-predictions-par-utilisateur.md) | Chaque utilisateur garde ses prédictions, et ne voit que les siennes | Proposée |

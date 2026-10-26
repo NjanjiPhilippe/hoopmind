@@ -33,3 +33,5 @@ databaseChangeLog:
       file: db/changelog/changes/016-score-model-metrics.yaml
   - include:
       file: db/changelog/changes/017-drop-legacy-tables.yaml
+  - include:
+      file: db/changelog/changes/018-prediction-history.yaml
