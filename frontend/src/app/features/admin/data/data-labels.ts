@@ -1,6 +1,5 @@
 import { EoinMooreJobStatus } from '../../../core/api/generated/models/eoin-moore-job-status';
 import { JobStatus } from '../../../core/api/generated/models/job-status';
-import { StatsNbaJobStatus } from '../../../core/api/generated/models/stats-nba-job-status';
 import { TrainingJobStatus } from '../../../core/api/generated/models/training-job-status';
 import { TrainingReport } from '../../../core/api/generated/models/training-report';
 
@@ -59,30 +58,6 @@ export function trainingPhaseLabel(phase: TrainingJobStatus['phase']): string {
 
 export function isRunning(job: JobStatus | null | undefined): boolean {
   return job?.phase === 'DOWNLOADING' || job?.phase === 'IMPORTING';
-}
-
-const STATS_NBA_PHASE_LABELS: Record<NonNullable<StatsNbaJobStatus['phase']>, string> = {
-  FETCHING: 'Lecture de stats.nba.com',
-  IMPORTING: 'Import en base',
-  SUCCEEDED: 'Import terminé',
-  FAILED: 'Échec',
-  INTERRUPTED: 'Interrompu (serveur redémarré)',
-};
-
-export function statsNbaPhaseLabel(phase: StatsNbaJobStatus['phase']): string {
-  return phase ? STATS_NBA_PHASE_LABELS[phase] : '';
-}
-
-export function isStatsNbaRunning(job: StatsNbaJobStatus | null | undefined): boolean {
-  return job?.phase === 'FETCHING' || job?.phase === 'IMPORTING';
-}
-
-/** Part des requêtes à stats.nba.com déjà faites (0 à 100), ou null tant que leur nombre est inconnu. */
-export function fetchPercent(job: StatsNbaJobStatus | null | undefined): number | null {
-  if (!job?.requests || job.fetched == null) {
-    return null;
-  }
-  return Math.min(100, Math.round((job.fetched / job.requests) * 100));
 }
 
 const EOIN_MOORE_PHASE_LABELS: Record<NonNullable<EoinMooreJobStatus['phase']>, string> = {

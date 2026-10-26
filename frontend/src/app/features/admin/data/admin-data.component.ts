@@ -5,12 +5,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Api } from '../../../core/api/generated/api';
 import { getEoinMooreStatus } from '../../../core/api/generated/fn/import-des-donnees/get-eoin-moore-status';
 import { getNbaDatabaseStatus } from '../../../core/api/generated/fn/import-des-donnees/get-nba-database-status';
-import { getStatsNbaStatus } from '../../../core/api/generated/fn/import-des-donnees/get-stats-nba-status';
 import { importReferenceCsv } from '../../../core/api/generated/fn/import-des-donnees/import-reference-csv';
 import { listReferenceDatasets } from '../../../core/api/generated/fn/import-des-donnees/list-reference-datasets';
 import { startEoinMooreImport } from '../../../core/api/generated/fn/import-des-donnees/start-eoin-moore-import';
 import { startNbaDatabaseImport } from '../../../core/api/generated/fn/import-des-donnees/start-nba-database-import';
-import { startStatsNbaImport } from '../../../core/api/generated/fn/import-des-donnees/start-stats-nba-import';
 import { getModelMetrics } from '../../../core/api/generated/fn/spark-analytics/get-model-metrics';
 import { getGameOutcomeTrainingStatus } from '../../../core/api/generated/fn/spark-analytics/get-game-outcome-training-status';
 import { startGameOutcomeTraining } from '../../../core/api/generated/fn/spark-analytics/start-game-outcome-training';
@@ -25,17 +23,14 @@ import {
   downloadPercent,
   eoinMoorePhaseLabel,
   featureLabel,
-  fetchPercent,
   formatBytes,
   formatDuration,
   gainOverBaseline,
   isEoinMooreRunning,
   isRunning,
-  isStatsNbaRunning,
   isTraining,
   phaseLabel,
   seasonName,
-  statsNbaPhaseLabel,
   trainingPhaseLabel,
   validSeasonRange,
   validSeasons,
@@ -66,7 +61,6 @@ export class AdminDataComponent {
   protected readonly featureLabel = featureLabel;
   protected readonly formatBytes = formatBytes;
   protected readonly phaseLabel = phaseLabel;
-  protected readonly statsNbaPhaseLabel = statsNbaPhaseLabel;
   protected readonly eoinMoorePhaseLabel = eoinMoorePhaseLabel;
   protected readonly seasonName = seasonName;
   protected readonly trainingPhaseLabel = trainingPhaseLabel;
@@ -95,14 +89,6 @@ export class AdminDataComponent {
   protected readonly eoinError = signal<string | null>(null);
   protected readonly startingEoin = signal(false);
 
-  // Saisons récentes lues sur stats.nba.com, après la fin de la base Walsh
-  protected readonly statsNba = resource({ loader: () => this.api.invoke(getStatsNbaStatus) });
-  protected readonly statsJob = computed(() => currentValue(this.statsNba)?.job ?? null);
-  protected readonly statsRunning = computed(() => isStatsNbaRunning(this.statsJob()));
-  protected readonly fetchPercent = computed(() => fetchPercent(this.statsJob()));
-  protected readonly statsError = signal<string | null>(null);
-  protected readonly startingStats = signal(false);
-
   // Archive CSV de Sumitro Datta
   protected readonly datasets = resource({ loader: () => this.api.invoke(listReferenceDatasets) });
   protected readonly importedDatasets = computed(() => (currentValue(this.datasets) ?? []).filter(d => (d.rows ?? 0) > 0).length);
@@ -128,7 +114,7 @@ export class AdminDataComponent {
   protected readonly gain = computed(() => gainOverBaseline(this.report()));
 
   /** Le serveur n'exécute qu'une opération sur les données à la fois : import et entraînement s'excluent. */
-  protected readonly dataBusy = computed(() => this.jobRunning() || this.statsRunning() || this.eoinRunning() || this.training());
+  protected readonly dataBusy = computed(() => this.jobRunning() || this.eoinRunning() || this.training());
 
   protected readonly weights = computed(() => {
     const weights = Object.entries(this.report()?.featureWeights ?? {});
@@ -143,7 +129,6 @@ export class AdminDataComponent {
     // Tant qu'un import ou un entraînement tourne, son état est relu régulièrement.
     pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS);
     pollWhile(() => isEoinMooreRunning(currentValue(this.eoinMoore)?.job), () => this.eoinMoore.reload(), POLL_MS);
-    pollWhile(() => isStatsNbaRunning(currentValue(this.statsNba)?.job), () => this.statsNba.reload(), POLL_MS);
     pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS);
   }
 
@@ -183,20 +168,6 @@ export class AdminDataComponent {
   /** La saisie est gardée telle quelle (même invalide) pour que le message d'erreur reste sous le champ. */
   onEoinYear(value: string, target: 'from' | 'to'): void {
     (target === 'from' ? this.eoinFrom : this.eoinTo).set(value === '' ? Number.NaN : Number(value));
-  }
-
-  /** Lit sur stats.nba.com les saisons qui manquent, de la dernière saison en base à la saison en cours. */
-  async startStatsNba(): Promise<void> {
-    this.startingStats.set(true);
-    this.statsError.set(null);
-    try {
-      await this.api.invoke(startStatsNbaImport, {});
-      this.statsNba.reload();
-    } catch (e) {
-      this.statsError.set(toProblem(e).detail ?? 'Import impossible');
-    } finally {
-      this.startingStats.set(false);
-    }
   }
 
   /** La saisie est gardée telle quelle (même invalide) pour que le message d'erreur reste sous le champ. */

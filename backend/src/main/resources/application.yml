@@ -92,9 +92,6 @@ hoopmind:
     kaggle:
       username: ${KAGGLE_USERNAME:}
       key: ${KAGGLE_KEY:}
-    # Saisons récentes lues sur stats.nba.com (public, sans clé), depuis la page « Données »
-    stats-nba:
-      delay-ms: ${STATS_NBA_DELAY_MS:3000}
     # Saisons récentes (après 2022-23) : Games.csv et TeamStatistics.csv du jeu Kaggle
     # eoinamoore/historical-nba-data-and-player-box-scores, déposés dans ce dossier
     eoin-moore:
