@@ -71,7 +71,7 @@ class NbaCatalogApiTests {
                     """.formatted(i, homeTeamId));
         }
 
-        MvcTestResult page = mvc.get().uri("/api/v1/players/position/CENTER?size=2").exchange();
+        MvcTestResult page = mvc.get().uri("/api/v1/players?size=2").exchange();
 
         assertThat(page).hasStatusOk();
         assertThat(page).bodyJson().extractingPath("$.content.length()").isEqualTo(2);
@@ -150,17 +150,6 @@ class NbaCatalogApiTests {
                 .contentType(MediaType.APPLICATION_JSON).content("""
                         {"homeTeamScore":100,"awayTeamScore":90}
                         """).exchange()).hasStatus(403);
-    }
-
-    @Test
-    void theDateRangeIsLimitedToThirtyOneDays() {
-        assertThat(mvc.get().uri("/api/v1/games/date-range?startDate=2025-01-01T00:00:00&endDate=2025-03-01T00:00:00")
-                .exchange())
-                .hasStatus(400)
-                .bodyJson().extractingPath("$.code").isEqualTo("INVALID_DATE_RANGE");
-        assertThat(mvc.get().uri("/api/v1/games/date-range?startDate=2025-01-01T00:00:00&endDate=2025-01-31T00:00:00")
-                .exchange())
-                .hasStatusOk();
     }
 
     private String team(String name) {

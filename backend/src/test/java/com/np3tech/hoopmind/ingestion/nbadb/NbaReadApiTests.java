@@ -99,20 +99,12 @@ class NbaReadApiTests {
     }
 
     @Test
-    void oneGameAndTheGamesOfATeamCanBeRead() {
+    void oneGameCanBeReadWithItsScore() {
         int bostonHome = gameId("0022400001");
-        int newYorkHome = gameId("0022400002");
-        int withoutBoston = gameId("0022400003");
-        long bostonId = teams.findByAbbreviation("BOS").orElseThrow().getId();
 
         assertThat(mvc.get().uri("/api/v1/games/{id}", bostonHome).header(HttpHeaders.AUTHORIZATION, bearer))
                 .hasStatusOk()
                 .bodyJson().extractingPath("$.result.awayTeamScore").isEqualTo(100);
-        assertThat(mvc.get().uri("/api/v1/games/team/{id}", bostonId).header(HttpHeaders.AUTHORIZATION, bearer))
-                .hasStatusOk()
-                .bodyJson().extractingPath("$.content[*].id").asArray()
-                .contains(bostonHome, newYorkHome)
-                .doesNotContain(withoutBoston);
     }
 
     /** Identifiant en int : c'est ainsi que le JSON des réponses le relit. */

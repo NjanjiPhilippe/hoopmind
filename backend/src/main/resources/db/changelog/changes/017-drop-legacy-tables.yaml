@@ -1,0 +1,22 @@
+databaseChangeLog:
+    # Tables de l'ancien code, retirées de l'application (ADR 0020 et 0024) : aucune route ni aucun import ne les
+    # remplit. Les pronostics des utilisateurs auront leur propre table, rattachée au compte.
+    - changeSet:
+          id: 017-drop-legacy-tables
+          author: hoopmind
+          changes:
+              - dropTable:
+                    tableName: match_predictions
+                    cascadeConstraints: true
+              - dropTable:
+                    tableName: user_predictions
+                    cascadeConstraints: true
+              - dropTable:
+                    tableName: game_odds
+                    cascadeConstraints: true
+              - dropTable:
+                    tableName: leaderboards
+                    cascadeConstraints: true
+              - dropTable:
+                    tableName: injury_reports
+                    cascadeConstraints: true

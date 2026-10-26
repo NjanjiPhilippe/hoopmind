@@ -168,7 +168,7 @@ public class StatsNbaJobService {
     }
 
     private int defaultFrom(int to) {
-        return seasons.findAllOrderByYearDesc().stream().findFirst()
+        return seasons.findAllByOrderByYearDesc().stream().findFirst()
                 .map(Season::getYear)
                 .filter(year -> year <= to && to - year + 1 <= MAX_SEASONS)
                 .orElse(to - Math.min(importProperties.seasons(), MAX_SEASONS) + 1);
