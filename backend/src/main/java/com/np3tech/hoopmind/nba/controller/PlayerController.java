@@ -1,116 +1,79 @@
 package com.np3tech.hoopmind.nba.controller;
 
-import com.np3tech.hoopmind.nba.api.PlayerApi;
-import com.np3tech.hoopmind.nba.mapper.PlayerMapper;
 import com.np3tech.hoopmind.nba.dto.request.PlayerCreateRequest;
 import com.np3tech.hoopmind.nba.dto.request.PlayerUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.PlayerResponse;
-import com.np3tech.hoopmind.nba.entity.Player;
-import com.np3tech.hoopmind.nba.entity.enummeration.PlayerStatus;
-import com.np3tech.hoopmind.nba.entity.enummeration.Position;
+import com.np3tech.hoopmind.nba.mapper.PlayerMapper;
 import com.np3tech.hoopmind.nba.service.PlayerService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
+@RequestMapping("/api/v1/players")
 @RequiredArgsConstructor
-@Slf4j
-public class PlayerController implements PlayerApi {
+@Tag(name = "Players", description = "Player management APIs")
+class PlayerController {
 
     private final PlayerService playerService;
     private final PlayerMapper playerMapper;
 
-    @Override
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PlayerResponse> createPlayer(PlayerCreateRequest request) {
-        log.info("Creating player: {} {}", request.getFirstName(), request.getLastName());
-        Player createdPlayer = playerService.createPlayer(request);
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(playerMapper.toResponse(createdPlayer));
+    @Operation(operationId = "createPlayer", summary = "Create a new player")
+    PlayerResponse createPlayer(@Valid @RequestBody PlayerCreateRequest request) {
+        return playerMapper.toResponse(playerService.createPlayer(request));
     }
 
-    @Override
-    public ResponseEntity<PlayerResponse> getPlayerById(Long id) {
-        log.debug("Fetching player with id: {}", id);
-
-        Player player = playerService.getPlayerById(id);
-        return ResponseEntity.ok(playerMapper.toResponse(player));
+    @GetMapping("/{id}")
+    @Operation(operationId = "getPlayerById", summary = "Get player by ID")
+    PlayerResponse getPlayerById(@PathVariable Long id) {
+        return playerMapper.toResponse(playerService.getPlayerById(id));
     }
 
-    @Override
-    public ResponseEntity<PagedModel<PlayerResponse>> getAllPlayers(Pageable pageable) {
-        return ResponseEntity.ok(new PagedModel<>(playerService.getAllPlayers(pageable).map(playerMapper::toResponse)));
+    @GetMapping
+    @Operation(operationId = "getAllPlayers", summary = "Get all players", description = "Paginated, by last name (at most 100 per page)")
+    PagedModel<PlayerResponse> getAllPlayers(@ParameterObject @PageableDefault(size = 20, sort = "lastName") Pageable pageable) {
+        return new PagedModel<>(playerService.getAllPlayers(pageable).map(playerMapper::toResponse));
     }
 
-    @Override
+    @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PlayerResponse> updatePlayer(Long id, PlayerUpdateRequest request) {
-        log.info("Updating player with id: {}", id);
-        Player updatedPlayer = playerService.updatePlayer(id, request);
-
-        return ResponseEntity.ok(playerMapper.toResponse(updatedPlayer));
+    @Operation(operationId = "updatePlayer", summary = "Update player")
+    PlayerResponse updatePlayer(@PathVariable Long id, @Valid @RequestBody PlayerUpdateRequest request) {
+        return playerMapper.toResponse(playerService.updatePlayer(id, request));
     }
 
-    @Override
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deletePlayer(Long id) {
-        log.info("Deleting player with id: {}", id);
-
+    @Operation(operationId = "deletePlayer", summary = "Delete player")
+    void deletePlayer(@PathVariable Long id) {
         playerService.deletePlayer(id);
-        return ResponseEntity.noContent().build();
     }
 
-    @Override
-    public ResponseEntity<List<PlayerResponse>> getPlayersByTeam(Long teamId) {
-        log.debug("Fetching players for team: {}", teamId);
-
-        List<Player> players = playerService.getPlayersByTeam(teamId);
-        List<PlayerResponse> responses = players.stream()
-                .map(playerMapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    public ResponseEntity<PagedModel<PlayerResponse>> getPlayersByPosition(Position position, Pageable pageable) {
-        return ResponseEntity.ok(new PagedModel<>(playerService.getPlayersByPosition(position, pageable).map(playerMapper::toResponse)));
-    }
-
-    @Override
-    public ResponseEntity<PagedModel<PlayerResponse>> getPlayersByStatus(PlayerStatus status, Pageable pageable) {
-        return ResponseEntity.ok(new PagedModel<>(playerService.getPlayersByStatus(status, pageable).map(playerMapper::toResponse)));
-    }
-
-    @Override
-    public ResponseEntity<List<PlayerResponse>> searchPlayersByName(String name) {
-        log.debug("Searching players by name: {}", name);
-
-        List<Player> players = playerService.searchPlayersByName(name);
-        List<PlayerResponse> responses = players.stream()
-                .map(playerMapper::toResponse)
-                .toList();
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PlayerResponse> updatePlayerStatus(Long id, PlayerStatus status) {
-        log.info("Updating player status for id: {} to {}", id, status);
-
-        playerService.updatePlayerStatus(id, status);
-        Player player = playerService.getPlayerById(id);
-
-        return ResponseEntity.ok(playerMapper.toResponse(player));
+    @GetMapping("/team/{teamId}")
+    @Operation(operationId = "getPlayersByTeam", summary = "Get players by team")
+    List<PlayerResponse> getPlayersByTeam(@PathVariable Long teamId) {
+        return playerService.getPlayersByTeam(teamId).stream().map(playerMapper::toResponse).toList();
     }
 }

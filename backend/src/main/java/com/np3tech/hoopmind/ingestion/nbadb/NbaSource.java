@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Une source de matchs NBA, ramenée aux lignes de {@link NbaDatabaseRows} : la base de Wyatt Walsh
- * ({@link NbaDatabaseReader}) ou les saisons récentes lues sur stats.nba.com ({@link StatsNbaSource}).
+ * ({@link NbaDatabaseReader}) ou les saisons récentes des fichiers d'Eoin Moore ({@link EoinMooreSource}).
  * {@link NbaDatabaseImporter} les importe de la même façon.
  */
 interface NbaSource extends AutoCloseable {

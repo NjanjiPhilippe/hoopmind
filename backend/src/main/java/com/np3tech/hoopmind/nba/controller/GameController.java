@@ -1,162 +1,115 @@
 package com.np3tech.hoopmind.nba.controller;
 
-import com.np3tech.hoopmind.nba.api.GameApi;
 import com.np3tech.hoopmind.nba.dto.request.GameCreateRequest;
 import com.np3tech.hoopmind.nba.dto.request.GameResultRequest;
 import com.np3tech.hoopmind.nba.dto.request.GameUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.GameResponse;
 import com.np3tech.hoopmind.nba.entity.Game;
 import com.np3tech.hoopmind.nba.entity.GameResult;
-import com.np3tech.hoopmind.nba.entity.enummeration.GameStatus;
 import com.np3tech.hoopmind.nba.mapper.GameMapper;
-import com.np3tech.hoopmind.nba.service.search.GameSearchService;
 import com.np3tech.hoopmind.nba.service.GameService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/v1/games")
 @RequiredArgsConstructor
-@Slf4j
-public class GameController implements GameApi {
+@Tag(name = "Games", description = "Game management APIs")
+class GameController {
 
     private final GameService gameService;
-    private final GameSearchService gameSearchService;
     private final GameMapper gameMapper;
 
-    @Override
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GameResponse> createGame(GameCreateRequest request) {
-        log.info("Creating game: {} vs {}", request.getHomeTeamId(), request.getAwayTeamId());
-        Game createdGame = gameService.createGame(request);
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(gameMapper.toResponse(createdGame));
+    @Operation(operationId = "createGame", summary = "Create a new game")
+    GameResponse createGame(@Valid @RequestBody GameCreateRequest request) {
+        return gameMapper.toResponse(gameService.createGame(request));
     }
 
-    @Override
-    public ResponseEntity<GameResponse> getGameById(Long id) {
-        log.debug("Fetching game with id: {}", id);
-
-        Game game = gameService.getGameById(id);
-        return ResponseEntity.ok(gameMapper.toResponse(game, gameService.getResults(List.of(game)).get(game.getId())));
+    @GetMapping("/{id}")
+    @Operation(operationId = "getGameById", summary = "Get game by ID")
+    GameResponse getGameById(@Parameter(description = "Game ID") @PathVariable Long id) {
+        return toResponses(List.of(gameService.getGameById(id))).getFirst();
     }
 
-    @Override
-    public ResponseEntity<PagedModel<GameResponse>> getAllGames(Pageable pageable) {
-        return ResponseEntity.ok(toPage(gameService.getAllGames(pageable)));
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GameResponse> updateGame(Long id, GameUpdateRequest request) {
-        log.info("Updating game with id: {}", id);
-        Game updatedGame = gameService.updateGame(id, request);
-
-        return ResponseEntity.ok(gameMapper.toResponse(updatedGame));
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGame(Long id) {
-        log.info("Deleting game with id: {}", id);
-
-        gameService.deleteGame(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Override
-    public ResponseEntity<PagedModel<GameResponse>> getGamesByStatus(GameStatus status, Pageable pageable) {
-        return ResponseEntity.ok(toPage(gameService.getGamesByStatus(status, pageable)));
-    }
-
-    @Override
-    public ResponseEntity<List<GameResponse>> getGamesBySeason(Long seasonId) {
-        log.debug("Fetching games for season: {}", seasonId);
-
-        List<Game> games = gameService.getGamesBySeason(seasonId);
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    public ResponseEntity<PagedModel<GameResponse>> getGamesByTeam(Long teamId, Pageable pageable) {
-        return ResponseEntity.ok(toPage(gameService.getGamesByTeam(teamId, pageable)));
-    }
-
-    @Override
-    public ResponseEntity<List<GameResponse>> getGamesByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        log.debug("Fetching games between {} and {}", startDate, endDate);
-
-        List<Game> games = gameService.getGamesByDateRange(startDate, endDate);
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    public ResponseEntity<List<GameResponse>> getTodaysGames() {
-        log.debug("Fetching today's games");
-
-        List<Game> games = gameSearchService.getTodaysGames();
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    public ResponseEntity<List<GameResponse>> getLiveGames() {
-        log.debug("Fetching live games");
-
-        List<Game> games = gameSearchService.getLiveGames();
-        List<GameResponse> responses = toResponses(games);
-
-        return ResponseEntity.ok(responses);
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GameResponse> updateGameStatus(Long id, GameStatus status) {
-        log.info("Updating game status for id: {} to {}", id, status);
-
-        gameService.updateGameStatus(id, status);
-        Game game = gameService.getGameById(id);
-
-        return ResponseEntity.ok(gameMapper.toResponse(game));
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GameResponse> recordGameResult(Long id, GameResultRequest request) {
-        GameResult result = gameService.recordResult(id, request);
-        return ResponseEntity.ok(gameMapper.toResponse(gameService.getGameById(id), result));
-    }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGameResult(Long id) {
-        gameService.deleteResult(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    private PagedModel<GameResponse> toPage(Page<Game> games) {
+    @GetMapping
+    @Operation(operationId = "getAllGames", summary = "Get all games", description = "Paginated, most recent first (at most 100 per page)")
+    PagedModel<GameResponse> getAllGames(@ParameterObject @PageableDefault(size = 20, sort = "scheduledDate",
+            direction = Sort.Direction.DESC) Pageable pageable) {
+        var games = gameService.getAllGames(pageable);
         Map<Long, GameResult> results = gameService.getResults(games.getContent());
         return new PagedModel<>(games.map(game -> gameMapper.toResponse(game, results.get(game.getId()))));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "updateGame", summary = "Update game")
+    GameResponse updateGame(@Parameter(description = "Game ID") @PathVariable Long id,
+                            @Valid @RequestBody GameUpdateRequest request) {
+        return gameMapper.toResponse(gameService.updateGame(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "deleteGame", summary = "Delete game")
+    void deleteGame(@Parameter(description = "Game ID") @PathVariable Long id) {
+        gameService.deleteGame(id);
+    }
+
+    @GetMapping("/season/{seasonId}")
+    @Operation(operationId = "getGamesBySeason", summary = "Get games by season")
+    List<GameResponse> getGamesBySeason(@Parameter(description = "Season ID") @PathVariable Long seasonId) {
+        return toResponses(gameService.getGamesBySeason(seasonId));
+    }
+
+    @PutMapping("/{id}/result")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "recordGameResult", summary = "Enregistrer le score d'un match",
+            description = "Saisie manuelle par un administrateur, quand l'import n'est pas disponible. Crée ou corrige "
+                    + "le score final et marque le match comme terminé ; la forme des équipes en tient compte dès la "
+                    + "prédiction suivante. 400 si le score est invalide (négatif, égalité…).")
+    GameResponse recordGameResult(@Parameter(description = "Game ID") @PathVariable Long id,
+                                  @Valid @RequestBody GameResultRequest request) {
+        GameResult result = gameService.recordResult(id, request);
+        return gameMapper.toResponse(gameService.getGameById(id), result);
+    }
+
+    @DeleteMapping("/{id}/result")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "deleteGameResult", summary = "Retirer le score d'un match", description = "Le match redevient « à venir ».")
+    void deleteGameResult(@Parameter(description = "Game ID") @PathVariable Long id) {
+        gameService.deleteResult(id);
+    }
+
     /** Les scores des matchs joués sont chargés en une requête pour toute la liste. */
-    private List<GameResponse> toResponses(List<Game> games) {
+    private List<GameResponse> toResponses(Collection<Game> games) {
         Map<Long, GameResult> results = gameService.getResults(games);
         return games.stream().map(game -> gameMapper.toResponse(game, results.get(game.getId()))).toList();
     }

@@ -3,7 +3,6 @@ package com.np3tech.hoopmind.nba.mapper;
 import com.np3tech.hoopmind.nba.dto.response.PlayerResponse;
 import com.np3tech.hoopmind.nba.dto.response.TeamSummaryResponse;
 import com.np3tech.hoopmind.nba.entity.Player;
-import com.np3tech.hoopmind.nba.entity.Team;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,7 +15,7 @@ public class PlayerMapper {
                 .lastName(player.getLastName())
                 .position(player.getPosition())
                 .jerseyNumber(player.getJerseyNumber())
-                .team(toTeamSummary(player.getTeam()))
+                .team(TeamSummaryResponse.of(player.getTeam()))
                 .birthDate(player.getBirthDate())
                 .birthPlace(player.getBirthPlace())
                 .nationality(player.getNationality())
@@ -29,16 +28,6 @@ public class PlayerMapper {
                 .draftNumber(player.getDraftNumber())
                 .photoUrl(player.getPhotoUrl())
                 .status(player.getStatus())
-                .build();
-    }
-
-    private TeamSummaryResponse toTeamSummary(Team team) {
-        return TeamSummaryResponse.builder()
-                .id(team.getId())
-                .name(team.getName())
-                .city(team.getCity())
-                .abbreviation(team.getAbbreviation())
-                .logoUrl(team.getLogoUrl())
                 .build();
     }
 }

@@ -19,4 +19,8 @@ public class AppException extends RuntimeException {
         this.status = status;
         this.errorCode = errorCode;
     }
+
+    public static AppException notFound(String errorCode, String message) {
+        return new AppException(message, HttpStatus.NOT_FOUND, errorCode);
+    }
 }

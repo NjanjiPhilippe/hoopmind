@@ -46,8 +46,6 @@ class AccessRulesTests {
         PUBLIC,
         /** Tout compte connecté. */
         USER,
-        /** Administrateur ou modérateur. */
-        STAFF,
         /** Administrateur seulement. */
         ADMIN
     }
@@ -59,24 +57,15 @@ class AccessRulesTests {
             GET    /api/v1/users/me                         USER
             PATCH  /api/v1/users/me                         USER
             PUT    /api/v1/users/me/password                USER
-            POST   /api/v1/injuries                         STAFF
-            PUT    /api/v1/injuries/{id}                    STAFF
-            PATCH  /api/v1/injuries/{id}/deactivate         STAFF
             GET    /api/v1/games/**                         PUBLIC
             GET    /api/v1/teams/**                         PUBLIC
             GET    /api/v1/players/**                       PUBLIC
             GET    /api/v1/seasons/**                       PUBLIC
             GET    /api/v1/stats/**                         PUBLIC
-            GET    /api/v1/injuries/**                      PUBLIC
-            GET    /api/v1/reports/**                       PUBLIC
             *      /api/v1/games/**                         ADMIN
             *      /api/v1/teams/**                         ADMIN
             *      /api/v1/players/**                       ADMIN
             *      /api/v1/seasons/**                       ADMIN
-            *      /api/v1/injuries/**                      ADMIN
-            POST   /api/v1/predictions                      STAFF
-            POST   /api/v1/predictions/{id}/evaluate        ADMIN
-            GET    /api/v1/predictions/**                   USER
             *      /api/v1/spark/ml/train/**                ADMIN
             GET    /api/v1/spark/ml/**                      USER
             """;
@@ -131,8 +120,7 @@ class AccessRulesTests {
     @Test
     void regularUsersAreRefusedOnRestrictedRoutes() {
         for (Route route : routes()) {
-            Access access = access(route);
-            if ((access == Access.STAFF || access == Access.ADMIN) && !route.needsInput()) {
+            if (access(route) == Access.ADMIN && !route.needsInput()) {
                 int status = mvc.perform(request(route.method(), route.samplePath())
                                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken))
                         .getResponse().getStatus();
@@ -147,7 +135,6 @@ class AccessRulesTests {
             String guard = route.guard();
             switch (access(route)) {
                 case PUBLIC, USER -> assertThat(guard).as("%s ne doit pas exiger de rôle", route).isNull();
-                case STAFF -> assertThat(guard).as(route.toString()).isEqualTo("hasAnyRole('ADMIN', 'MODERATOR')");
                 case ADMIN -> assertThat(guard).as(route.toString()).isEqualTo("hasRole('ADMIN')");
             }
         }

@@ -3,10 +3,8 @@ package com.np3tech.hoopmind.nba.service;
 import com.np3tech.hoopmind.nba.dto.request.TeamCreateRequest;
 import com.np3tech.hoopmind.nba.dto.request.TeamUpdateRequest;
 import com.np3tech.hoopmind.nba.entity.Team;
-import com.np3tech.hoopmind.nba.entity.enummeration.Conference;
-import com.np3tech.hoopmind.nba.entity.enummeration.Division;
-import com.np3tech.hoopmind.shared.exception.AppException;
 import com.np3tech.hoopmind.nba.repository.TeamRepository;
+import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,7 +22,9 @@ public class TeamService {
     private final TeamRepository teamRepository;
 
     public Team createTeam(TeamCreateRequest request) {
-        Team team = Team.builder()
+        requireFreeAbbreviation(request.getAbbreviation());
+        log.info("Creating team: {}", request.getName());
+        return teamRepository.save(Team.builder()
                 .name(request.getName())
                 .city(request.getCity())
                 .abbreviation(request.getAbbreviation())
@@ -34,80 +34,43 @@ public class TeamService {
                 .foundedYear(request.getFoundedYear())
                 .arena(request.getArena())
                 .headCoach(request.getHeadCoach())
-                .build();
-
-        log.info("Creating team: {}", team.getName());
-
-        if (teamRepository.existsByAbbreviation(team.getAbbreviation())) {
-            throw new AppException(
-                    "Team with abbreviation " + team.getAbbreviation() + " already exists",
-                    HttpStatus.CONFLICT,
-                    "TEAM_ALREADY_EXISTS"
-            );
-        }
-
-        return teamRepository.save(team);
+                .build());
     }
 
     public Team updateTeam(Long id, TeamUpdateRequest request) {
-        log.info("Updating team with id: {}", id);
-
-        Team existingTeam = getTeamById(id);
-
+        Team team = getTeamById(id);
         if (request.getName() != null) {
-            existingTeam.setName(request.getName());
+            team.setName(request.getName());
         }
         if (request.getCity() != null) {
-            existingTeam.setCity(request.getCity());
+            team.setCity(request.getCity());
         }
-        if (request.getAbbreviation() != null &&
-                !request.getAbbreviation().equals(existingTeam.getAbbreviation())) {
-            if (teamRepository.existsByAbbreviation(request.getAbbreviation())) {
-                throw new AppException(
-                        "Team with abbreviation " + request.getAbbreviation() + " already exists",
-                        HttpStatus.CONFLICT,
-                        "TEAM_ALREADY_EXISTS"
-                );
-            }
-            existingTeam.setAbbreviation(request.getAbbreviation());
+        if (request.getAbbreviation() != null && !request.getAbbreviation().equals(team.getAbbreviation())) {
+            requireFreeAbbreviation(request.getAbbreviation());
+            team.setAbbreviation(request.getAbbreviation());
         }
         if (request.getConference() != null) {
-            existingTeam.setConference(request.getConference());
+            team.setConference(request.getConference());
         }
         if (request.getDivision() != null) {
-            existingTeam.setDivision(request.getDivision());
+            team.setDivision(request.getDivision());
         }
         if (request.getLogoUrl() != null) {
-            existingTeam.setLogoUrl(request.getLogoUrl());
+            team.setLogoUrl(request.getLogoUrl());
         }
         if (request.getArena() != null) {
-            existingTeam.setArena(request.getArena());
+            team.setArena(request.getArena());
         }
         if (request.getHeadCoach() != null) {
-            existingTeam.setHeadCoach(request.getHeadCoach());
+            team.setHeadCoach(request.getHeadCoach());
         }
-
-        return teamRepository.save(existingTeam);
+        return teamRepository.save(team);
     }
 
     @Transactional(readOnly = true)
     public Team getTeamById(Long id) {
         return teamRepository.findById(id)
-                .orElseThrow(() -> new AppException(
-                        "Team not found with id: " + id,
-                        HttpStatus.NOT_FOUND,
-                        "TEAM_NOT_FOUND"
-                ));
-    }
-
-    @Transactional(readOnly = true)
-    public Team getTeamByAbbreviation(String abbreviation) {
-        return teamRepository.findByAbbreviation(abbreviation)
-                .orElseThrow(() -> new AppException(
-                        "Team not found with abbreviation: " + abbreviation,
-                        HttpStatus.NOT_FOUND,
-                        "TEAM_NOT_FOUND"
-                ));
+                .orElseThrow(() -> AppException.notFound("TEAM_NOT_FOUND", "Team not found with id: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -115,27 +78,15 @@ public class TeamService {
         return teamRepository.findAll();
     }
 
-    @Transactional(readOnly = true)
-    public List<Team> getTeamsByConference(Conference conference) {
-        return teamRepository.findByConference(conference);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Team> getTeamsByDivision(Division division) {
-        return teamRepository.findByDivision(division);
-    }
-
     public void deleteTeam(Long id) {
         log.info("Deleting team with id: {}", id);
+        teamRepository.delete(getTeamById(id));
+    }
 
-        if (!teamRepository.existsById(id)) {
-            throw new AppException(
-                    "Team not found with id: " + id,
-                    HttpStatus.NOT_FOUND,
-                    "TEAM_NOT_FOUND"
-            );
+    private void requireFreeAbbreviation(String abbreviation) {
+        if (teamRepository.existsByAbbreviation(abbreviation)) {
+            throw new AppException("Team with abbreviation " + abbreviation + " already exists",
+                    HttpStatus.CONFLICT, "TEAM_ALREADY_EXISTS");
         }
-
-        teamRepository.deleteById(id);
     }
 }

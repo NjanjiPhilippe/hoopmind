@@ -74,7 +74,7 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 |---|---|
 | `user` | Comptes, profils, rôles, administration des utilisateurs. API publique : `UserAccountService` et l'événement `UserCredentialsRevoked`. |
 | `auth` | Connexion, jetons, configuration Spring Security (API et Swagger). Dépend de `user`, jamais l'inverse. |
-| `nba` | Équipes, joueurs, saisons, matchs, statistiques, blessures. |
+| `nba` | Équipes, joueurs, saisons, matchs, classements. |
 | `audit` | Journal d'audit : qui a fait quoi, sur quel compte, avec quel résultat. Les autres modules publient un `AuditEvent`. |
 | `ml` | Prédictions et analyses. Le reste de l'application passe par le port `GameOutcomePredictor` ; l'implémentation Spark vit dans `ml.spark`. L'explication par LLM passe par le port `PredictionExplainer` (`ml.explanation`). |
 | `shared` | Configuration commune, erreurs, e-mail. |
@@ -123,7 +123,8 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | GET, DELETE | `/api/v1/admin/users/{id}` | ADMIN |
 | PUT | `/api/v1/admin/users/{id}/status`, `/roles` | ADMIN |
 | GET | `/api/v1/admin/audit-events?action=&outcome=&userId=&user=&from=&to=` | ADMIN |
-| GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats`… | public |
+| GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats/standings`… | public |
+| POST, PUT, DELETE | `/api/v1/teams`, `/players`, `/games` (et `/games/{id}/result`), `/seasons` | ADMIN |
 | GET | `/api/v1/admin/imports/nba-database/status` | ADMIN |
 | POST | `/api/v1/admin/imports/nba-database/jobs?seasons=&download=` (arrière-plan) | ADMIN |
 | POST | `/api/v1/admin/imports/csv` (multipart `files`), GET `/csv/datasets` | ADMIN |
@@ -137,7 +138,6 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 |---|---|---|
 | [NBA Basketball Database](https://www.kaggle.com/datasets/wyattowalsh/basketball) de **Wyatt Walsh** ([nbadb](https://github.com/wyattowalsh/nbadb)), licence CC BY-SA 4.0 | Tous les matchs depuis 1946-47 avec scores, feuilles de match, classements, issus de stats.nba.com | Équipes, saisons, matchs, résultats, statistiques par match et bilans de saison |
 | [Historical NBA Data and Player Box Scores](https://www.kaggle.com/datasets/eoinamoore/historical-nba-data-and-player-box-scores) de **Eoin Moore** | Tous les matchs et feuilles de match d'équipe, mis à jour chaque jour | Saisons absentes de la base Walsh (2023-24 et suivantes) : matchs, play-in, résultats avec points par quart-temps, statistiques par match et bilans de saison |
-| [stats.nba.com](https://www.nba.com/stats), site officiel de la NBA, public | Journal des matchs par équipe (`leaguegamelog`) | Saisons récentes absentes de la base Walsh : matchs, résultats, statistiques par match et bilans de saison, sans les points par quart-temps |
 | [NBA Stats (1947-present)](https://www.kaggle.com/datasets/sumitrodatta/nba-aba-baa-stats) de **Sumitro Datta**, d'après Basketball-Reference | Statistiques de saison des joueurs et des équipes, votes des trophées individuels | Importée telle quelle (table `reference_csv_rows`), pour la future prédiction des trophées (MVP, DPOY, ROY…) |
 
 Les données ne sont pas versionnées : chacun les télécharge depuis Kaggle, et `data/` est ignoré par git.
@@ -154,11 +154,8 @@ Les fichiers d'Eoin Moore donnent les saisons suivantes, avec les mêmes identif
 la saison régulière, le play-in et les playoffs des saisons choisies (voir [ADR 0018](docs/adr/0018-saisons-recentes-eoin-moore.md)).
 Le play-in (type `PLAY_IN`) ne compte ni dans le bilan de saison régulière ni dans les classements.
 
-Le complément stats.nba.com lit, pour chaque saison de la dernière en base à la saison en cours, le journal des matchs
-de saison régulière et de playoffs (deux requêtes par saison, trois secondes d'écart), puis l'importe comme la base Walsh :
-mêmes identifiants, donc les saisons communes sont mises à jour sans doublon (voir [ADR 0017](docs/adr/0017-complement-stats-nba.md)).
-Depuis mars 2026, nba.com coupe tout client qui n'est pas un navigateur (empreinte TLS) : ce complément ne répond plus. S'il cesse de répondre en cours
-de route, les saisons déjà lues sont importées et l'import suivant reprend à partir de la dernière saison en base.
+Le complément stats.nba.com (ADR 0017) a été retiré : depuis mars 2026, nba.com coupe tout client qui n'est pas un
+navigateur. Les fichiers d'Eoin Moore le remplacent (voir [ADR 0024](docs/adr/0024-allegement-du-backend.md)).
 
 L'import des CSV (`nba.importer.csv`) reconnaît les 22 fichiers de l'archive par leurs colonnes caractéristiques et range
 chaque ligne sous sa clé naturelle (par exemple saison, ligue, joueur et équipe), avec ses valeurs en JSON : « NA » devient nul,

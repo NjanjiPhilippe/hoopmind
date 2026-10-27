@@ -23,9 +23,8 @@ class ModularityTests {
     }
 
     /**
-     * Les modules {@code ml} et {@code nba} restent ouverts à cause des relations JPA historiques
-     * (MatchPrediction → Game…). Le nouveau moteur de prédiction, lui, ne lit le module NBA qu'à travers
-     * son API publique ({@code GameHistory}, {@code GameRecord}) : cette règle empêche d'y revenir.
+     * Le module {@code ml} ne lit le module NBA qu'à travers son API publique ({@code GameHistory},
+     * {@code GameRecord}) : cette règle empêche d'y revenir par une relation JPA ou un dépôt.
      */
     @Test
     void predictionEngineReadsNbaOnlyThroughItsPublicApi() {
@@ -33,14 +32,7 @@ class ModularityTests {
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages("com.np3tech.hoopmind");
         noClasses()
-                .that().haveSimpleNameStartingWith("GameOutcome")
-                .or().haveSimpleNameStartingWith("SparkGameOutcome")
-                .or().haveSimpleName("TeamGameLoader")
-                .or().haveSimpleName("GameFeatureBuilder")
-                .or().haveSimpleName("TrainingReport")
-                .or().resideInAPackage("com.np3tech.hoopmind.ml.web..")
-                .or().resideInAPackage("com.np3tech.hoopmind.ml.scoring..")
-                .or().resideInAPackage("com.np3tech.hoopmind.ml.training..")
+                .that().resideInAPackage("com.np3tech.hoopmind.ml..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "com.np3tech.hoopmind.nba.entity..",
                         "com.np3tech.hoopmind.nba.repository..",

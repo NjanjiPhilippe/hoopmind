@@ -1,5 +1,7 @@
 package com.np3tech.hoopmind.nba.dto.response;
 
+import com.np3tech.hoopmind.nba.entity.Team;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +17,8 @@ public class TeamSummaryResponse {
     private String city;
     private String abbreviation;
     private String logoUrl;
-}
 
+    public static TeamSummaryResponse of(Team team) {
+        return new TeamSummaryResponse(team.getId(), team.getName(), team.getCity(), team.getAbbreviation(), team.getLogoUrl());
+    }
+}

@@ -1,8 +1,8 @@
 /**
- * Données NBA : équipes, joueurs, saisons, matchs, statistiques et blessures.
+ * Données NBA : équipes, joueurs, saisons, matchs et statistiques.
  * <p>
- * Module ouvert pour l'instant (ses dépôts et entités sont utilisés par le module ML) ; à refermer
- * derrière des services publics lors du chantier ML.
+ * Module ouvert : l'import ({@code ingestion}) écrit directement ses entités et dépôts. Le module ML, lui, ne passe
+ * que par {@link com.np3tech.hoopmind.nba.GameHistory}.
  */
 @org.springframework.modulith.ApplicationModule(displayName = "NBA", type = org.springframework.modulith.ApplicationModule.Type.OPEN)
 package com.np3tech.hoopmind.nba;

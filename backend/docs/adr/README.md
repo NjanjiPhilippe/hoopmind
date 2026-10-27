@@ -21,10 +21,11 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0014](0014-import-par-lots-et-coherence.md) | Import par lots réécrits, une seule transaction, horodatages et rôles | Acceptée |
 | [0015](0015-explication-par-llm.md) | Explication des prédictions par un LLM, avec nos propres adaptateurs plutôt que Spring AI | Acceptée |
 | [0016](0016-ancien-format-kaggle.md) | L'import lit aussi l'ancien format de la base de Wyatt Walsh | Acceptée |
-| [0017](0017-complement-stats-nba.md) | Les saisons récentes viennent de stats.nba.com | Acceptée |
+| [0017](0017-complement-stats-nba.md) | Les saisons récentes viennent de stats.nba.com | Remplacée par 0018, retirée (0024) |
 | [0018](0018-saisons-recentes-eoin-moore.md) | Les saisons récentes viennent des fichiers d'Eoin Moore, play-in compris | Acceptée |
 | [0019](0019-monitoring.md) | Monitoring sur trois niveaux : Micrometer, Prometheus et Grafana | Acceptée |
 | [0020](0020-suppression-du-code-herite.md) | Suppression du code hérité inutilisé, matrice des droits testée | Acceptée |
 | [0021](0021-api-nba-services-et-pagination.md) | API NBA : services qui reçoivent les requêtes, pagination, horloge, limite LLM | Acceptée |
 | [0022](0022-forme-de-debut-de-saison.md) | Forme de début de saison à partir de la saison passée, saisie des scores par l'administrateur | Proposée |
 | [0023](0023-prediction-du-score.md) | Prédire le score : deux régressions linéaires sur les moyennes de points | Proposée |
+| [0024](0024-allegement-du-backend.md) | Allègement du backend : routes inutilisées, stats.nba.com, module ML fermé | Proposée |
