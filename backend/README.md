@@ -125,6 +125,8 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | GET | `/api/v1/admin/audit-events?action=&outcome=&userId=&user=&from=&to=` | ADMIN |
 | GET | `/api/v1/teams`, `/players`, `/games`, `/seasons`, `/stats/standings`… | public |
 | POST, PUT, DELETE | `/api/v1/teams`, `/players`, `/games` (et `/games/{id}/result`), `/seasons` | ADMIN |
+| GET | `/api/v1/players/team/{teamId}`, `/players/{id}/stats` | public |
+| PUT, DELETE | `/api/v1/players/{id}/stats/{seasonId}` (statistiques de saison saisies, page *Administration → Joueurs*) | ADMIN |
 | GET | `/api/v1/admin/imports/nba-database/status` | ADMIN |
 | POST | `/api/v1/admin/imports/nba-database/jobs?seasons=&download=` (arrière-plan) | ADMIN |
 | POST | `/api/v1/admin/imports/csv` (multipart `files`), GET `/csv/datasets` | ADMIN |

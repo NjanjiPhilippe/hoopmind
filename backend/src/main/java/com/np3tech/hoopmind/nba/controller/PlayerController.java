@@ -1,10 +1,13 @@
 package com.np3tech.hoopmind.nba.controller;
 
 import com.np3tech.hoopmind.nba.dto.request.PlayerCreateRequest;
+import com.np3tech.hoopmind.nba.dto.request.PlayerSeasonStatsRequest;
 import com.np3tech.hoopmind.nba.dto.request.PlayerUpdateRequest;
 import com.np3tech.hoopmind.nba.dto.response.PlayerResponse;
+import com.np3tech.hoopmind.nba.dto.response.PlayerSeasonStatsResponse;
 import com.np3tech.hoopmind.nba.mapper.PlayerMapper;
 import com.np3tech.hoopmind.nba.service.PlayerService;
+import com.np3tech.hoopmind.nba.service.PlayerStatsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,6 +37,7 @@ import java.util.List;
 class PlayerController {
 
     private final PlayerService playerService;
+    private final PlayerStatsService playerStatsService;
     private final PlayerMapper playerMapper;
 
     @PostMapping
@@ -75,5 +79,28 @@ class PlayerController {
     @Operation(operationId = "getPlayersByTeam", summary = "Get players by team")
     List<PlayerResponse> getPlayersByTeam(@PathVariable Long teamId) {
         return playerService.getPlayersByTeam(teamId).stream().map(playerMapper::toResponse).toList();
+    }
+
+    @GetMapping("/{id}/stats")
+    @Operation(operationId = "getPlayerSeasonStats", summary = "Statistiques d'un joueur, saison par saison", description = "La plus récente d'abord.")
+    List<PlayerSeasonStatsResponse> getPlayerSeasonStats(@PathVariable Long id) {
+        return playerStatsService.getPlayerStats(id).stream().map(PlayerSeasonStatsResponse::of).toList();
+    }
+
+    @PutMapping("/{id}/stats/{seasonId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "savePlayerSeasonStats", summary = "Saisir les statistiques d'un joueur sur une saison",
+            description = "Crée ou remplace la ligne de cette saison. Moyennes par match ; pourcentages entre 0 et 1.")
+    PlayerSeasonStatsResponse savePlayerSeasonStats(@PathVariable Long id, @PathVariable Long seasonId,
+                                                    @Valid @RequestBody PlayerSeasonStatsRequest request) {
+        return PlayerSeasonStatsResponse.of(playerStatsService.saveSeasonStats(id, seasonId, request));
+    }
+
+    @DeleteMapping("/{id}/stats/{seasonId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "deletePlayerSeasonStats", summary = "Retirer les statistiques d'un joueur sur une saison")
+    void deletePlayerSeasonStats(@PathVariable Long id, @PathVariable Long seasonId) {
+        playerStatsService.deleteSeasonStats(id, seasonId);
     }
 }

@@ -4,6 +4,7 @@ import com.np3tech.hoopmind.nba.dto.request.PlayerCreateRequest;
 import com.np3tech.hoopmind.nba.dto.request.PlayerUpdateRequest;
 import com.np3tech.hoopmind.nba.entity.Player;
 import com.np3tech.hoopmind.nba.repository.PlayerRepository;
+import com.np3tech.hoopmind.nba.repository.PlayerStatsRepository;
 import com.np3tech.hoopmind.shared.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import java.util.List;
 public class PlayerService {
 
     private final PlayerRepository playerRepository;
+    private final PlayerStatsRepository playerStatsRepository;
     private final TeamService teamService;
 
     public Player createPlayer(PlayerCreateRequest request) {
@@ -71,6 +73,9 @@ public class PlayerService {
         if (request.getPhotoUrl() != null) {
             player.setPhotoUrl(request.getPhotoUrl());
         }
+        if (request.getStatus() != null) {
+            player.setStatus(request.getStatus());
+        }
         return playerRepository.save(player);
     }
 
@@ -92,6 +97,8 @@ public class PlayerService {
 
     public void deletePlayer(Long id) {
         log.info("Deleting player with id: {}", id);
-        playerRepository.delete(getPlayerById(id));
+        Player player = getPlayerById(id);
+        playerStatsRepository.deleteByPlayer(player);
+        playerRepository.delete(player);
     }
 }
