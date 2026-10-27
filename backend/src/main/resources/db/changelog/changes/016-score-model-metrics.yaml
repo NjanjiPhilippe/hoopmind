@@ -1,0 +1,19 @@
+databaseChangeLog:
+    # Modèle de score : mean_absolute_error et root_mean_squared_error (déjà là) portent sur l'écart prédit ; ces
+    # colonnes ajoutent l'erreur sur les points d'une équipe, sur le total, et celle de la règle simple sur l'écart.
+    - changeSet:
+          id: 016-score-model-metrics
+          author: hoopmind
+          changes:
+              - addColumn:
+                    tableName: prediction_model_metrics
+                    columns:
+                        - column:
+                              name: points_mean_absolute_error
+                              type: DECIMAL(6,2)
+                        - column:
+                              name: total_mean_absolute_error
+                              type: DECIMAL(6,2)
+                        - column:
+                              name: baseline_mean_absolute_error
+                              type: DECIMAL(6,2)

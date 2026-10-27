@@ -53,38 +53,43 @@ public final class GameOutcomeTrainer {
      * @param games lignes produites par {@link GameFeatureBuilder#gameFeatures}
      */
     public static Result train(Dataset<Row> games) {
-        Dataset<Row> usable = games
+        Dataset<Row> usable = usable(games);
+        Split split = split(usable);
+        PipelineModel model = pipeline().fit(split.train());
+        Dataset<Row> predictions = model.transform(split.test()).cache();
+        Evaluation evaluation = evaluate(predictions, model, split.trainingSeasons(), split.testSeason(),
+                split.train().count());
+        predictions.unpersist();
+        usable.unpersist();
+        return new Result(model, evaluation);
+    }
+
+    /** Matchs joués où les deux équipes ont un bilan représentatif (mis en cache : le libérer après usage). */
+    static Dataset<Row> usable(Dataset<Row> games) {
+        return games
                 .filter(col(LABEL).isNotNull())
                 .filter(col("home_games_played").geq(MIN_PRIOR_GAMES).and(col("away_games_played").geq(MIN_PRIOR_GAMES)))
                 .cache();
+    }
+
+    /** Saisons d'apprentissage et saison de test : le découpage commun aux modèles du vainqueur et du score. */
+    record Split(Dataset<Row> train, Dataset<Row> test, List<String> trainingSeasons, String testSeason) {
+    }
+
+    static Split split(Dataset<Row> usable) {
         List<String> seasons = usable.select("season").distinct().orderBy("season").as(
                 org.apache.spark.sql.Encoders.STRING()).collectAsList();
         if (seasons.isEmpty() || usable.count() < 20) {
             throw new IllegalStateException("Pas assez de matchs joués pour entraîner le modèle.");
         }
-
-        Dataset<Row> train;
-        Dataset<Row> test;
-        String testSeason;
         if (seasons.size() >= 2) {
-            testSeason = seasons.getLast();
-            train = usable.filter(col("season").notEqual(testSeason));
-            test = usable.filter(col("season").equalTo(testSeason));
-        } else {
-            // Une seule saison : pas de découpage dans le temps possible, on garde 20 % des matchs au hasard.
-            testSeason = seasons.getFirst() + " (20 % des matchs)";
-            Dataset<Row>[] split = usable.randomSplit(new double[]{0.8, 0.2}, 42L);
-            train = split[0];
-            test = split[1];
+            String testSeason = seasons.getLast();
+            return new Split(usable.filter(col("season").notEqual(testSeason)),
+                    usable.filter(col("season").equalTo(testSeason)), seasons.subList(0, seasons.size() - 1), testSeason);
         }
-
-        PipelineModel model = pipeline().fit(train);
-        Dataset<Row> predictions = model.transform(test).cache();
-        Evaluation evaluation = evaluate(predictions, model,
-                seasons.size() >= 2 ? seasons.subList(0, seasons.size() - 1) : seasons, testSeason, train.count());
-        predictions.unpersist();
-        usable.unpersist();
-        return new Result(model, evaluation);
+        // Une seule saison : pas de découpage dans le temps possible, on garde 20 % des matchs au hasard.
+        Dataset<Row>[] split = usable.randomSplit(new double[]{0.8, 0.2}, 42L);
+        return new Split(split[0], split[1], seasons, seasons.getFirst() + " (20 % des matchs)");
     }
 
     static Pipeline pipeline() {

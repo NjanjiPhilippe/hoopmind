@@ -2,6 +2,7 @@ package com.np3tech.hoopmind.ml.explanation;
 
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 
 import java.util.List;
 
@@ -54,6 +55,18 @@ public final class TemplateExplanation {
         }
         if (factors.isEmpty()) {
             text.append(" Les deux équipes arrivent dans une forme très proche : c'est surtout l'avantage du terrain qui compte.");
+        }
+        ScorePrediction score = prediction.score();
+        if (score != null) {
+            String leader = score.homeTeamWins() ? request.homeTeam() : request.awayTeam();
+            text.append(" Score estimé : ").append(request.homeTeam()).append(' ').append(score.homePoints()).append(", ")
+                    .append(request.awayTeam()).append(' ').append(score.awayPoints()).append(", soit ")
+                    .append(ExplanationFacts.margin(score.margin())).append(" d'écart pour ").append(leader)
+                    .append(" (le modèle se trompe en moyenne de ").append(ExplanationFacts.margin(score.marginError()))
+                    .append(" sur l'écart).");
+            if (score.homeTeamWins() != homeFavorite) {
+                text.append(" Le score estimé donne l'avantage à l'autre équipe : le match s'annonce très serré.");
+            }
         }
         return new Explanation(text.toString(), PROVIDER, null);
     }

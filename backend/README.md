@@ -182,6 +182,10 @@ Une régression logistique Spark ML prédit la probabilité de victoire de l'éq
   « l'équipe au meilleur bilan gagne ». Les métriques (précision, AUC, log loss, matrice de confusion, poids des variables)
   sont enregistrées à chaque entraînement et servies par `GET /api/v1/spark/ml/model-metrics`.
 - Le modèle est enregistré dans `ML_MODEL_DIR` et rechargé au redémarrage.
+- **Score** : le même entraînement ajuste deux régressions linéaires (points de chaque équipe) sur les points marqués et
+  encaissés par match avant le match, le repos et les playoffs. La prédiction renvoie le score, l'écart, le total et
+  l'erreur moyenne du modèle sur l'écart, comparée à une règle simple sans avantage du terrain.
+  Voir [ADR 0023](docs/adr/0023-prediction-du-score.md).
 
 ## Explication des prédictions par un LLM
 

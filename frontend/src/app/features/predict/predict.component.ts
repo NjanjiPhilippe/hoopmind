@@ -25,6 +25,7 @@ import { teamCalendar } from '../../core/nba/team-calendar';
 import { actualResult } from './actual-result';
 import { defaultGame, gamesOn } from './game-picker';
 import { FactorRow, explanationSource, factorRows } from './prediction-factors';
+import { PredictedScore, marginMiss, points, predictedScore } from './predicted-score';
 
 interface Prediction {
   homeTeamId: number;
@@ -34,11 +35,13 @@ interface Prediction {
   result: ExplainedPrediction;
   factors: FactorRow[];
   source: string;
+  /** Null tant que le modèle n'a pas été réentraîné depuis l'ajout du modèle de score. */
+  score: PredictedScore | null;
 }
 
 /**
- * Prédire le vainqueur d'un match : deux équipes, une date, et le modèle calcule la forme de chacune avant ce jour.
- * La prédiction arrive avec le poids de chaque facteur et une explication en français (rédigée par un LLM si le
+ * Prédire le vainqueur et le score d'un match : deux équipes, une date, et le modèle calcule la forme de chacune avant
+ * ce jour. La prédiction arrive avec le score estimé (points de chaque équipe, écart), le poids de chaque facteur et une explication en français (rédigée par un LLM si le
  * serveur en a un, sinon automatiquement).
  * Les paramètres de la page sont dans l'URL (lien « Prédire » de la liste des matchs, partage d'une prédiction).
  */
@@ -59,6 +62,8 @@ export class PredictComponent {
   protected readonly matchupColors = matchupColors;
   protected readonly textOn = textOn;
   protected readonly actualResult = actualResult;
+  protected readonly marginMiss = marginMiss;
+  protected readonly points = points;
 
   readonly season = input(undefined, { transform: idParam });
   readonly home = input(undefined, { transform: idParam });
@@ -191,6 +196,7 @@ export class PredictComponent {
         homeTeamId: request.homeTeamId, awayTeamId: request.awayTeamId, date: request.date, playoff: request.playoff, result,
         factors: factorRows(result.factors, request.playoff),
         source: explanationSource(result),
+        score: predictedScore(result.prediction),
       });
       // L'URL reflète la prédiction affichée : elle se partage et survit au rechargement.
       void this.router.navigate([], {

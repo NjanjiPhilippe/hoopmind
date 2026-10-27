@@ -27,3 +27,4 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0020](0020-suppression-du-code-herite.md) | Suppression du code hérité inutilisé, matrice des droits testée | Acceptée |
 | [0021](0021-api-nba-services-et-pagination.md) | API NBA : services qui reçoivent les requêtes, pagination, horloge, limite LLM | Acceptée |
 | [0022](0022-forme-de-debut-de-saison.md) | Forme de début de saison à partir de la saison passée, saisie des scores par l'administrateur | Proposée |
+| [0023](0023-prediction-du-score.md) | Prédire le score : deux régressions linéaires sur les moyennes de points | Proposée |

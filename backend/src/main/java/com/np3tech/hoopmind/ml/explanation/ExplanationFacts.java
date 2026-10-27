@@ -68,6 +68,17 @@ public final class ExplanationFacts {
         return String.format(FRENCH, "%.0f %%", probability * 100);
     }
 
+    /** Points avec une décimale : « 112,4 ». */
+    public static String points(double points) {
+        return String.format(FRENCH, "%.1f", points);
+    }
+
+    /** Écart arrondi, jamais nul : « 1 point », « 7 points ». */
+    public static String margin(double margin) {
+        long points = Math.max(1, Math.round(Math.abs(margin)));
+        return points + (points > 1 ? " points" : " point");
+    }
+
     public static String signed(double number) {
         return String.format(FRENCH, "%+.2f", number);
     }

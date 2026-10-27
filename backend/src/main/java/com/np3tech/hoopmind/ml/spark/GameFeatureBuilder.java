@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.ml.spark;
 
 import com.np3tech.hoopmind.ml.scoring.GameOutcomeFeatures;
+import com.np3tech.hoopmind.ml.scoring.GameScoreFeatures;
 import com.np3tech.hoopmind.ml.scoring.TeamForm;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -71,10 +72,13 @@ public final class GameFeatureBuilder {
 
     public static final String LABEL = "home_won";
 
+    /** Variables du modèle de score : moyennes de points de chaque équipe, repos et playoffs. */
+    public static final String[] SCORE_FEATURES = GameScoreFeatures.NAMES.toArray(String[]::new);
+
     /** Valeurs neutres quand une équipe n'a pas encore joué (début de saison). */
     private static final double NEUTRAL_WIN_PCT = TeamForm.NEUTRAL_WIN_PCT;
     private static final double NEUTRAL_RATING = TeamForm.NEUTRAL_RATING;
-    private static final double NEUTRAL_POINTS = 110.0;
+    private static final double NEUTRAL_POINTS = TeamForm.NEUTRAL_POINTS;
     private static final int PRIOR_GAMES = TeamForm.PRIOR_GAMES;
     private static final int LAST_GAMES = 10;
     private static final int MAX_REST_DAYS = 7;
@@ -100,8 +104,8 @@ public final class GameFeatureBuilder {
                 .withColumn("last10_played", count("won").over(lastTen))
                 .withColumn("last10_wins", coalesce(sum("won").over(lastTen), lit(0L)))
                 .withColumn("box_games", count("possessions").over(before))
-                .withColumn("points_per_game", avg("points").over(before))
-                .withColumn("points_allowed_per_game", avg("points_allowed").over(before))
+                .withColumn("points_scored", coalesce(sum("points").over(before), lit(0L)))
+                .withColumn("points_conceded", coalesce(sum("points_allowed").over(before), lit(0L)))
                 .withColumn("current_offensive_rating",
                         rating(sum("box_points").over(before), sum("possessions").over(before)))
                 .withColumn("current_defensive_rating",
@@ -120,10 +124,15 @@ public final class GameFeatureBuilder {
         return teamGames.filter(col("won").isNotNull())
                 .groupBy("season_year", "team_id")
                 .agg(avg("won").as("prior_win_pct"),
+                        avg("points").as("prior_points_per_game"),
+                        avg("points_allowed").as("prior_points_allowed_per_game"),
                         rating(sum("box_points"), sum("possessions")).as("prior_offensive_rating"),
                         rating(sum("box_points_allowed"), sum("opponent_possessions")).as("prior_defensive_rating"))
                 .select(col("season_year").plus(1).as("prior_season_year"), col("team_id").as("prior_team_id"),
                         coalesce(col("prior_win_pct"), lit(NEUTRAL_WIN_PCT)).as("prior_win_pct"),
+                        coalesce(col("prior_points_per_game"), lit(NEUTRAL_POINTS)).as("prior_points_per_game"),
+                        coalesce(col("prior_points_allowed_per_game"), lit(NEUTRAL_POINTS))
+                                .as("prior_points_allowed_per_game"),
                         coalesce(col("prior_offensive_rating"), lit(NEUTRAL_RATING)).as("prior_offensive_rating"),
                         coalesce(col("prior_defensive_rating"), lit(NEUTRAL_RATING)).as("prior_defensive_rating"));
     }
@@ -133,6 +142,8 @@ public final class GameFeatureBuilder {
         Column priorWinPct = coalesce(col("prior_win_pct"), lit(NEUTRAL_WIN_PCT));
         Column priorOffensive = coalesce(col("prior_offensive_rating"), lit(NEUTRAL_RATING));
         Column priorDefensive = coalesce(col("prior_defensive_rating"), lit(NEUTRAL_RATING));
+        Column priorPoints = coalesce(col("prior_points_per_game"), lit(NEUTRAL_POINTS));
+        Column priorPointsAllowed = coalesce(col("prior_points_allowed_per_game"), lit(NEUTRAL_POINTS));
         return form.join(priors, col("season_year").equalTo(col("prior_season_year"))
                         .and(col("team_id").equalTo(col("prior_team_id"))), "left")
                 .withColumn("win_pct", col("wins").plus(priorWinPct.multiply(PRIOR_GAMES))
@@ -140,11 +151,18 @@ public final class GameFeatureBuilder {
                 .withColumn("last10_win_pct", col("last10_wins")
                         .plus(lit(LAST_GAMES).minus(col("last10_played")).multiply(priorWinPct))
                         .divide(LAST_GAMES))
+                .withColumn("points_per_game", blendPoints(col("points_scored"), priorPoints))
+                .withColumn("points_allowed_per_game", blendPoints(col("points_conceded"), priorPointsAllowed))
                 .withColumn("offensive_rating", blendRating(col("current_offensive_rating"), priorOffensive))
                 .withColumn("defensive_rating", blendRating(col("current_defensive_rating"), priorDefensive))
                 .drop("prior_season_year", "prior_team_id", "prior_win_pct", "prior_offensive_rating",
-                        "prior_defensive_rating", "wins", "last10_played", "last10_wins", "current_offensive_rating",
+                        "prior_defensive_rating", "prior_points_per_game", "prior_points_allowed_per_game",
+                        "points_scored", "points_conceded", "wins", "last10_played", "last10_wins", "current_offensive_rating",
                         "current_defensive_rating");
+    }
+
+    private static Column blendPoints(Column points, Column prior) {
+        return points.plus(prior.multiply(PRIOR_GAMES)).divide(col("games_played").plus(PRIOR_GAMES));
     }
 
     private static Column blendRating(Column rating, Column prior) {

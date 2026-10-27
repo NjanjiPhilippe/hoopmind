@@ -66,6 +66,28 @@ class TeamFormTests {
     }
 
     @Test
+    void pointsPerGameBlendThisSeasonWithLastSeasonAverage() {
+        // Saison passée : les Celtics marquent 105 points et en encaissent 95 par match.
+        List<GameRecord> lastSeason = List.of(
+                game(11, DAY.minusYears(1), CELTICS, LAKERS, 110, 100),
+                game(12, DAY.minusYears(1).plusDays(2), LAKERS, CELTICS, 90, 100));
+        TeamPrior prior = TeamPrior.of(lastSeason, CELTICS);
+        assertThat(prior.pointsPerGame()).isEqualTo(105.0);
+        assertThat(prior.pointsAllowedPerGame()).isEqualTo(95.0);
+
+        TeamForm opening = TeamForm.before(season, CELTICS, DAY, null, prior);
+        assertThat(opening.pointsPerGame()).isEqualTo(105.0);
+        assertThat(opening.pointsAllowedPerGame()).isEqualTo(95.0);
+
+        // 225 points marqués et 210 encaissés en deux matchs, plus la saison passée qui compte comme 10 matchs ; le match
+        // à venir (sans score) ne compte pas.
+        TeamForm later = TeamForm.before(season, CELTICS, DAY.plusDays(20), null, prior);
+        assertThat(later.pointsPerGame()).isCloseTo((225 + 10 * 105.0) / 12, within(1e-9));
+        assertThat(later.pointsAllowedPerGame()).isCloseTo((210 + 10 * 95.0) / 12, within(1e-9));
+        assertThat(TeamForm.before(season, CELTICS, DAY, null).pointsPerGame()).isEqualTo(TeamForm.NEUTRAL_POINTS);
+    }
+
+    @Test
     void restDaysAreCappedAndPlayoffIsAFeature() {
         TeamForm celtics = TeamForm.before(season, CELTICS, DAY.plusDays(30), null);
         TeamForm lakers = TeamForm.before(season, LAKERS, DAY.plusDays(30), null);

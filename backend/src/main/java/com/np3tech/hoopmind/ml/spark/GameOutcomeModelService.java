@@ -32,6 +32,8 @@ import static org.apache.spark.sql.functions.col;
 /**
  * Entraînement et suivi du modèle de prédiction des matchs, à partir des données importées. Spark ne sert qu'à
  * entraîner : le modèle est enregistré sous forme de carte de score, appliquée en Java pour chaque prédiction.
+ * Chaque entraînement produit deux modèles de même version : le vainqueur (régression logistique) et le score (deux
+ * régressions linéaires), chacun avec sa ligne de métriques.
  */
 @Service
 @ConditionalOnSpark
@@ -40,6 +42,7 @@ import static org.apache.spark.sql.functions.col;
 public class GameOutcomeModelService implements GameOutcomeModel {
 
     public static final String MODEL_NAME = "game-outcome-logistic-regression";
+    public static final String SCORE_MODEL_NAME = "game-score-linear-regression";
 
     private final TeamGameLoader loader;
     private final PredictionModelMetricsRepository metricsRepository;
@@ -66,29 +69,39 @@ public class GameOutcomeModelService implements GameOutcomeModel {
         log.info("Entraînement du modèle de prédiction sur les saisons {}", years);
 
         GameOutcomeTrainer.Result result;
+        GameScoreTrainer.Result score;
         try {
             // La saison qui précède la première sert seulement de point de départ à la forme (bilan de la saison passée).
             List<Integer> loaded = Stream.concat(Stream.of(years.getFirst() - 1), years.stream()).toList();
             Dataset<Row> features = GameFeatureBuilder.gameFeatures(loader.teamGames(loaded))
                     .filter(col("season_year").isin(years.toArray()));
             result = GameOutcomeTrainer.train(features);
+            score = GameScoreTrainer.train(features);
         } catch (IllegalStateException e) {
             throw new AppException(e.getMessage(), HttpStatus.UNPROCESSABLE_CONTENT, "NO_TRAINING_DATA");
         }
         String version = LocalDateTime.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         scoringCards.save(GameOutcomeTrainer.scoringCard(result.model(), MODEL_NAME, version));
+        scoringCards.save(GameScoreTrainer.scoreCard(score.model(), SCORE_MODEL_NAME, version,
+                score.evaluation().marginMeanAbsoluteError()));
 
         PredictionModelMetrics metrics = metricsRepository.save(toMetrics(result.evaluation(), years.size(), version));
-        TrainingReport report = toReport(metrics, result.evaluation().trainingGames());
-        log.info("Modèle entraîné : précision {} (référence meilleur bilan {}, domicile {})",
-                report.accuracy(), report.betterRecordBaseline(), report.homeTeamBaseline());
+        PredictionModelMetrics scoreMetrics =
+                metricsRepository.save(toScoreMetrics(score.evaluation(), years.size(), version));
+        TrainingReport report = toReport(metrics, result.evaluation().trainingGames(), Optional.of(scoreMetrics));
+        log.info("Modèle entraîné : précision {} (référence meilleur bilan {}, domicile {}) ; score : erreur moyenne "
+                        + "sur l'écart {} points (règle simple {})", report.accuracy(), report.betterRecordBaseline(),
+                report.homeTeamBaseline(), report.score().marginMeanAbsoluteError(),
+                report.score().baselineMarginMeanAbsoluteError());
         return report;
     }
 
     /** Dernier entraînement enregistré. */
     @Override
     public Optional<TrainingReport> latestReport() {
-        return metricsRepository.findFirstByModelOrderByCreatedAtDesc(MODEL_NAME).map(m -> toReport(m, null));
+        return metricsRepository.findFirstByModelOrderByCreatedAtDesc(MODEL_NAME).map(m -> toReport(m, null,
+                metricsRepository.findFirstByModelOrderByCreatedAtDesc(SCORE_MODEL_NAME)
+                        .filter(score -> score.getModelVersion().equals(m.getModelVersion()))));
     }
 
     private PredictionModelMetrics toMetrics(Evaluation e, int seasonsUsed, String version) {
@@ -113,7 +126,26 @@ public class GameOutcomeModelService implements GameOutcomeModel {
                 .build();
     }
 
-    private TrainingReport toReport(PredictionModelMetrics m, Long trainingGames) {
+    private PredictionModelMetrics toScoreMetrics(GameScoreTrainer.Evaluation e, int seasonsUsed, String version) {
+        return PredictionModelMetrics.builder()
+                .model(SCORE_MODEL_NAME)
+                .modelVersion(version)
+                .evaluationDate(LocalDate.now(clock))
+                .totalPredictions((int) e.testGames())
+                .correctPredictions((int) e.correctWinners())
+                .accuracy(decimal(e.winnerAccuracy()))
+                .meanAbsoluteError(points(e.marginMeanAbsoluteError()))
+                .rootMeanSquaredError(points(e.marginRootMeanSquaredError()))
+                .pointsMeanAbsoluteError(points(e.pointsMeanAbsoluteError()))
+                .totalMeanAbsoluteError(points(e.totalMeanAbsoluteError()))
+                .baselineMeanAbsoluteError(points(e.baselineMarginMeanAbsoluteError()))
+                .trainingSeasons(seasonsUsed)
+                .testSeason(e.testSeason().length() > 20 ? e.testSeason().substring(0, 20) : e.testSeason())
+                .build();
+    }
+
+    /** @param score évaluation du modèle de score de la même version, s'il a été entraîné avec */
+    private TrainingReport toReport(PredictionModelMetrics m, Long trainingGames, Optional<PredictionModelMetrics> score) {
         return new TrainingReport(m.getModel(), m.getModelVersion(), m.getCreatedAt(), m.getTrainingSeasons(),
                 m.getTestSeason(), trainingGames, m.getTotalPredictions(), m.getAccuracy().doubleValue(),
                 number(m.getAuc()), number(m.getLogLoss()), number(m.getPrecisionScore()), number(m.getRecall()),
@@ -121,7 +153,15 @@ public class GameOutcomeModelService implements GameOutcomeModel {
                 read(m.getConfusionMatrixJson(), new TypeReference<>() {
                 }),
                 read(m.getFeatureImportanceJson(), new TypeReference<>() {
-                }));
+                }),
+                score.map(GameOutcomeModelService::toScoreReport).orElse(null));
+    }
+
+    private static TrainingReport.ScoreReport toScoreReport(PredictionModelMetrics s) {
+        return new TrainingReport.ScoreReport(s.getModel(), s.getTotalPredictions(), s.getAccuracy().doubleValue(),
+                number(s.getPointsMeanAbsoluteError()), s.getMeanAbsoluteError().doubleValue(),
+                number(s.getRootMeanSquaredError()), number(s.getTotalMeanAbsoluteError()),
+                number(s.getBaselineMeanAbsoluteError()));
     }
 
     private <T> T read(String json, TypeReference<T> type) {
@@ -130,6 +170,10 @@ public class GameOutcomeModelService implements GameOutcomeModel {
 
     private static BigDecimal decimal(double value) {
         return BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal points(double value) {
+        return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP);
     }
 
     private static Double number(BigDecimal value) {

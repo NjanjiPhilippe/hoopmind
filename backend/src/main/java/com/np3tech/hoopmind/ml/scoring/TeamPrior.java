@@ -11,15 +11,18 @@ import java.util.List;
  *
  * @param gamesPlayed matchs joués la saison passée ; 0 si l'équipe n'y apparaît pas (valeurs neutres)
  */
-public record TeamPrior(long gamesPlayed, double winPct, double offensiveRating, double defensiveRating) {
+public record TeamPrior(long gamesPlayed, double winPct, double offensiveRating, double defensiveRating,
+                        double pointsPerGame, double pointsAllowedPerGame) {
 
-    public static final TeamPrior NONE =
-            new TeamPrior(0, TeamForm.NEUTRAL_WIN_PCT, TeamForm.NEUTRAL_RATING, TeamForm.NEUTRAL_RATING);
+    public static final TeamPrior NONE = new TeamPrior(0, TeamForm.NEUTRAL_WIN_PCT, TeamForm.NEUTRAL_RATING,
+            TeamForm.NEUTRAL_RATING, TeamForm.NEUTRAL_POINTS, TeamForm.NEUTRAL_POINTS);
 
     /** @param previousSeason matchs de la saison précédente (au moins ceux de l'équipe) */
     public static TeamPrior of(List<GameRecord> previousSeason, long teamId) {
         long played = 0;
         long wins = 0;
+        long totalPoints = 0;
+        long totalPointsAllowed = 0;
         Double scored = null;
         Double allowed = null;
         double ownPossessions = 0;
@@ -33,6 +36,8 @@ public record TeamPrior(long gamesPlayed, double winPct, double offensiveRating,
             int pointsAllowed = home ? game.awayPoints() : game.homePoints();
             played++;
             wins += points > pointsAllowed ? 1 : 0;
+            totalPoints += points;
+            totalPointsAllowed += pointsAllowed;
             BoxScore own = home ? game.home() : game.away();
             BoxScore opponent = home ? game.away() : game.home();
             if (own != null && opponent != null) {
@@ -49,6 +54,7 @@ public record TeamPrior(long gamesPlayed, double winPct, double offensiveRating,
         Double defensive = TeamForm.rating(allowed, opponentPossessions);
         return new TeamPrior(played, (double) wins / played,
                 offensive == null ? TeamForm.NEUTRAL_RATING : offensive,
-                defensive == null ? TeamForm.NEUTRAL_RATING : defensive);
+                defensive == null ? TeamForm.NEUTRAL_RATING : defensive,
+                (double) totalPoints / played, (double) totalPointsAllowed / played);
     }
 }

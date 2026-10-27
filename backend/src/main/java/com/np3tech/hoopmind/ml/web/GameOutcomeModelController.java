@@ -50,10 +50,10 @@ class GameOutcomeModelController {
     }
 
     @GetMapping("/predict/game")
-    @Operation(operationId = "predictGameOutcome", summary = "Prédire le vainqueur d'un match",
+    @Operation(operationId = "predictGameOutcome", summary = "Prédire le vainqueur et le score d'un match",
             description = "Forme des deux équipes avant la date du match (matchs déjà joués de la saison, complétés en début de "
                     + "saison par le bilan de la saison passée), puis le modèle "
-                    + "entraîné. Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas "
+                    + "entraîné, et le score si le modèle a été entraîné depuis l'ajout du modèle de score (sinon score = null). Calculé en Java : disponible même si Spark est désactivé. 409 si le modèle n'est pas "
                     + "entraîné, 422 si une équipe n'a joué aucun match ni cette saison avant cette date, ni la saison passée.")
     GameOutcomePrediction predictGameOutcome(
             @Parameter(description = "ID de la saison") @RequestParam long seasonId,

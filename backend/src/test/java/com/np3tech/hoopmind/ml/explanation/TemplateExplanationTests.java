@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.ml.explanation;
 import com.np3tech.hoopmind.ml.GameOutcomeAnalysis;
 import com.np3tech.hoopmind.ml.GameOutcomePrediction;
 import com.np3tech.hoopmind.ml.PredictionFactor;
+import com.np3tech.hoopmind.ml.ScorePrediction;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -26,6 +27,28 @@ class TemplateExplanationTests {
                 .doesNotContain("10 derniers matchs")
                 .doesNotContain("playoffs")
                 .doesNotContain("très ouvert");
+    }
+
+    @Test
+    void givesTheEstimatedScoreWhenTheScoreModelIsTrained() {
+        Explanation explanation = TemplateExplanation.of(Fixtures.requestWithScore(
+                ScorePrediction.of(114.4, 107.2, 10.3, 116.1, 108.5, 111.0, 112.4)));
+
+        assertThat(explanation.text())
+                .contains("Score estimé : Boston Celtics 114, New York Knicks 107, soit 7 points d'écart pour Boston Celtics "
+                        + "(le modèle se trompe en moyenne de 10 points sur l'écart).")
+                .doesNotContain("très serré");
+        assertThat(TemplateExplanation.of(Fixtures.request()).text()).doesNotContain("Score estimé");
+    }
+
+    @Test
+    void saysTheGameIsCloseWhenTheScoreDisagreesWithTheFavorite() {
+        Explanation explanation = TemplateExplanation.of(Fixtures.requestWithScore(
+                ScorePrediction.of(109.6, 110.1, 10.3, 110, 110, 110, 110)));
+
+        assertThat(explanation.text())
+                .contains("Boston Celtics 110, New York Knicks 111, soit 1 point d'écart pour New York Knicks")
+                .contains("le match s'annonce très serré");
     }
 
     /** Données réelles d'un essai : le modèle compense le net rating par le bilan, de sens contraire. */

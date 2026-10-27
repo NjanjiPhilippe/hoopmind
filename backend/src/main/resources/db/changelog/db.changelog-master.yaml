@@ -29,3 +29,5 @@ databaseChangeLog:
       file: db/changelog/changes/014-remove-demo-season.yaml
   - include:
       file: db/changelog/changes/015-team-logo-urls.yaml
+  - include:
+      file: db/changelog/changes/016-score-model-metrics.yaml
