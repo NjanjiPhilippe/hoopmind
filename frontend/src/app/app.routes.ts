@@ -36,6 +36,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/predict/predict.component').then(m => m.PredictComponent),
   },
   {
+    path: 'predictions',
+    title: 'Mes prédictions · HoopMind',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/predictions/my-predictions.component').then(m => m.MyPredictionsComponent),
+  },
+  {
     path: 'standings',
     title: 'Classement · HoopMind',
     canActivate: [authGuard],

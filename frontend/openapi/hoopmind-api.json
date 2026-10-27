@@ -1428,7 +1428,7 @@
           "Spark Analytics"
         ],
         "summary": "Prédire le vainqueur et le score d'un match et expliquer pourquoi",
-        "description": "Même prédiction que GET /predict/game (score compris), avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a joué aucun match ni cette saison avant cette date, ni la saison passée.",
+        "description": "Même prédiction que GET /predict/game (score compris), avec le poids de chaque facteur et une explication en français. Le texte est rédigé par le LLM configuré (hoopmind.ml.explanation.provider) à partir des seuls chiffres du modèle ; sans LLM, ou s'il ne répond pas, une explication est rédigée sans lui (fallback = true), de même au-delà de la limite d'appels au LLM par utilisateur et par heure. La prédiction est ajoutée à « Mes prédictions » de l'utilisateur. 409 si le modèle n'est pas entraîné, 422 si une équipe n'a joué aucun match ni cette saison avant cette date, ni la saison passée.",
         "operationId": "explainGameOutcome",
         "parameters": [
           {
@@ -1516,6 +1516,72 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrainingReport"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/mine": {
+      "get": {
+        "tags": [
+          "Mes prédictions"
+        ],
+        "summary": "Mes prédictions, les plus récentes d'abord",
+        "description": "Chaque match prédit depuis la page « Prédire », avec le score réel et le verdict une fois le match joué.",
+        "operationId": "listMyPredictions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Zero-based page index (0..N)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "The size of the page to be returned",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "default": [
+                "predictedAt,DESC"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedModelPredictionHistoryEntry"
                 }
               }
             }
@@ -1955,6 +2021,37 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/predictions/mine/{id}": {
+      "delete": {
+        "tags": [
+          "Mes prédictions"
+        ],
+        "summary": "Retirer une de mes prédictions",
+        "description": "404 si elle n'existe pas ou appartient à un autre utilisateur.",
+        "operationId": "deleteMyPrediction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         },
         "security": [
@@ -3408,6 +3505,97 @@
             "format": "int64"
           }
         }
+      },
+      "PagedModelPredictionHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PredictionHistoryEntry"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/PageMetadata"
+          }
+        }
+      },
+      "PredictionHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seasonId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "homeTeamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "homeTeam": {
+            "type": "string"
+          },
+          "awayTeamId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awayTeam": {
+            "type": "string"
+          },
+          "gameDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "playoff": {
+            "type": "boolean"
+          },
+          "homeWinProbability": {
+            "type": "number",
+            "format": "double"
+          },
+          "predictedHomePoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "predictedAwayPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "model": {
+            "type": "string"
+          },
+          "predictedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualHomePoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "actualAwayPoints": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "correct": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "awayTeam",
+          "awayTeamId",
+          "gameDate",
+          "homeTeam",
+          "homeTeamId",
+          "homeWinProbability",
+          "id",
+          "model",
+          "playoff",
+          "predictedAt",
+          "seasonId"
+        ]
       },
       "PagedModelPlayerResponse": {
         "type": "object",

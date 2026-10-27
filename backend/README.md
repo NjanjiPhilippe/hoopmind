@@ -130,6 +130,7 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | POST | `/api/v1/admin/imports/csv` (multipart `files`), GET `/csv/datasets` | ADMIN |
 | POST | `/api/v1/spark/ml/train/game-outcome/jobs?seasons=` (arrière-plan), GET `/train/game-outcome/status` | ADMIN |
 | GET | `/api/v1/spark/ml/model-metrics`, `/ml/predict/game`, `/ml/predict/game/explanation` | connecté |
+| GET, DELETE | `/api/v1/predictions/mine`, `/mine/{id}` (ses propres prédictions seulement) | connecté |
 | * | `/api/v1/spark/**` | connecté (entraînement : ADMIN) |
 
 ## Données NBA

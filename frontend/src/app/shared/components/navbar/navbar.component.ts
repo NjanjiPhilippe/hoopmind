@@ -16,6 +16,7 @@ interface NavLink {
 const LINKS: NavLink[] = [
   { path: '/dashboard', label: 'Accueil', exact: true },
   { path: '/predict', label: 'Prédire' },
+  { path: '/predictions', label: 'Mes prédictions' },
   { path: '/standings', label: 'Classement' },
   { path: '/games', label: 'Calendrier' },
 ];

@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 
 import { Api } from '../../core/api/generated/api';
 import { getGamesBySeason } from '../../core/api/generated/fn/games/get-games-by-season';
+import { listMyPredictions } from '../../core/api/generated/fn/mes-predictions/list-my-predictions';
 import { getModelMetrics } from '../../core/api/generated/fn/spark-analytics/get-model-metrics';
 import { GameResponse } from '../../core/api/generated/models/game-response';
 import { TrainingReport } from '../../core/api/generated/models/training-report';
@@ -13,8 +14,10 @@ import { NbaCatalog, teamName } from '../../core/nba/nba-catalog';
 import { byDateDesc } from '../../core/nba/nba-format';
 import { currentValue } from '../../core/util/resource';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
+import { predictParams, summarize } from '../predictions/prediction-summary';
 
 const LATEST = 5;
+const RECENT_PREDICTIONS = 3;
 
 /** Derniers résultats et prochains matchs d'une saison. */
 export function splitGames(games: GameResponse[], count = LATEST): { results: GameResponse[]; upcoming: GameResponse[] } {
@@ -27,7 +30,8 @@ export function splitGames(games: GameResponse[], count = LATEST): { results: Ga
 
 /**
  * Première page après la connexion : ce que l'application sait faire (prédire), la qualité du modèle, et les derniers
- * matchs de la saison. Sans données, elle oriente vers l'import (administrateur) ou explique l'attente (utilisateur).
+ * matchs de la saison. Chacun y retrouve ses dernières prédictions ; l'administrateur a en plus ses raccourcis de gestion.
+ * Sans données, elle oriente vers l'import (administrateur) ou explique l'attente (utilisateur).
  */
 @Component({
   selector: 'app-dashboard',
@@ -42,10 +46,15 @@ export class DashboardComponent {
   protected readonly auth = inject(AuthService);
   protected readonly catalog = inject(NbaCatalog);
   protected readonly teamName = teamName;
+  protected readonly summarize = summarize;
+  protected readonly predictParams = predictParams;
 
   protected readonly firstName = computed(() => this.auth.user()?.firstName || this.auth.user()?.username);
 
   protected readonly model = resource({ loader: () => this.latestModel() });
+  protected readonly myPredictions = resource({
+    loader: () => this.api.invoke(listMyPredictions, { page: 0, size: RECENT_PREDICTIONS }),
+  });
   protected readonly games = resource({
     params: () => this.catalog.latestSeason()?.id,
     loader: ({ params }) => this.api.invoke(getGamesBySeason, { seasonId: params }),
