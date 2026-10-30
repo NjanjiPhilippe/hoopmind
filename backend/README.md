@@ -75,6 +75,7 @@ Monolithe modulaire, découpé par fonctionnalité (`com.np3tech.hoopmind.*`) :
 | `user` | Comptes, profils, rôles, administration des utilisateurs. API publique : `UserAccountService` et l'événement `UserCredentialsRevoked`. |
 | `auth` | Connexion, jetons, configuration Spring Security (API et Swagger). Dépend de `user`, jamais l'inverse. |
 | `nba` | Équipes, joueurs, saisons, matchs, classements. |
+| `ingestion` | Import des données NBA : base de Wyatt Walsh et fichiers d'Eoin Moore (`ingestion.nbadb`), CSV de Sumitro Datta (`ingestion.csv`), en jobs d'arrière-plan. |
 | `audit` | Journal d'audit : qui a fait quoi, sur quel compte, avec quel résultat. Les autres modules publient un `AuditEvent`. |
 | `ml` | Prédictions et analyses. Le reste de l'application passe par le port `GameOutcomePredictor` ; l'implémentation Spark vit dans `ml.spark`. L'explication par LLM passe par le port `PredictionExplainer` (`ml.explanation`). |
 | `shared` | Configuration commune, erreurs, e-mail. |
@@ -160,7 +161,7 @@ Le play-in (type `PLAY_IN`) ne compte ni dans le bilan de saison régulière ni 
 Le complément stats.nba.com (ADR 0017) a été retiré : depuis mars 2026, nba.com coupe tout client qui n'est pas un
 navigateur. Les fichiers d'Eoin Moore le remplacent (voir [ADR 0024](docs/adr/0024-allegement-du-backend.md)).
 
-L'import des CSV (`nba.importer.csv`) reconnaît les 22 fichiers de l'archive par leurs colonnes caractéristiques et range
+L'import des CSV (`ingestion.csv`) reconnaît les 22 fichiers de l'archive par leurs colonnes caractéristiques et range
 chaque ligne sous sa clé naturelle (par exemple saison, ligue, joueur et équipe), avec ses valeurs en JSON : « NA » devient nul,
 les nombres restent des nombres. Une ligne déjà présente n'est réécrite que si elle a changé.
 
