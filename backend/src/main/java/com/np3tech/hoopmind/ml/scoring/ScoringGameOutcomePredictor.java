@@ -93,8 +93,13 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
         }
         double[] features = GameOutcomeFeatures.of(home, away, playoff);
         double probability = card.homeWinProbability(features);
+        // Une carte du score d'un autre entraînement (enregistrement interrompu entre les deux cartes) mélangerait
+        // deux modèles : sans carte de la même version, la prédiction ne donne que le vainqueur.
         GameOutcomePrediction prediction = new GameOutcomePrediction(probability >= 0.5, probability, 1 - probability,
-                card.model(), cards.currentScore().map(score -> score(score, home, away, playoff)).orElse(null));
+                card.model(), cards.currentScore()
+                .filter(score -> score.version().equals(card.version()))
+                .map(score -> score(score, home, away, playoff))
+                .orElse(null));
         return new GameOutcomeAnalysis(prediction, card.version(), card.intercept(),
                 factors(home, away, playoff, card.contributions(features)), home.gamesPlayed(), away.gamesPlayed());
     }

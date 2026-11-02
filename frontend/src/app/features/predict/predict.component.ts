@@ -111,6 +111,9 @@ export class PredictComponent {
   /** Saisie libre d'une affiche (match hypothétique) : repliée par défaut, ouverte si l'URL décrit un match sans identifiant. */
   protected readonly manual = linkedSignal(() => !!this.home() && !this.game());
 
+  /** Numéro de la dernière demande de prédiction : les réponses des demandes précédentes sont ignorées. */
+  private predictionSequence = 0;
+
   /** Qualité du modèle, montrée à côté de chaque prédiction pour savoir quelle confiance lui accorder. */
   protected readonly model = resource({ loader: () => this.latestModel() });
 
@@ -188,10 +191,16 @@ export class PredictComponent {
       date: this.day(),
       playoff: this.isPlayoff(),
     };
+    // Un match choisi pendant qu'un autre est en cours de prédiction : seule la dernière demande s'affiche, même si
+    // la réponse de la précédente arrive après.
+    const sequence = ++this.predictionSequence;
     this.predicting.set(true);
     this.error.set(null);
     try {
       const result = await this.api.invoke(explainGameOutcome, request);
+      if (sequence !== this.predictionSequence) {
+        return;
+      }
       this.prediction.set({
         homeTeamId: request.homeTeamId, awayTeamId: request.awayTeamId, date: request.date, playoff: request.playoff, result,
         factors: factorRows(result.factors, request.playoff),
@@ -204,6 +213,9 @@ export class PredictComponent {
         replaceUrl: true,
       });
     } catch (e) {
+      if (sequence !== this.predictionSequence) {
+        return;
+      }
       const problem = toProblem(e);
       const notTrained = problem.code === 'MODEL_NOT_TRAINED';
       this.prediction.set(null);
@@ -212,7 +224,9 @@ export class PredictComponent {
         notTrained,
       });
     } finally {
-      this.predicting.set(false);
+      if (sequence === this.predictionSequence) {
+        this.predicting.set(false);
+      }
     }
   }
 

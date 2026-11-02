@@ -86,6 +86,24 @@ class ScoringGameOutcomePredictorTests {
     }
 
     @Test
+    void ignoresAScoreModelFromAnotherTraining() {
+        ScoringCardStore cards = store();
+        double[] zeros = new double[GameScoreFeatures.NAMES.size()];
+        double[] ones = {1, 1, 1, 1, 1, 1};
+        cards.save(new GameScoreCard("linear-regression", "v7",
+                new ScoringCard("linear-regression", "v7", GameScoreFeatures.NAMES, zeros, ones, zeros, 100),
+                new ScoringCard("linear-regression", "v7", GameScoreFeatures.NAMES, zeros, ones, zeros, 100),
+                11.2));
+        // Le vainqueur a été réentraîné (v8) mais l'enregistrement de la carte du score a échoué.
+        cards.save(new ScoringCard("logistic-regression", "v8", GameOutcomeFeatures.NAMES,
+                new double[]{0, 0, 0, 0, 0.1}, new double[]{0.2, 0.25, 8, 1.5, 0},
+                new double[]{0.9, 0.3, 0.6, 0.1, 0.4}, 0.15));
+        ScoringGameOutcomePredictor predictor = new ScoringGameOutcomePredictor(new Season(), cards, registry);
+
+        assertThat(predictor.predict(10, CELTICS, LAKERS, DAY.plusDays(5), false).score()).isNull();
+    }
+
+    @Test
     void countsFailuresByErrorCode() {
         ScoringGameOutcomePredictor predictor = new ScoringGameOutcomePredictor(new Season(), store(), registry);
 

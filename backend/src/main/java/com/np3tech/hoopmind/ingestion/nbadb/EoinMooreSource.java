@@ -82,6 +82,11 @@ final class EoinMooreSource implements NbaSource {
             if (gameId == null || home == null || away == null) {
                 return;
             }
+            // Saison lue dans l'identifiant quand c'est possible : la date d'un match écarté n'est jamais lue, et une
+            // date illisible hors des saisons demandées ne fait pas échouer l'import.
+            if (seasonInId(gameId) && !kept(gameId, null, fromYear, toYear)) {
+                return;
+            }
             LocalDate date = date(text(line, "gameDate") != null ? text(line, "gameDate") : text(line, "gameDateTimeEst"));
             if (!kept(gameId, date, fromYear, toYear)) {
                 return;
@@ -105,6 +110,10 @@ final class EoinMooreSource implements NbaSource {
                 NbaAlignment.season(toYear), unique.size());
     }
 
+    private static boolean seasonInId(String gameId) {
+        return gameId.length() >= 5 && Character.isDigit(gameId.charAt(3)) && Character.isDigit(gameId.charAt(4));
+    }
+
     /** Saison régulière, play-in et playoffs des saisons demandées ; présaison, All-Star et NBA Cup sont ignorés. */
     private static boolean kept(String gameId, LocalDate date, int fromYear, int toYear) {
         if (!(gameId.startsWith("002") || gameId.startsWith("005") || gameId.startsWith("004"))) {
@@ -120,7 +129,7 @@ final class EoinMooreSource implements NbaSource {
      */
     static int seasonYear(String gameId, LocalDate date) {
         String digits = gameId.substring(3, 5);
-        if (Character.isDigit(digits.charAt(0)) && Character.isDigit(digits.charAt(1))) {
+        if (seasonInId(gameId)) {
             int twoDigits = Integer.parseInt(digits);
             return twoDigits >= 46 ? 1900 + twoDigits : 2000 + twoDigits;
         }

@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,14 @@ import java.util.Optional;
  * construit la réponse ({@code open-in-view: false}), un proxy non chargé y lèverait une LazyInitializationException.
  */
 public interface GameRepository extends JpaRepository<Game, Long> {
+
+    /**
+     * Verrouille la ligne du match jusqu'à la fin de la transaction : deux saisies du même score passent l'une après
+     * l'autre. Requête native : PostgreSQL refuse {@code FOR UPDATE} sur les jointures externes du graphe d'entités,
+     * et le match est relu ensuite avec ses équipes par {@link #findById}.
+     */
+    @Query(value = "SELECT id FROM games WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Long> lockById(@Param("id") Long id);
 
     @Override
     @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "season"})

@@ -61,6 +61,21 @@ describe('AuthService', () => {
     expect(auth.token()).toBeNull();
   });
 
+  it('garde la session si le serveur est momentanément injoignable', async () => {
+    const login = auth.login({ login: 'saiko', password: 'x' });
+    http.expectOne('/api/v1/auth/login').flush(authResponse());
+    await login;
+
+    for (const status of [0, 503, 429]) {
+      const refresh = auth.refresh();
+      http.expectOne('/api/v1/auth/refresh').flush(null, { status, statusText: 'Unavailable' });
+      expect(await refresh).toBe(false);
+    }
+
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.token()).toBe('access-token');
+  });
+
   it('ferme la session locale même si la déconnexion côté serveur échoue', async () => {
     const login = auth.login({ login: 'saiko', password: 'x' });
     http.expectOne('/api/v1/auth/login').flush(authResponse());

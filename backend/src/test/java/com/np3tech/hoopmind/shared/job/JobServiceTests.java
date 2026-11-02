@@ -112,6 +112,25 @@ class JobServiceTests {
                 .isInstanceOfSatisfying(Interrupted.class, interrupted -> assertThat(interrupted.step()).isEqualTo("IMPORTING")));
     }
 
+    /** L'import au démarrage lance son job avant ApplicationReadyEvent : il ne doit pas être marqué interrompu. */
+    @Test
+    void aJobStartedBeforeTheApplicationIsReadyIsNotMarkedInterrupted() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        Job<Result> started = jobs.start(JobType.NBA_DATABASE_IMPORT, null, Map.of(), "IMPORTING", context -> {
+            await(release);
+            return new Result(1);
+        });
+        try {
+            jobs.markInterruptedJobs();
+
+            assertThat(jobs.find(started.id(), Result.class))
+                    .hasValueSatisfying(job -> assertThat(job.state()).isInstanceOf(JobState.Running.class));
+        } finally {
+            release.countDown();
+        }
+        assertThat(waitForEnd(started.id()).state()).isInstanceOf(Succeeded.class);
+    }
+
     private Job<Result> waitForEnd(UUID id) throws InterruptedException {
         Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
         while (Instant.now().isBefore(deadline)) {

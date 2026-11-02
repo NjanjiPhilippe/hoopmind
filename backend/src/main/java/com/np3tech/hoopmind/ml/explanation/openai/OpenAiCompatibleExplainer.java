@@ -83,6 +83,10 @@ public class OpenAiCompatibleExplainer implements PredictionExplainer {
         if (content == null || content.isBlank()) {
             throw new LlmRejectedException(PROVIDER + " : réponse vide (" + response.choices().getFirst().finishReason() + ")");
         }
+        // Une phrase coupée serait affichée et gardée en cache : mieux vaut l'explication rédigée sans LLM.
+        if ("length".equals(response.choices().getFirst().finishReason())) {
+            throw new LlmRejectedException(PROVIDER + " : réponse tronquée (length)");
+        }
         return content.strip();
     }
 

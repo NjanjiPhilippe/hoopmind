@@ -1,4 +1,4 @@
-import { HttpClient, HttpContext, HttpContextToken } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpContextToken, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -64,16 +64,24 @@ export class AuthService {
 
   /**
    * Renouvelle le jeton d'accès. Les appels simultanés partagent la même requête : le backend fait tourner
-   * le jeton de rafraîchissement et rejetterait le second échange comme une réutilisation.
+   * le jeton de rafraîchissement et refuserait un second échange du même jeton. Entre onglets, un verrou du
+   * navigateur fait passer les renouvellements l'un après l'autre.
+   *
+   * Seul un refus du serveur (401, 403) ferme la session : après une panne passagère (réseau, 5xx, 429), le cookie
+   * reste valable et la session est gardée.
    */
   refresh(): Promise<boolean> {
-    this.refreshInFlight ??= firstValueFrom(refreshSession(this.http, this.rootUrl, undefined, this.authContext()))
+    this.refreshInFlight ??= withRefreshLock(() =>
+      firstValueFrom(refreshSession(this.http, this.rootUrl, undefined, this.authContext())),
+    )
       .then(response => {
         this.openSession(response.body);
         return true;
       })
-      .catch(() => {
-        this.clearSession();
+      .catch(error => {
+        if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
+          this.clearSession();
+        }
         return false;
       })
       .finally(() => (this.refreshInFlight = null));
@@ -110,4 +118,14 @@ export class AuthService {
   private authContext(): HttpContext {
     return new HttpContext().set(SKIP_AUTH_REFRESH, true);
   }
+}
+
+/**
+ * Un seul renouvellement à la fois entre les onglets du navigateur. Le cookie est lu au moment de l'envoi : l'onglet
+ * qui attend présente le jeton que le premier vient de recevoir, au lieu de l'ancien.
+ */
+function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator === 'undefined' ? undefined : navigator.locks;
+  // request() est typé Promise<Promise<T>> pour une tâche asynchrone ; then() le ramène à Promise<T>.
+  return locks ? locks.request('hoopmind-refresh', task).then(result => result) : task();
 }

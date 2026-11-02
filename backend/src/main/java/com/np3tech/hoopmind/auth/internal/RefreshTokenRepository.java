@@ -16,12 +16,18 @@ interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     @Modifying
-    @Query("update RefreshToken t set t.revoked = true, t.revokedAt = :now where t.familyId = :familyId and t.revoked = false")
-    int revokeFamily(@Param("familyId") String familyId, @Param("now") Instant now);
+    @Query("""
+            update RefreshToken t set t.revoked = true, t.revokedAt = :now, t.revokedReason = :reason
+            where t.familyId = :familyId and t.revoked = false""")
+    int revokeFamily(@Param("familyId") String familyId, @Param("now") Instant now,
+                     @Param("reason") RefreshToken.RevocationReason reason);
 
     @Modifying
-    @Query("update RefreshToken t set t.revoked = true, t.revokedAt = :now where t.userId = :userId and t.revoked = false")
-    int revokeAllForUser(@Param("userId") Long userId, @Param("now") Instant now);
+    @Query("""
+            update RefreshToken t set t.revoked = true, t.revokedAt = :now, t.revokedReason = :reason
+            where t.userId = :userId and t.revoked = false""")
+    int revokeAllForUser(@Param("userId") Long userId, @Param("now") Instant now,
+                         @Param("reason") RefreshToken.RevocationReason reason);
 
     @Modifying
     @Query("delete from RefreshToken t where t.userId = :userId")

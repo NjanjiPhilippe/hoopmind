@@ -127,9 +127,12 @@ export class AdminDataComponent {
 
   constructor() {
     // Tant qu'un import ou un entraînement tourne, son état est relu régulièrement.
-    pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS);
-    pollWhile(() => isEoinMooreRunning(currentValue(this.eoinMoore)?.job), () => this.eoinMoore.reload(), POLL_MS);
-    pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS);
+    pollWhile(() => isRunning(currentValue(this.nbaStatus)?.job), () => this.nbaStatus.reload(), POLL_MS,
+      () => this.nbaStatus.status() === 'error');
+    pollWhile(() => isEoinMooreRunning(currentValue(this.eoinMoore)?.job), () => this.eoinMoore.reload(), POLL_MS,
+      () => this.eoinMoore.status() === 'error');
+    pollWhile(() => isTraining(currentValue(this.trainingJob)), () => this.trainingJob.reload(), POLL_MS,
+      () => this.trainingJob.status() === 'error');
   }
 
   async startImport(download: boolean): Promise<void> {

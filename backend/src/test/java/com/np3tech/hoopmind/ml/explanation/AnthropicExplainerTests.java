@@ -49,6 +49,15 @@ class AnthropicExplainerTests {
     }
 
     @Test
+    void aTruncatedAnswerIsARejection() {
+        llm.reply(200, "{\"content\": [{\"type\": \"text\", \"text\": \"Boston part favori, surtout\"}], "
+                + "\"stop_reason\": \"max_tokens\"}");
+
+        assertThatThrownBy(() -> explainer(null).explain(Fixtures.request()))
+                .isInstanceOf(LlmRejectedException.class).hasMessageContaining("tronquée");
+    }
+
+    @Test
     void overloadIsTemporary() {
         llm.reply(529, "{\"type\": \"error\", \"error\": {\"type\": \"overloaded_error\"}}");
 

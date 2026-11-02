@@ -3,6 +3,7 @@ package com.np3tech.hoopmind.auth.internal;
 import com.np3tech.hoopmind.auth.AuthenticationEvent;
 import com.np3tech.hoopmind.auth.AuthenticationEvent.LoginFailed;
 import com.np3tech.hoopmind.auth.config.JwtProperties;
+import com.np3tech.hoopmind.auth.internal.RefreshToken.RevocationReason;
 import com.np3tech.hoopmind.user.Registration;
 import com.np3tech.hoopmind.user.UserAccount;
 import com.np3tech.hoopmind.user.UserAccountService;
@@ -21,6 +22,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
@@ -35,6 +37,9 @@ import java.util.UUID;
 public class AuthService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    /** Délai pendant lequel un jeton tout juste échangé est refusé sans alerte (onglets concurrents). */
+    static final Duration ROTATION_GRACE = Duration.ofSeconds(10);
 
     private final UserAccountService accounts;
     private final PasswordEncoder passwordEncoder;
@@ -88,6 +93,10 @@ public class AuthService {
     /**
      * Échange un jeton de rafraîchissement contre un nouveau couple de jetons. L'ancien jeton est révoqué ;
      * s'il est présenté de nouveau (vol probable), toute la famille est révoquée.
+     * <p>
+     * Deux exceptions à l'alerte de vol : un jeton révoqué pour une autre raison qu'un échange (déconnexion, accès
+     * changé), et un jeton échangé il y a moins de {@link #ROTATION_GRACE} (deux onglets qui renouvellent la session
+     * au même moment). Les deux reçoivent un refus simple, sans nouveau jeton.
      */
     @Transactional(noRollbackFor = AuthenticationFailedException.class)
     public Session refresh(String rawRefreshToken, ClientInfo client) {
@@ -95,8 +104,11 @@ public class AuthService {
         RefreshToken current = refreshTokens.findByTokenHash(hash(rawRefreshToken))
                 .orElseThrow(AuthenticationFailedException::invalidRefreshToken);
 
+        if (current.isRevoked() && (!current.wasRotated() || current.rotatedWithin(now, ROTATION_GRACE))) {
+            throw AuthenticationFailedException.invalidRefreshToken();
+        }
         if (current.isRevoked()) {
-            int revoked = refreshTokens.revokeFamily(current.getFamilyId(), now);
+            int revoked = refreshTokens.revokeFamily(current.getFamilyId(), now, RevocationReason.REUSE_DETECTED);
             log.warn("Réutilisation d'un jeton de rafraîchissement révoqué (utilisateur {}), {} jeton(s) révoqué(s)",
                     current.getUserId(), revoked);
             accounts.findAccountById(current.getUserId()).ifPresent(account -> events.publishEvent(
@@ -110,14 +122,14 @@ public class AuthService {
                 .filter(UserAccount::active)
                 .orElseThrow(AuthenticationFailedException::invalidRefreshToken);
 
-        current.revoke(now);
+        current.revoke(now, RevocationReason.ROTATED);
         return openSession(account, current.getFamilyId(), client);
     }
 
     @Transactional
     public void logout(String rawRefreshToken) {
         refreshTokens.findByTokenHash(hash(rawRefreshToken)).ifPresent(token -> {
-            refreshTokens.revokeFamily(token.getFamilyId(), clock.instant());
+            refreshTokens.revokeFamily(token.getFamilyId(), clock.instant(), RevocationReason.LOGOUT);
             if (!token.isRevoked()) {
                 accounts.findAccountById(token.getUserId()).ifPresent(account -> events.publishEvent(
                         new AuthenticationEvent.LoggedOut(account.id(), account.username())));
@@ -134,7 +146,7 @@ public class AuthService {
         if (event.reason() == UserCredentialsRevoked.Reason.ACCOUNT_DELETED) {
             refreshTokens.deleteAllForUser(event.userId());
         } else {
-            refreshTokens.revokeAllForUser(event.userId(), clock.instant());
+            refreshTokens.revokeAllForUser(event.userId(), clock.instant(), RevocationReason.ACCESS_CHANGED);
         }
     }
 

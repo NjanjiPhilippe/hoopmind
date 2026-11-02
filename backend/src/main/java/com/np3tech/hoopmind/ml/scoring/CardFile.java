@@ -30,16 +30,29 @@ final class CardFile<T> {
 
     /** Écrit la carte (remplacement atomique du fichier) puis la rend active. */
     void save(T card) {
+        Path temporary = null;
         try {
             Files.createDirectories(file.toAbsolutePath().getParent());
-            Path temporary = Files.createTempFile(file.toAbsolutePath().getParent(), "scoring-card-", ".json");
+            temporary = Files.createTempFile(file.toAbsolutePath().getParent(), "scoring-card-", ".json");
             Files.writeString(temporary, json.writeValueAsString(card));
             Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
+            deleteQuietly(temporary);
             throw new AppException("Impossible d'enregistrer le modèle entraîné.", e, HttpStatus.INTERNAL_SERVER_ERROR,
                     "MODEL_SAVE_FAILED");
         }
         current.set(card);
+    }
+
+    private static void deleteQuietly(Path temporary) {
+        if (temporary == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(temporary);
+        } catch (IOException ignored) {
+            // L'erreur d'origine est celle qui compte ; un fichier temporaire resté là ne gêne pas la lecture.
+        }
     }
 
     /** La carte active, relue sur disque au premier appel après un redémarrage. */

@@ -129,6 +129,7 @@ public class GameService {
             throw new AppException("Un match NBA ne se termine pas sur une égalité : vérifiez les scores.",
                     HttpStatus.BAD_REQUEST, "INVALID_GAME_RESULT");
         }
+        gameRepository.lockById(id);
         Game game = getGameById(id);
         boolean homeWon = request.getHomeTeamScore() > request.getAwayTeamScore();
         int overtimePeriods = request.getOvertimePeriods() == null ? 0 : request.getOvertimePeriods();
@@ -154,6 +155,9 @@ public class GameService {
         Game game = getGameById(id);
         GameResult result = gameResultRepository.findByGame(game).orElseThrow(() -> new AppException(
                 "Ce match n'a pas de score enregistré.", HttpStatus.NOT_FOUND, "GAME_RESULT_NOT_FOUND"));
+        // Un match importé a des feuilles de match qui référencent son résultat.
+        gameResultRepository.detachTeamGameStats(result.getId());
+        gameResultRepository.detachPlayerGameStats(result.getId());
         gameResultRepository.delete(result);
         game.setStatus(GameStatus.SCHEDULED);
         gameRepository.save(game);

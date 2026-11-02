@@ -63,6 +63,14 @@ class OpenAiCompatibleExplainerTests {
     }
 
     @Test
+    void aTruncatedAnswerIsARejection() {
+        llm.reply(200, "{\"choices\": [{\"finish_reason\": \"length\", \"message\": {\"content\": \"Boston part favori, surtout\"}}]}");
+
+        assertThatThrownBy(() -> explainer("secret").explain(Fixtures.request()))
+                .isInstanceOf(LlmRejectedException.class).hasMessageContaining("tronquée");
+    }
+
+    @Test
     void quotaAndServerErrorsAreTemporary() {
         llm.reply(429, "{}").reply(503, "{}");
 

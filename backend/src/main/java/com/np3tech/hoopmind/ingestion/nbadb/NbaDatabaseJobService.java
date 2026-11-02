@@ -110,10 +110,10 @@ public class NbaDatabaseJobService {
             events.publishEvent(new DataImportEvent.NbaDatabaseImported(requestedBy, download, report.seasons(),
                     report.games()));
             return new ImportOutcome(downloaded, report);
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             events.publishEvent(new DataImportEvent.NbaDatabaseImportFailed(requestedBy, download, seasons,
                     JobService.userMessage(e)));
-            throw e;
+            throw JobService.rethrow(e);
         }
     }
 

@@ -21,6 +21,13 @@ describe('parseScore', () => {
     expect(parseScore('-2', '100', '0')).toEqual({ error: 'Un score va de 0 à 250 points.' });
     expect(parseScore('100', '100', '0')).toEqual({ error: 'Un match NBA ne se termine pas sur une égalité.' });
   });
+
+  it('compte zéro prolongation quand le champ est vide et refuse une valeur hors de 0 à 10', () => {
+    expect(parseScore('112', '108', ' ')).toEqual({ homeTeamScore: 112, awayTeamScore: 108, overtimePeriods: 0 });
+    for (const overtime of ['abc', '1.5', '-1', '11']) {
+      expect(parseScore('112', '108', overtime)).toEqual({ error: 'Les prolongations vont de 0 à 10.' });
+    }
+  });
 });
 
 describe('shiftDay', () => {

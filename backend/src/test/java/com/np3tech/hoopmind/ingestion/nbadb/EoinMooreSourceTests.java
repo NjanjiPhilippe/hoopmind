@@ -79,6 +79,18 @@ class EoinMooreSourceTests {
     }
 
     @Test
+    void anUnreadableDateOutsideTheRequestedSeasonsIsIgnored() throws Exception {
+        new EoinMooreFixture()
+                .scheduled("22200002", "", BOS, NYK)   // 2022-23, hors fenêtre, sans date
+                .played("22300001", "2023-10-24", BOS, NYK, REGULATION, new int[]{20, 20, 20, 20})
+                .write(directory);
+
+        EoinMooreSource source = EoinMooreSource.read(directory, 2023, 2023);
+
+        assertThat(source.games(List.of("2023-24"))).extracting(GameRow::gameId).containsExactly("0022300001");
+    }
+
+    @Test
     void normalisesGameIdsAndReadsTheSeasonFromThem() {
         assertThat(EoinMooreSource.gameId("22300061")).isEqualTo("0022300061");
         assertThat(EoinMooreSource.gameId("22300061.0")).isEqualTo("0022300061");

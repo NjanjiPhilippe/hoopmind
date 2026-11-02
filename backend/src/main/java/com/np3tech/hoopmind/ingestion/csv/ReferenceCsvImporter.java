@@ -122,8 +122,11 @@ public class ReferenceCsvImporter {
     private void importZip(Upload upload, List<FileReport> reports, long[] budget) {
         try (ZipInputStream zip = new ZipInputStream(upload.content())) {
             for (ZipEntry entry; (entry = zip.getNextEntry()) != null; ) {
-                String name = Path.of(entry.getName()).getFileName().toString();
-                if (entry.isDirectory() || entry.getName().startsWith("__MACOSX") || name.startsWith(".")
+                // Le nom est découpé à la main : Path.of refuse certains caractères selon le système, et un nom
+                // réduit à « / » n'a pas de nom de fichier ; l'un ou l'autre ferait échouer tout l'envoi.
+                String raw = entry.getName();
+                String name = raw.substring(Math.max(raw.lastIndexOf('/'), raw.lastIndexOf('\\')) + 1);
+                if (entry.isDirectory() || name.isEmpty() || raw.startsWith("__MACOSX") || name.startsWith(".")
                         || !lowerCase(name).endsWith(".csv")) {
                     continue;
                 }
@@ -176,7 +179,10 @@ public class ReferenceCsvImporter {
         Timestamp now = Timestamp.from(clock.instant().truncatedTo(ChronoUnit.MICROS));
         int rows = 0;
         int skipped = 0;
-        List<Object[]> batch = new ArrayList<>(BATCH_SIZE);
+        int duplicates = 0;
+        // Par clé : PostgreSQL refuse qu'un même INSERT … ON CONFLICT DO UPDATE touche deux fois la même ligne, ce qui
+        // arrive quand deux lignes de même clé tombent dans un lot regroupé. La dernière l'emporte.
+        Map<String, Object[]> batch = new LinkedHashMap<>();
         for (CSVRecord record : parser) {
             rows++;
             Map<String, String> raw = new LinkedHashMap<>();
@@ -190,8 +196,11 @@ public class ReferenceCsvImporter {
                 skipped++;
                 continue;
             }
-            batch.add(new Object[]{dataset.name(), key, season(values.get("season")),
+            Object[] previous = batch.put(key, new Object[]{dataset.name(), key, season(values.get("season")),
                     jsonMapper.writeValueAsString(values), now});
+            if (previous != null) {
+                duplicates++;
+            }
             if (batch.size() == BATCH_SIZE) {
                 flush(batch);
             }
@@ -201,15 +210,25 @@ public class ReferenceCsvImporter {
         // compteurs du lot, que le pilote ne renvoie plus quand il regroupe les INSERT (reWriteBatchedInserts).
         int affected = countWrittenAt(dataset, now);
         int inserted = (int) (countRows(dataset) - before);
-        int written = rows - skipped;
+        int written = rows - skipped - duplicates;
         return new FileReport(name, FileStatus.IMPORTED, dataset.name(), dataset.label(), rows, inserted,
-                affected - inserted, written - affected, skipped,
-                skipped > 0 ? skipped + " ligne(s) sans clé ignorée(s)." : null);
+                affected - inserted, written - affected, skipped + duplicates, skippedMessage(skipped, duplicates));
     }
 
-    private void flush(List<Object[]> batch) {
+    private static String skippedMessage(int withoutKey, int duplicates) {
+        List<String> parts = new ArrayList<>();
+        if (withoutKey > 0) {
+            parts.add(withoutKey + " ligne(s) sans clé ignorée(s).");
+        }
+        if (duplicates > 0) {
+            parts.add(duplicates + " ligne(s) en double : la dernière a été gardée.");
+        }
+        return parts.isEmpty() ? null : String.join(" ", parts);
+    }
+
+    private void flush(Map<String, Object[]> batch) {
         if (!batch.isEmpty()) {
-            jdbc.batchUpdate(UPSERT, batch);
+            jdbc.batchUpdate(UPSERT, new ArrayList<>(batch.values()));
             batch.clear();
         }
     }

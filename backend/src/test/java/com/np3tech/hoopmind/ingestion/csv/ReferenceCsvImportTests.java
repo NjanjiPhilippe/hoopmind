@@ -106,6 +106,29 @@ class ReferenceCsvImportTests {
     }
 
     @Test
+    void duplicateKeysAndOddZipEntriesDoNotFailTheImport() throws IOException {
+        String mvp = AWARDS.lines().toList().get(1);
+        String withDuplicate = AWARDS + mvp.replace("0.913", "0.914") + "\n";
+        MockMultipartFile archive = new MockMultipartFile("files", "archive.zip", "application/zip",
+                zip(Map.of("/", "", "dossier/", "", "awards.csv", withDuplicate)));
+
+        assertThat(mvc.post().uri("/api/v1/admin/imports/csv").multipart().file(archive)
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.admin(mvc).bearer()))
+                .hasStatusOk()
+                .bodyJson()
+                .satisfies(json -> {
+                    assertThat(json).extractingPath("$.length()").isEqualTo(1);
+                    assertThat(json).extractingPath("$[0].status").isEqualTo("IMPORTED");
+                    assertThat(json).extractingPath("$[0].inserted").isEqualTo(3);
+                    assertThat(json).extractingPath("$[0].skipped").isEqualTo(1);
+                });
+        assertThat(jdbc.queryForObject("""
+                SELECT data->>'share' FROM reference_csv_rows
+                 WHERE row_key = '2025|nba mvp|gilgesh01|Shai Gilgeous-Alexander'""", String.class))
+                .as("la dernière ligne l'emporte").isEqualTo("0.914");
+    }
+
+    @Test
     void onlyAdministratorsCanImport() {
         MockMultipartFile file = new MockMultipartFile("files", "awards.csv", "text/csv", AWARDS.getBytes(StandardCharsets.UTF_8));
         assertThat(mvc.post().uri("/api/v1/admin/imports/csv").multipart().file(file)

@@ -25,7 +25,11 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
       return from(auth.refresh()).pipe(
         switchMap(refreshed => {
           if (!refreshed) {
-            void router.navigate(['/auth/login'], { queryParams: { returnUrl: router.url } });
+            // Session refusée par le serveur : retour à la connexion. Après une panne passagère, la session est
+            // gardée et seule cette requête échoue.
+            if (!auth.isAuthenticated()) {
+              void router.navigate(['/auth/login'], { queryParams: { returnUrl: router.url } });
+            }
             return throwError(() => error);
           }
           return next(withToken(request, auth.token()));

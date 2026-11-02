@@ -29,6 +29,8 @@ public class ModelTrainingJobs {
 
     public enum Phase { TRAINING, SUCCEEDED, FAILED, INTERRUPTED }
 
+    private static final int MAX_SEASONS = 30;
+
     /** @param seasons nombre de saisons demandé, {@code null} pour le réglage par défaut */
     public record TrainingJobStatus(UUID id, Phase phase, Integer seasons, Instant startedAt, Instant finishedAt,
                                     TrainingReport report, String error) {
@@ -45,6 +47,11 @@ public class ModelTrainingJobs {
     }
 
     public TrainingJobStatus start(Integer seasons) {
+        // Vérifié aussi par le moteur, mais avant le job : une saisie invalide doit répondre 400, pas 202 puis échec.
+        if (seasons != null && (seasons < 1 || seasons > MAX_SEASONS)) {
+            throw new AppException("Le nombre de saisons doit être compris entre 1 et " + MAX_SEASONS + ".",
+                    HttpStatus.BAD_REQUEST, "INVALID_TRAINING_SEASONS");
+        }
         GameOutcomeModel engine = engine();
         CurrentUser requestedBy = CurrentUser.get().orElse(null);
         Map<String, String> parameters = new HashMap<>();
@@ -67,9 +74,9 @@ public class ModelTrainingJobs {
             events.publishEvent(new ModelTrainingEvent.ModelTrained(requestedBy, report.version(), report.accuracy(),
                     report.testSeason()));
             return report;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             events.publishEvent(new ModelTrainingEvent.ModelTrainingFailed(requestedBy, JobService.userMessage(e)));
-            throw e;
+            throw JobService.rethrow(e);
         }
     }
 

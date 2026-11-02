@@ -2,6 +2,8 @@ package com.np3tech.hoopmind.auth.internal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -10,6 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -44,6 +47,11 @@ class RefreshToken {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
+    /** {@code null} pour les jetons révoqués avant l'ajout du motif : traités comme échangés. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revoked_reason", length = 30)
+    private RevocationReason revokedReason;
+
     @Column(name = "ip_address", length = 100)
     private String ipAddress;
 
@@ -67,10 +75,32 @@ class RefreshToken {
         return !expiresAt.isAfter(now);
     }
 
-    void revoke(Instant now) {
+    void revoke(Instant now, RevocationReason reason) {
         if (!revoked) {
             revoked = true;
             revokedAt = now;
+            revokedReason = reason;
         }
+    }
+
+    /** Révoqué parce qu'il a été échangé : le présenter de nouveau est suspect. */
+    boolean wasRotated() {
+        return revoked && (revokedReason == null || revokedReason == RevocationReason.ROTATED);
+    }
+
+    /** Échangé il y a moins de {@code grace} : un autre onglet du même navigateur a pu le présenter en même temps. */
+    boolean rotatedWithin(Instant now, Duration grace) {
+        return wasRotated() && revokedAt != null && revokedAt.plus(grace).isAfter(now);
+    }
+
+    enum RevocationReason {
+        /** Échangé contre un nouveau jeton. */
+        ROTATED,
+        /** Déconnexion. */
+        LOGOUT,
+        /** Mot de passe, rôles ou statut du compte changés. */
+        ACCESS_CHANGED,
+        /** Famille révoquée après la réutilisation d'un jeton échangé. */
+        REUSE_DETECTED
     }
 }

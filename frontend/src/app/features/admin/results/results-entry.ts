@@ -22,7 +22,11 @@ export function parseScore(home: string, away: string, overtime: string): ScoreI
   if (homeTeamScore === awayTeamScore) {
     return { error: 'Un match NBA ne se termine pas sur une égalité.' };
   }
-  return { homeTeamScore, awayTeamScore, overtimePeriods: Number(overtime) || 0 };
+  const overtimePeriods = overtime.trim() === '' ? 0 : Number(overtime);
+  if (!Number.isInteger(overtimePeriods) || overtimePeriods < 0 || overtimePeriods > 10) {
+    return { error: 'Les prolongations vont de 0 à 10.' };
+  }
+  return { homeTeamScore, awayTeamScore, overtimePeriods };
 }
 
 /** Jour suivant ou précédent, au format yyyy-mm-dd. */

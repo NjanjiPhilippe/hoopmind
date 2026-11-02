@@ -64,6 +64,44 @@ class ModelTrainingJobsTests {
         assertThat(events).containsExactly(new ModelTrainingEvent.ModelTrained(null, "v-test", 0.66, "2024-25"));
     }
 
+    /** Spark (Scala) lève des exceptions vérifiées sans les déclarer : l'échec doit quand même être tracé. */
+    @Test
+    void anUndeclaredCheckedExceptionIsStillReportedAsAFailedTraining() throws Exception {
+        GameOutcomeModel engine = new GameOutcomeModel() {
+            @Override
+            public TrainingReport train(Integer seasons) {
+                return ModelTrainingJobsTests.<RuntimeException, TrainingReport>sneakyThrow(new java.io.IOException("stage failure"));
+            }
+
+            @Override
+            public Optional<TrainingReport> latestReport() {
+                return Optional.empty();
+            }
+        };
+        List<Object> events = new CopyOnWriteArrayList<>();
+        ModelTrainingJobs trainings = new ModelTrainingJobs(
+                new StaticListableBeanFactory(Map.of("engine", engine)).getBeanProvider(GameOutcomeModel.class),
+                jobService, events::add);
+
+        trainings.start(3);
+
+        assertThat(waitForEnd(trainings).phase()).isEqualTo(Phase.FAILED);
+        assertThat(events).singleElement().isInstanceOf(ModelTrainingEvent.ModelTrainingFailed.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable, T> T sneakyThrow(Throwable error) throws E {
+        throw (E) error;
+    }
+
+    @Test
+    void anInvalidSeasonCountIsRefusedBeforeAnyJobStarts() {
+        assertThat(mvc.post().uri("/api/v1/spark/ml/train/game-outcome/jobs").param("seasons", "0")
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.admin(mvc).bearer()))
+                .hasStatus(400)
+                .bodyJson().extractingPath("$.code").isEqualTo("INVALID_TRAINING_SEASONS");
+    }
+
     @Test
     void withoutTheSparkEngineTheTrainingIsUnavailableNotMissing() {
         assertThat(mvc.post().uri("/api/v1/spark/ml/train/game-outcome/jobs")

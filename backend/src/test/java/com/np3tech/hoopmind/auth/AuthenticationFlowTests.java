@@ -8,9 +8,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,6 +25,9 @@ class AuthenticationFlowTests {
 
     @Autowired
     MockMvcTester mvc;
+
+    @Autowired
+    JdbcTemplate jdbc;
 
     @Test
     void registerReturnsAccessTokenAndHttpOnlyRefreshCookie() {
@@ -103,9 +112,66 @@ class AuthenticationFlowTests {
         Cookie second = refreshed.getResponse().getCookie(TestAccounts.REFRESH_COOKIE);
         assertThat(second.getValue()).isNotEqualTo(first.getValue());
 
-        // L'ancien jeton rejoué : refusé, et toute la famille est révoquée
+        // L'ancien jeton rejoué après le délai de grâce : refusé, toute la famille est révoquée, et l'audit le signale
+        backdateRevocation(first);
         assertThat(refresh(first)).hasStatus(401);
         assertThat(refresh(second)).hasStatus(401);
+        assertThat(reuseAlerts(session)).isEqualTo(1);
+    }
+
+    /** Deux onglets qui renouvellent la session au même moment : le second est refusé sans tout révoquer. */
+    @Test
+    void aTokenReplayedRightAfterItsRotationDoesNotRevokeTheSession() {
+        Session session = TestAccounts.register(mvc);
+        Cookie first = session.refreshCookie();
+        Cookie second = refresh(first).getResponse().getCookie(TestAccounts.REFRESH_COOKIE);
+
+        assertThat(refresh(first)).hasStatus(401);
+        assertThat(refresh(second)).hasStatusOk();
+        assertThat(reuseAlerts(session)).isZero();
+    }
+
+    @Test
+    void aTokenRevokedByLogoutOrAPasswordChangeIsNotReportedAsStolen() {
+        Session loggedOut = TestAccounts.register(mvc);
+        mvc.post().uri("/api/v1/auth/logout").cookie(loggedOut.refreshCookie()).exchange();
+        backdateRevocation(loggedOut.refreshCookie());
+
+        Session passwordChanged = TestAccounts.register(mvc);
+        assertThat(mvc.put().uri("/api/v1/users/me/password")
+                .header(HttpHeaders.AUTHORIZATION, passwordChanged.bearer())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"currentPassword":"%s","newPassword":"NewPassword456"}
+                        """.formatted(TestAccounts.PASSWORD)))
+                .hasStatus2xxSuccessful();
+        backdateRevocation(passwordChanged.refreshCookie());
+
+        assertThat(refresh(loggedOut.refreshCookie())).hasStatus(401);
+        assertThat(refresh(passwordChanged.refreshCookie())).hasStatus(401);
+        assertThat(reuseAlerts(loggedOut)).isZero();
+        assertThat(reuseAlerts(passwordChanged)).isZero();
+    }
+
+    /** Fait comme si le jeton avait été révoqué il y a une minute, au-delà du délai de grâce. */
+    private void backdateRevocation(Cookie refreshCookie) {
+        jdbc.update("UPDATE refresh_tokens SET revoked_at = revoked_at - INTERVAL '1 minute' WHERE token = ?",
+                sha256(refreshCookie.getValue()));
+    }
+
+    private int reuseAlerts(Session session) {
+        return jdbc.queryForObject("""
+                SELECT count(*) FROM audit_events WHERE action = 'REFRESH_TOKEN_REUSED' AND target_id = ?""",
+                Integer.class, String.valueOf(session.userId()));
+    }
+
+    private static String sha256(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

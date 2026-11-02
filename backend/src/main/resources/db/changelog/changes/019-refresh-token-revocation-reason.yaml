@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-refresh-token-revocation-reason
+      author: hoopmind
+      comment: >
+        Motif de révocation d'un jeton de rafraîchissement. Seul un jeton déjà échangé (ROTATED) puis présenté de
+        nouveau signale un vol ; un jeton révoqué par une déconnexion ou un changement d'accès ne le signale pas.
+        Les jetons déjà révoqués restent sans motif et sont traités comme échangés, ce qui garde l'alerte d'avant.
+      changes:
+        - addColumn:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: revoked_reason
+                  type: VARCHAR(30)

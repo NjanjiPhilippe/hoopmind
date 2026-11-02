@@ -23,6 +23,9 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -118,12 +121,30 @@ public class JobService {
                 : "Erreur inattendue. Le détail est dans les journaux du serveur.";
     }
 
+    /**
+     * Relance une erreur d'un job sans changer son type quand c'est possible. Spark (Scala) lève des exceptions
+     * vérifiées sans les déclarer : les corps de job les attrapent avec {@code catch (Exception e)} pour publier leur
+     * événement d'échec, puis les relancent par cette méthode.
+     */
+    public static RuntimeException rethrow(Exception error) {
+        return error instanceof RuntimeException runtime ? runtime : new IllegalStateException(error);
+    }
+
+    /**
+     * Les jobs de ce processus sont exclus : un {@code ApplicationRunner} (import au démarrage) lance son job avant
+     * {@link ApplicationReadyEvent}, et il ne doit pas être pris pour un reste de l'arrêt précédent.
+     */
     @EventListener(ApplicationReadyEvent.class)
     void markInterruptedJobs() {
-        int interrupted = jdbc.sql("""
-                        UPDATE background_jobs SET state = 'INTERRUPTED', finished_at = ?
-                        WHERE state = 'RUNNING'""")
-                .param(Timestamp.from(clock.instant()))
+        List<UUID> live = List.copyOf(progress.keySet());
+        String excluded = live.isEmpty() ? ""
+                : " AND id NOT IN (" + String.join(", ", Collections.nCopies(live.size(), "?")) + ")";
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(Timestamp.from(clock.instant()));
+        parameters.addAll(live);
+        int interrupted = jdbc.sql("UPDATE background_jobs SET state = 'INTERRUPTED', finished_at = ? "
+                        + "WHERE state = 'RUNNING'" + excluded)
+                .params(parameters)
                 .update();
         if (interrupted > 0) {
             log.warn("{} job(s) interrompu(s) par l'arrêt précédent du serveur", interrupted);

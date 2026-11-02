@@ -107,6 +107,23 @@ class NbaReadApiTests {
                 .bodyJson().extractingPath("$.result.awayTeamScore").isEqualTo(100);
     }
 
+    /** Un match importé a des feuilles de match qui référencent son résultat : le retirer ne doit pas échouer. */
+    @Test
+    void theScoreOfAnImportedGameCanBeRemoved() {
+        int bostonHome = gameId("0022400001");
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM team_game_stats s JOIN game_results r ON r.id = s.game_result_id
+                 WHERE r.game_id = ?""", Integer.class, bostonHome)).as("feuilles de match importées").isPositive();
+
+        assertThat(mvc.delete().uri("/api/v1/games/{id}/result", bostonHome)
+                .header(HttpHeaders.AUTHORIZATION, TestAccounts.admin(mvc).bearer()))
+                .hasStatus(204);
+
+        assertThat(mvc.get().uri("/api/v1/games/{id}", bostonHome).header(HttpHeaders.AUTHORIZATION, bearer))
+                .hasStatusOk()
+                .bodyJson().doesNotHavePath("$.result");
+    }
+
     /** Identifiant en int : c'est ainsi que le JSON des réponses le relit. */
     private int gameId(String externalId) {
         return jdbc.queryForObject("SELECT id FROM games WHERE external_id = ?", Integer.class, externalId);

@@ -106,10 +106,10 @@ public class EoinMooreJobService {
             }
             events.publishEvent(new DataImportEvent.EoinMooreImported(requestedBy, report.seasons(), report.games()));
             return report;
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             events.publishEvent(new DataImportEvent.EoinMooreImportFailed(requestedBy, fromSeason, toSeason,
                     JobService.userMessage(e)));
-            throw e;
+            throw JobService.rethrow(e);
         }
     }
 

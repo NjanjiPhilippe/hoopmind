@@ -37,6 +37,11 @@ final class LlmCallQuota {
         Instant now = clock.instant();
         if (windows.size() >= MAX_TRACKED_USERS) {
             windows.values().removeIf(window -> expired(window, now));
+            // Toutes les fenêtres encore ouvertes : un nouvel utilisateur reçoit l'explication sans LLM plutôt que de
+            // faire grossir la table sans limite.
+            if (windows.size() >= MAX_TRACKED_USERS && !windows.containsKey(user)) {
+                return false;
+            }
         }
         boolean[] acquired = new boolean[1];
         windows.compute(user, (key, window) -> {

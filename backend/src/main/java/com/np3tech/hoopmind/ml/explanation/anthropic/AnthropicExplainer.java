@@ -84,6 +84,10 @@ public class AnthropicExplainer implements PredictionExplainer {
         if (text.isEmpty()) {
             throw new LlmRejectedException(PROVIDER + " : réponse vide (" + response.stopReason() + ")");
         }
+        // Une phrase coupée serait affichée et gardée en cache : mieux vaut l'explication rédigée sans LLM.
+        if ("max_tokens".equals(response.stopReason())) {
+            throw new LlmRejectedException(PROVIDER + " : réponse tronquée (max_tokens)");
+        }
         return text;
     }
 
