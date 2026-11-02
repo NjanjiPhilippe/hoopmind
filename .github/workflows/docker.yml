@@ -1,0 +1,25 @@
+name: Docker
+
+# Ce qui ne sert qu'au déploiement (images, nginx, docker compose) casserait sinon sur le serveur et pas dans une PR.
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', 'frontend/**', '.github/workflows/docker.yml']
+  pull_request:
+    paths: ['backend/**', 'frontend/**', '.github/workflows/docker.yml']
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image du backend
+        run: docker build -t hoopmind-backend backend
+      - name: Image du frontend
+        run: docker build -t hoopmind-frontend frontend
+      # nginx résout « backend » au démarrage : l'hôte est simulé pour vérifier la configuration seule.
+      - name: Configuration nginx
+        run: docker run --rm --add-host backend:127.0.0.1 hoopmind-frontend nginx -t
+      - name: Fichier docker compose
+        working-directory: backend
+        run: cp .env.example .env && DB_PASSWORD=ci docker compose --profile app --profile spark-cluster --profile monitoring config --quiet

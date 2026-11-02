@@ -81,13 +81,15 @@ class PredictionHistoryTests {
         MvcTestResult mine = mvc.get().uri("/api/v1/predictions/mine").header(HttpHeaders.AUTHORIZATION, alice.bearer()).exchange();
         assertThat(mine).hasStatusOk();
         assertThat(mine).bodyJson().extractingPath("$.page.totalElements").isEqualTo(2);
-        // Les plus récentes d'abord : le match pas encore joué, puis celui du 10 janvier.
-        assertThat(mine).bodyJson().doesNotHavePath("$.content[0].actualHomePoints");
-        assertThat(mine).bodyJson().doesNotHavePath("$.content[0].correct");
-        assertThat(mine).bodyJson().extractingPath("$.content[1].homeTeam").isEqualTo("Testville Home");
-        assertThat(mine).bodyJson().extractingPath("$.content[1].predictedHomePoints").isEqualTo(112);
-        assertThat(mine).bodyJson().extractingPath("$.content[1].actualHomePoints").isEqualTo(110);
-        assertThat(mine).bodyJson().extractingPath("$.content[1].correct").isEqualTo(true);
+        // Les deux lignes peuvent avoir la même heure d'enregistrement : chacune est retrouvée par sa date de match.
+        String played = "$.content[?(@.gameDate == '" + GAME_DAY + "')]";
+        String upcoming = "$.content[?(@.gameDate == '" + GAME_DAY.plusDays(3) + "')]";
+        assertThat(mine).bodyJson().extractingPath(upcoming + ".actualHomePoints").asArray().isEmpty();
+        assertThat(mine).bodyJson().extractingPath(upcoming + ".correct").asArray().isEmpty();
+        assertThat(mine).bodyJson().extractingPath(played + ".homeTeam").asArray().containsExactly("Testville Home");
+        assertThat(mine).bodyJson().extractingPath(played + ".predictedHomePoints").asArray().containsExactly(112);
+        assertThat(mine).bodyJson().extractingPath(played + ".actualHomePoints").asArray().containsExactly(110);
+        assertThat(mine).bodyJson().extractingPath(played + ".correct").asArray().containsExactly(true);
 
         MvcTestResult theirs = mvc.get().uri("/api/v1/predictions/mine").header(HttpHeaders.AUTHORIZATION, bob.bearer()).exchange();
         assertThat(theirs).bodyJson().extractingPath("$.page.totalElements").isEqualTo(1);

@@ -1,11 +1,12 @@
 name: Backend
 
+# OpenApiSnapshotTests compare l'API au fichier du frontend : un changement de ce fichier relance aussi ces tests.
 on:
   push:
     branches: [main]
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', 'frontend/openapi/**', '.github/workflows/backend.yml']
   pull_request:
-    paths: ['backend/**', '.github/workflows/backend.yml']
+    paths: ['backend/**', 'frontend/openapi/**', '.github/workflows/backend.yml']
 
 defaults:
   run:
