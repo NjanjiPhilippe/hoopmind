@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +33,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserAccountService {
+
+    /** Plus long que pour un compte ordinaire (8) : l'administrateur initial ouvre toute la console. */
+    static final int MIN_ADMIN_PASSWORD_LENGTH = 12;
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -164,14 +168,40 @@ public class UserAccountService {
     }
 
     /**
+     * Le compte de démonstration, créé s'il n'existe pas. Son mot de passe est aléatoire et jamais communiqué : on n'y
+     * entre que par la connexion de démonstration, et {@link RoleName#ROLE_DEMO} le garde en lecture seule. Un compte
+     * ordinaire du même nom n'est jamais repris : la démo ne doit pas ouvrir la session de quelqu'un.
+     */
+    @Transactional
+    public UserAccount demoAccount(String username, String email) {
+        Optional<UserAccount> existing = findAccountByLogin(username);
+        if (existing.isPresent()) {
+            if (!existing.get().roles().contains(RoleName.ROLE_DEMO)) {
+                throw new IllegalStateException("Le compte « " + username + " » existe déjà sans le rôle ROLE_DEMO : "
+                        + "choisissez un autre nom pour la démonstration (HOOPMIND_DEMO_USERNAME).");
+            }
+            return existing.get();
+        }
+        return toAccount(create(username, email, UUID.randomUUID() + "-Demo1",
+                EnumSet.of(RoleName.ROLE_USER, RoleName.ROLE_DEMO)));
+    }
+
+    /**
      * Crée l'administrateur initial si aucun administrateur actif n'existe.
      *
      * @return {@code true} si un compte a été créé
+     * @throws IllegalStateException si l'administrateur doit être créé avec un mot de passe de moins de
+     *                               {@value #MIN_ADMIN_PASSWORD_LENGTH} caractères : le démarrage s'arrête plutôt que
+     *                               d'exposer une console d'administration à un mot de passe faible
      */
     @Transactional
     public boolean createAdminIfNoneExists(String username, String email, String password) {
         if (users.countEnabledWithRole(RoleName.ROLE_ADMIN) > 0) {
             return false;
+        }
+        if (password.length() < MIN_ADMIN_PASSWORD_LENGTH) {
+            throw new IllegalStateException("HOOPMIND_ADMIN_PASSWORD doit faire au moins " + MIN_ADMIN_PASSWORD_LENGTH
+                    + " caractères.");
         }
         User admin = create(username, email, password, EnumSet.of(RoleName.ROLE_USER, RoleName.ROLE_ADMIN));
         events.publishEvent(new UserAccountEvent.AdminBootstrapped(admin.getId(), admin.getUsername()));

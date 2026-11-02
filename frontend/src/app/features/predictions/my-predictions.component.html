@@ -62,8 +62,10 @@
                 }
               }
               <a routerLink="/predict" [queryParams]="predictParams(entry)" class="btn-secondary text-sm">Revoir</a>
-              <button type="button" class="btn-secondary text-sm" [disabled]="busyId() === entry.id" (click)="remove(entry)"
-                      [attr.aria-label]="'Retirer la prédiction ' + entry.awayTeam + ' chez ' + entry.homeTeam">Retirer</button>
+              @if (!auth.isDemo()) {
+                <button type="button" class="btn-secondary text-sm" [disabled]="busyId() === entry.id" (click)="remove(entry)"
+                        [attr.aria-label]="'Retirer la prédiction ' + entry.awayTeam + ' chez ' + entry.homeTeam">Retirer</button>
+              }
             </div>
           </li>
         }

@@ -37,7 +37,12 @@ class ExplanationMetrics {
     }
 
     void call(Duration duration, LlmException failure) {
-        String outcome = failure == null ? "success" : failure instanceof LlmRejectedException ? "rejected" : "unavailable";
+        String outcome = switch (failure) {
+            case null -> "success";
+            case LlmRejectedException rejected -> "rejected";
+            case LlmQuotaExceededException quota -> "quota";
+            case LlmUnavailableException unavailable -> "unavailable";
+        };
         Timer.builder("hoopmind.llm.calls")
                 .description("Appels au LLM qui rédige les explications")
                 .tag("provider", provider)

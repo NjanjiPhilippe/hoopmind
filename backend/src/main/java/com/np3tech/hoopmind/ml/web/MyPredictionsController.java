@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,9 +41,10 @@ class MyPredictionsController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("!hasRole('DEMO')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(operationId = "deleteMyPrediction", summary = "Retirer une de mes prédictions",
-            description = "404 si elle n'existe pas ou appartient à un autre utilisateur.")
+            description = "404 si elle n'existe pas ou appartient à un autre utilisateur, 403 pour le compte de démonstration.")
     void deleteMyPrediction(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
         history.delete(Long.parseLong(jwt.getSubject()), id);
     }

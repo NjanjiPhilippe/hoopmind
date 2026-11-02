@@ -63,17 +63,20 @@ class OpenAiCompatibleExplainerTests {
     }
 
     @Test
-    void quotaAndServerErrorsAreTemporary() {
-        llm.reply(429, "{}").reply(503, "{}");
+    void serverErrorsAreTemporaryAndAQuotaIsReportedAsSuch() {
+        llm.reply(503, "{}").reply(429, "{}");
 
         assertThatThrownBy(() -> explainer("secret").explain(Fixtures.request())).isInstanceOf(LlmUnavailableException.class);
-        assertThatThrownBy(() -> explainer("secret").explain(Fixtures.request())).isInstanceOf(LlmUnavailableException.class);
+        assertThatThrownBy(() -> explainer("secret").explain(Fixtures.request())).isInstanceOf(LlmQuotaExceededException.class);
     }
 
-    /** {@code @Retryable} vérifié à travers le vrai proxy Spring : deux 429 puis une réponse donnent 3 appels. */
+    /**
+     * {@code @Retryable} vérifié à travers le vrai proxy Spring : deux 503 puis une réponse donnent 3 appels ; un 429
+     * (quota) et un 401 ne sont pas retentés.
+     */
     @Test
-    void retriesTemporaryErrorsButNotRejections() {
-        llm.reply(429, "{}").reply(429, "{}").reply(200, ANSWER).reply(401, "{}");
+    void retriesTemporaryErrorsButNotQuotasNorRejections() {
+        llm.reply(503, "{}").reply(503, "{}").reply(200, ANSWER).reply(429, "{}").reply(401, "{}");
         try (var context = new AnnotationConfigApplicationContext()) {
             context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("test",
                     Map.of("hoopmind.ml.explanation.provider", "openai-compatible",
@@ -86,8 +89,10 @@ class OpenAiCompatibleExplainerTests {
             assertThat(explainer.explain(Fixtures.request()).text()).startsWith("Boston");
             assertThat(llm.received).hasSize(3);
 
-            assertThatThrownBy(() -> explainer.explain(Fixtures.request())).isInstanceOf(LlmRejectedException.class);
+            assertThatThrownBy(() -> explainer.explain(Fixtures.request())).isInstanceOf(LlmQuotaExceededException.class);
             assertThat(llm.received).hasSize(4);
+            assertThatThrownBy(() -> explainer.explain(Fixtures.request())).isInstanceOf(LlmRejectedException.class);
+            assertThat(llm.received).hasSize(5);
         }
     }
 
@@ -97,6 +102,6 @@ class OpenAiCompatibleExplainerTests {
 
     private ExplanationProperties properties(String key) {
         return new ExplanationProperties("openai-compatible", llm.url("/v1beta/openai"), key, "gemini-2.5-flash",
-                Duration.ofSeconds(5), 2048, 10, 4, 20);
+                Duration.ofSeconds(5), 2048, 10, 4, 20, 200);
     }
 }

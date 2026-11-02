@@ -72,11 +72,21 @@ class ScoringGameOutcomePredictor implements GameOutcomePredictor {
     }
 
     private GameOutcomeAnalysis score(long seasonId, long homeTeamId, long awayTeamId, LocalDate date, boolean playoff) {
+        if (homeTeamId == awayTeamId) {
+            throw new AppException("Une équipe ne peut pas jouer contre elle-même.", HttpStatus.BAD_REQUEST,
+                    "INVALID_MATCHUP");
+        }
         ScoringCard card = cards.current().orElseThrow(() -> new AppException(
                 "Le modèle n'est pas encore entraîné (POST /api/v1/spark/ml/train/game-outcome/jobs).",
                 HttpStatus.CONFLICT, "MODEL_NOT_TRAINED"));
         int seasonYear = history.seasonYear(seasonId).orElseThrow(() -> new AppException(
                 "Saison introuvable : " + seasonId, HttpStatus.NOT_FOUND, "SEASON_NOT_FOUND"));
+        // Une saison NBA va d'octobre à juin ; la marge couvre la saison 2019-20, finie en octobre 2020. Hors de
+        // cette fenêtre, la forme n'a pas de sens et chaque date demandée créerait une explication de plus.
+        if (date.isBefore(LocalDate.of(seasonYear, 7, 1)) || date.isAfter(LocalDate.of(seasonYear + 1, 10, 31))) {
+            throw new AppException("Cette date n'appartient pas à la saison choisie.", HttpStatus.UNPROCESSABLE_CONTENT,
+                    "DATE_OUTSIDE_SEASON");
+        }
         List<Long> teams = List.of(homeTeamId, awayTeamId);
         List<GameRecord> games = history.teamGames(seasonYear, teams);
         List<GameRecord> previousSeason = history.teamGames(seasonYear - 1, teams);

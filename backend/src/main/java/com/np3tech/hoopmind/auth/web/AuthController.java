@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,6 +56,22 @@ class AuthController {
     @Operation(operationId = "login", summary = "Se connecter avec son nom d'utilisateur ou son e-mail")
     ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         return respond(HttpStatus.OK, authService.login(request.login(), request.password(), client(http)));
+    }
+
+    @GetMapping("/demo")
+    @Operation(operationId = "getDemoStatus", summary = "Savoir si la démonstration est ouverte",
+            description = "Le frontend n'affiche le bouton « Essayer sans compte » que si elle l'est.")
+    DemoStatus demoStatus() {
+        return new DemoStatus(authService.demoEnabled());
+    }
+
+    @PostMapping("/demo")
+    @Operation(operationId = "demoLogin", summary = "Ouvrir une session de démonstration, sans compte",
+            description = "Session sur un compte partagé en lecture seule : tout se consulte et se prédit, mais le profil, "
+                    + "le mot de passe et les prédictions enregistrées ne se modifient pas. 404 si la démonstration n'est "
+                    + "pas activée (DEMO_ENABLED), 429 après trop de sessions ouvertes depuis la même adresse.")
+    ResponseEntity<AuthResponse> demo(HttpServletRequest http) {
+        return respond(HttpStatus.OK, authService.demo(client(http)));
     }
 
     @PostMapping("/refresh")
@@ -115,6 +132,10 @@ class AuthController {
     }
 
     record LoginRequest(@NotBlank String login, @NotBlank String password) {
+    }
+
+    @Schema(requiredProperties = {"enabled"})
+    record DemoStatus(boolean enabled) {
     }
 
     @Schema(requiredProperties = {"accessToken", "tokenType", "expiresIn", "user"})

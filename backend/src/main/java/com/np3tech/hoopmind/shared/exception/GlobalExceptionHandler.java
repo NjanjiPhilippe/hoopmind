@@ -3,7 +3,9 @@ package com.np3tech.hoopmind.shared.exception;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -60,6 +62,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ex.getConstraintViolations().forEach(v -> errors.put(v.getPropertyPath().toString(), v.getMessage()));
         problem.setProperty("errors", errors);
         return problem;
+    }
+
+    /**
+     * {@code ?sort=} sur une propriété inconnue : une erreur du client, pas du serveur. Le nom de la propriété n'est
+     * pas repris dans la réponse (ADR 0008). Spring Data la lève telle quelle ou enveloppée par la traduction des
+     * exceptions du dépôt.
+     */
+    @ExceptionHandler(PropertyReferenceException.class)
+    ProblemDetail handleInvalidSort(PropertyReferenceException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "invalid-sort", "Critère de tri invalide");
+    }
+
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    ProblemDetail handleInvalidDataAccess(InvalidDataAccessApiUsageException ex) {
+        if (ex.getMostSpecificCause() instanceof PropertyReferenceException invalidSort) {
+            return handleInvalidSort(invalidSort);
+        }
+        return handleUnexpected(ex);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

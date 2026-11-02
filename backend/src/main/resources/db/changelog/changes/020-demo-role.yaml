@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-demo-role
+      author: hoopmind
+      comment: >
+        Rôle du compte de démonstration : il lit tout ce qu'un utilisateur lit, mais ne change ni son profil, ni son
+        mot de passe, ni ses prédictions (voir backend/docs/adr/0027-compte-de-demonstration.md).
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  value: ROLE_DEMO
+              - column:
+                  name: description
+                  value: Compte de démonstration en lecture seule

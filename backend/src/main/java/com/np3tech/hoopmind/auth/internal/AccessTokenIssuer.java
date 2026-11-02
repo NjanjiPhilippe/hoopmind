@@ -15,7 +15,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Émet les jetons d'accès : sujet = identifiant de l'utilisateur, rôles dans la claim {@code roles}.
+ * Émet les jetons d'accès : sujet = identifiant de l'utilisateur, rôles dans la claim {@code roles}, version de
+ * révocation du compte dans la claim {@code rev} ({@link RevokedAccessTokens}).
  */
 @Component
 @RequiredArgsConstructor
@@ -24,6 +25,7 @@ class AccessTokenIssuer {
     private final JwtEncoder encoder;
     private final JwtProperties properties;
     private final Clock clock;
+    private final RevokedAccessTokens revoked;
 
     String issue(UserAccount account) {
         Instant now = clock.instant();
@@ -35,6 +37,7 @@ class AccessTokenIssuer {
                 .expiresAt(now.plus(properties.accessTokenTtl()))
                 .claim("username", account.username())
                 .claim("roles", account.roles().stream().map(Enum::name).sorted().toList())
+                .claim(RevokedAccessTokens.CLAIM, revoked.version(account.id()))
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

@@ -121,6 +121,19 @@ class PredictionHistoryTests {
                 .bodyJson().extractingPath("$.page.totalElements").isEqualTo(0);
     }
 
+    @Test
+    void onlyTheLatestPredictionsOfAUserAreKept() {
+        Session alice = TestAccounts.register(mvc);
+        for (int i = 0; i < PredictionHistory.MAX_PER_USER + 5; i++) {
+            history.record(alice.userId(), match(GAME_DAY.plusDays(i)), prediction(0.6, null, null));
+        }
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM prediction_history WHERE user_id = ?", Integer.class,
+                alice.userId())).isEqualTo(PredictionHistory.MAX_PER_USER);
+        assertThat(jdbc.queryForObject("SELECT min(game_date) FROM prediction_history WHERE user_id = ?",
+                LocalDate.class, alice.userId())).as("les 5 plus anciennes sont parties").isEqualTo(GAME_DAY.plusDays(5));
+    }
+
     private PredictedMatch match(LocalDate day) {
         return new PredictedMatch(seasonId, homeTeamId, awayTeamId, day, false);
     }

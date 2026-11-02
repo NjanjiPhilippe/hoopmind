@@ -1,6 +1,7 @@
 package com.np3tech.hoopmind.auth.config;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.np3tech.hoopmind.auth.internal.RevokedAccessTokens;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, DemoProperties.class})
 class JwtConfig {
 
     static final String ROLES_CLAIM = "roles";
@@ -42,12 +43,12 @@ class JwtConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKey jwtSigningKey, JwtProperties properties) {
+    JwtDecoder jwtDecoder(SecretKey jwtSigningKey, JwtProperties properties, RevokedAccessTokens revoked) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSigningKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(properties.issuer())));
+                JwtValidators.createDefaultWithIssuer(properties.issuer()), revoked));
         return decoder;
     }
 

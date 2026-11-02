@@ -18,6 +18,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Prédit un match puis l'explique. Le LLM n'est qu'un rédacteur : la probabilité et le poids de chaque facteur
@@ -26,8 +29,9 @@ import java.util.Map;
  *     <li>Une explication générée est gardée en mémoire (match, date, version du modèle) : les offres gratuites
  *     limitent le nombre d'appels, et la même question ne doit pas les consommer deux fois.</li>
  *     <li>Si le LLM ne répond pas (quota, panne, clé refusée), une explication rédigée sans LLM la remplace.</li>
- *     <li>Chaque utilisateur a droit à un nombre d'appels au LLM par heure ({@link LlmCallQuota}) ; au-delà, il
- *     reçoit aussi l'explication rédigée sans LLM.</li>
+ *     <li>Chaque utilisateur a droit à un nombre d'appels au LLM par heure ({@link LlmCallQuota}), et l'application
+ *     à un nombre d'appels par jour ({@link LlmDailyBudget}) ; au-delà, l'explication est rédigée sans LLM.</li>
+ *     <li>Deux demandes simultanées de la même explication ne font qu'un appel au LLM.</li>
  *     <li>Chaque explication est comptée par origine, et chaque appel au LLM mesuré ({@link ExplanationMetrics}).</li>
  * </ul>
  */
@@ -41,6 +45,8 @@ public class PredictionExplanationService {
     private final PredictionExplainer explainer;
     private final Map<Key, Explanation> cache;
     private final LlmCallQuota quota;
+    private final LlmDailyBudget dailyBudget;
+    private final ConcurrentMap<Key, CompletableFuture<Explanation>> inFlight = new ConcurrentHashMap<>();
     private final ExplanationMetrics metrics;
 
     public PredictionExplanationService(GameOutcomePredictor predictor, GameHistory history,
@@ -57,6 +63,7 @@ public class PredictionExplanationService {
             }
         });
         this.quota = new LlmCallQuota(properties.maxCallsPerUserPerHour(), clock);
+        this.dailyBudget = new LlmDailyBudget(properties.maxCallsPerDay(), clock);
         this.metrics = new ExplanationMetrics(registry, properties.provider());
         log.info("Explication des prédictions : {}", this.explainer == null
                 ? "sans LLM (hoopmind.ml.explanation.provider=none)" : properties.provider());
@@ -81,10 +88,42 @@ public class PredictionExplanationService {
             metrics.served(Source.CACHE);
             return result(request, cached, true, false);
         }
+        // La même question déjà posée au LLM par une autre requête : on attend sa réponse au lieu d'en payer une autre.
+        CompletableFuture<Explanation> pending = new CompletableFuture<>();
+        CompletableFuture<Explanation> running = inFlight.putIfAbsent(key, pending);
+        if (running != null) {
+            Explanation shared = running.exceptionally(error -> null).join();
+            metrics.served(shared == null ? Source.FALLBACK : Source.CACHE);
+            return shared == null ? result(request, TemplateExplanation.of(request), false, true)
+                    : result(request, shared, true, false);
+        }
+        try {
+            Explanation generated = generate(requester, request);
+            if (generated != null) {
+                cache.put(key, generated);
+            }
+            pending.complete(generated);
+            return generated == null ? result(request, TemplateExplanation.of(request), false, true)
+                    : result(request, generated, false, false);
+        } catch (RuntimeException e) {
+            pending.completeExceptionally(e);
+            throw e;
+        } finally {
+            inFlight.remove(key, pending);
+        }
+    }
+
+    /** L'explication du LLM, ou {@code null} quand l'explication sans LLM doit la remplacer (limite atteinte, échec). */
+    private Explanation generate(String requester, ExplanationRequest request) {
         if (!quota.tryAcquire(requester)) {
             log.info("Limite d'appels au LLM atteinte pour l'utilisateur {} : explication sans LLM", requester);
             metrics.served(Source.FALLBACK);
-            return result(request, TemplateExplanation.of(request), false, true);
+            return null;
+        }
+        if (!dailyBudget.tryAcquire()) {
+            log.warn("Plafond quotidien d'appels au LLM atteint : explication sans LLM jusqu'à minuit (UTC)");
+            metrics.served(Source.FALLBACK);
+            return null;
         }
         long start = System.nanoTime();
         try {
@@ -92,13 +131,12 @@ public class PredictionExplanationService {
             metrics.call(Duration.ofNanos(System.nanoTime() - start), null);
             metrics.tokens(generated);
             metrics.served(Source.LLM);
-            cache.put(key, generated);
-            return result(request, generated, false, false);
+            return generated;
         } catch (LlmException e) {
             metrics.call(Duration.ofNanos(System.nanoTime() - start), e);
             metrics.served(Source.FALLBACK);
             log.warn("Explication par LLM impossible, explication sans LLM à la place : {}", e.getMessage());
-            return result(request, TemplateExplanation.of(request), false, true);
+            return null;
         }
     }
 

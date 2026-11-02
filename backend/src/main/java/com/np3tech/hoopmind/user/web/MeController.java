@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,16 +37,20 @@ class MeController {
         return accounts.getProfile(userId(jwt));
     }
 
+    // Le compte de démonstration est partagé : un visiteur ne doit pas changer ce que les suivants verront.
     @PatchMapping
-    @Operation(operationId = "updateMyProfile", summary = "Modifier mon profil")
+    @PreAuthorize("!hasRole('DEMO')")
+    @Operation(operationId = "updateMyProfile", summary = "Modifier mon profil", description = "403 pour le compte de démonstration.")
     UserProfile update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UpdateProfileRequest request) {
         return accounts.updateProfile(userId(jwt), new ProfileUpdate(request.firstName(), request.lastName(),
                 request.bio(), request.favoriteTeamId()));
     }
 
     @PutMapping("/password")
+    @PreAuthorize("!hasRole('DEMO')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(operationId = "changeMyPassword", summary = "Changer mon mot de passe", description = "Déconnecte toutes les autres sessions.")
+    @Operation(operationId = "changeMyPassword", summary = "Changer mon mot de passe",
+            description = "Déconnecte toutes les autres sessions. 403 pour le compte de démonstration.")
     void changePassword(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ChangePasswordRequest request) {
         accounts.changePassword(userId(jwt), request.currentPassword(), request.newPassword());
     }

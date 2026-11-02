@@ -31,9 +31,9 @@ class SecurityConfig {
 
     static final String[] DOCS_PATHS = {"/v3/api-docs/**", "/v3/api-docs.yaml", "/swagger-ui/**", "/swagger-ui.html"};
 
-    private static final String[] PUBLIC_READ_PATHS = {
-            "/api/v1/games/**", "/api/v1/teams/**", "/api/v1/players/**", "/api/v1/seasons/**",
-            "/api/v1/stats/**", "/api/v1/injuries/**", "/api/v1/reports/**"
+    /** Lectures publiques. Chaque motif doit correspondre à une route existante (vérifié par {@code AccessRulesTests}). */
+    static final String[] PUBLIC_READ_PATHS = {
+            "/api/v1/games/**", "/api/v1/teams/**", "/api/v1/players/**", "/api/v1/seasons/**", "/api/v1/stats/**"
     };
 
     /**

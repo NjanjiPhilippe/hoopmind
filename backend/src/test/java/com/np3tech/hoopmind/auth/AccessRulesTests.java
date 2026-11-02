@@ -46,6 +46,8 @@ class AccessRulesTests {
         PUBLIC,
         /** Tout compte connecté. */
         USER,
+        /** Tout compte connecté, sauf le compte de démonstration partagé (ADR 0027). */
+        WRITER,
         /** Administrateur seulement. */
         ADMIN
     }
@@ -53,10 +55,12 @@ class AccessRulesTests {
     /** Méthode HTTP (ou *), motif de chemin, accès attendu. */
     private static final String RULES = """
             POST   /api/v1/auth/**                          PUBLIC
+            GET    /api/v1/auth/demo                        PUBLIC
             *      /api/v1/admin/**                         ADMIN
             GET    /api/v1/users/me                         USER
-            PATCH  /api/v1/users/me                         USER
-            PUT    /api/v1/users/me/password                USER
+            PATCH  /api/v1/users/me                         WRITER
+            PUT    /api/v1/users/me/password                WRITER
+            DELETE /api/v1/predictions/mine/**              WRITER
             GET    /api/v1/games/**                         PUBLIC
             GET    /api/v1/teams/**                         PUBLIC
             GET    /api/v1/players/**                       PUBLIC
@@ -136,6 +140,7 @@ class AccessRulesTests {
             String guard = route.guard();
             switch (access(route)) {
                 case PUBLIC, USER -> assertThat(guard).as("%s ne doit pas exiger de rôle", route).isNull();
+                case WRITER -> assertThat(guard).as(route.toString()).isEqualTo("!hasRole('DEMO')");
                 case ADMIN -> assertThat(guard).as(route.toString()).isEqualTo("hasRole('ADMIN')");
             }
         }

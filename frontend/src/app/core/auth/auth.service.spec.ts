@@ -41,6 +41,26 @@ describe('AuthService', () => {
     expect(auth.isAdmin()).toBe(true);
   });
 
+  it('ouvre une session de démonstration sans mot de passe', async () => {
+    const available = auth.demoAvailable();
+    http.expectOne({ method: 'GET', url: '/api/v1/auth/demo' }).flush({ enabled: true });
+    expect(await available).toBe(true);
+
+    const demo = auth.demoLogin();
+    http.expectOne({ method: 'POST', url: '/api/v1/auth/demo' }).flush(authResponse(['ROLE_USER', 'ROLE_DEMO']));
+    await demo;
+
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.isDemo()).toBe(true);
+  });
+
+  it('ne propose pas la démonstration si le serveur ne répond pas', async () => {
+    const available = auth.demoAvailable();
+    http.expectOne('/api/v1/auth/demo').flush(null, { status: 503, statusText: 'Unavailable' });
+
+    expect(await available).toBe(false);
+  });
+
   it('partage une seule requête entre des rafraîchissements simultanés', async () => {
     const first = auth.refresh();
     const second = auth.refresh();

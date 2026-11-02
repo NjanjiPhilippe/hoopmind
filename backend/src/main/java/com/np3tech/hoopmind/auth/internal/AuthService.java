@@ -2,7 +2,9 @@ package com.np3tech.hoopmind.auth.internal;
 
 import com.np3tech.hoopmind.auth.AuthenticationEvent;
 import com.np3tech.hoopmind.auth.AuthenticationEvent.LoginFailed;
+import com.np3tech.hoopmind.auth.config.DemoProperties;
 import com.np3tech.hoopmind.auth.config.JwtProperties;
+import com.np3tech.hoopmind.shared.exception.AppException;
 import com.np3tech.hoopmind.user.Registration;
 import com.np3tech.hoopmind.user.UserAccount;
 import com.np3tech.hoopmind.user.UserAccountService;
@@ -44,13 +46,38 @@ public class AuthService {
     private final Clock clock;
     private final ApplicationEventPublisher events;
     private final LoginThrottle throttle;
+    private final SessionCreationLimits limits;
+    private final DemoProperties demo;
 
     /** Hash factice comparé quand le compte n'existe pas, pour ne pas révéler son existence par le temps de réponse. */
     private String dummyHash;
 
     @Transactional
     public Session register(Registration registration, ClientInfo client) {
+        limits.registration(client.ipAddress());
         UserAccount account = accounts.register(registration);
+        return openSession(account, UUID.randomUUID().toString(), client);
+    }
+
+    public boolean demoEnabled() {
+        return demo.enabled();
+    }
+
+    /**
+     * Ouvre une session sur le compte de démonstration, sans mot de passe. Chaque visiteur a sa propre session
+     * (sa propre famille de jetons) ; le compte, lui, est partagé et en lecture seule.
+     */
+    @Transactional
+    public Session demo(ClientInfo client) {
+        if (!demo.enabled()) {
+            throw AppException.notFound("DEMO_DISABLED", "La démonstration n'est pas activée.");
+        }
+        limits.demoSession(client.ipAddress());
+        UserAccount account = accounts.demoAccount(demo.username(), demo.email());
+        if (!account.active()) {
+            throw AuthenticationFailedException.badCredentials();
+        }
+        events.publishEvent(new AuthenticationEvent.LoginSucceeded(account.id(), account.username()));
         return openSession(account, UUID.randomUUID().toString(), client);
     }
 

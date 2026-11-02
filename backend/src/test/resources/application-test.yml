@@ -8,6 +8,10 @@ hoopmind:
       secret: dGVzdC1vbmx5LWtleS1ub3QtYS1zZWNyZXQtMTIzNDU2Nzg5MA==
       refresh-cookie:
         secure: false
+  # Tous les tests viennent de la même adresse : la limite des inscriptions est levée, AddressRateLimitTests la vérifie.
+    registrations-per-address-per-hour: 1000000
+  demo:
+    enabled: true
   bootstrap-admin:
     username: admin
     email: admin@hoopmind.test

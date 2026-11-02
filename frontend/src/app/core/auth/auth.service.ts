@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { ApiConfiguration } from '../api/generated/api-configuration';
+import { demoLogin } from '../api/generated/fn/authentification/demo-login';
+import { getDemoStatus } from '../api/generated/fn/authentification/get-demo-status';
 import { login } from '../api/generated/fn/authentification/login';
 import { logout } from '../api/generated/fn/authentification/logout';
 import { refreshSession } from '../api/generated/fn/authentification/refresh-session';
@@ -38,6 +40,8 @@ export class AuthService {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly isAdmin = computed(() => this.hasRole('ROLE_ADMIN'));
+  /** Compte de démonstration partagé : lecture seule, le serveur refuse les modifications (403). */
+  readonly isDemo = computed(() => this.hasRole('ROLE_DEMO'));
 
   token(): string | null {
     return this.accessToken();
@@ -54,6 +58,22 @@ export class AuthService {
 
   async register(data: RegisterRequest): Promise<UserProfile> {
     const response = await firstValueFrom(register(this.http, this.rootUrl, { body: data }, this.authContext()));
+    return this.openSession(response.body);
+  }
+
+  /** La démonstration sans compte est-elle ouverte sur ce serveur ? {@code false} si la question échoue. */
+  async demoAvailable(): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(getDemoStatus(this.http, this.rootUrl, undefined, this.authContext()));
+      return response.body.enabled;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Ouvre une session sur le compte de démonstration, sans mot de passe. */
+  async demoLogin(): Promise<UserProfile> {
+    const response = await firstValueFrom(demoLogin(this.http, this.rootUrl, undefined, this.authContext()));
     return this.openSession(response.body);
   }
 

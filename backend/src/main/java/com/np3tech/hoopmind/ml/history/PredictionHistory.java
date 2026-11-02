@@ -32,7 +32,16 @@ public class PredictionHistory {
     private final GameHistory games;
     private final Clock clock;
 
-    /** Garde la prédiction ; le même match redemandé remplace la ligne existante. */
+    /**
+     * Prédictions gardées par utilisateur. La prédiction est enregistrée par une simple lecture (GET) : sans plafond,
+     * un script ferait grossir la table sans limite, une ligne par match et par date demandés.
+     */
+    static final int MAX_PER_USER = 200;
+
+    /**
+     * Garde la prédiction ; le même match redemandé remplace la ligne existante. Au-delà de {@link #MAX_PER_USER},
+     * les plus anciennes sont supprimées.
+     */
     public void record(long userId, PredictedMatch match, GameOutcomePrediction prediction) {
         SavedPrediction saved = repository.findByUserIdAndSeasonIdAndHomeTeamIdAndAwayTeamIdAndGameDateAndPlayoff(
                         userId, match.seasonId(), match.homeTeamId(), match.awayTeamId(), match.date(), match.playoff())
@@ -41,7 +50,8 @@ public class PredictionHistory {
                 prediction.score() == null ? null : prediction.score().homePoints(),
                 prediction.score() == null ? null : prediction.score().awayPoints(),
                 prediction.model(), clock.instant());
-        repository.save(saved);
+        repository.saveAndFlush(saved);
+        repository.deleteOlderThanLatest(userId, MAX_PER_USER);
     }
 
     @Transactional(readOnly = true)

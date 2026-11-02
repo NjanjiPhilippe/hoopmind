@@ -75,6 +75,13 @@ hoopmind:
       refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:7d}
       refresh-cookie:
         secure: ${REFRESH_COOKIE_SECURE:true}
+    # Comptes et sessions de démonstration créés par adresse IP et par heure (voir l'ADR 0027).
+    registrations-per-address-per-hour: ${REGISTRATIONS_PER_ADDRESS_PER_HOUR:5}
+    demo-sessions-per-address-per-hour: ${DEMO_SESSIONS_PER_ADDRESS_PER_HOUR:30}
+  # Démonstration sans compte, sur un compte partagé en lecture seule (voir l'ADR 0027).
+  demo:
+    enabled: ${DEMO_ENABLED:false}
+    username: ${HOOPMIND_DEMO_USERNAME:demo}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   # Premier administrateur, créé au démarrage s'il n'en existe aucun (laisser vide pour ne rien créer).
@@ -111,7 +118,9 @@ hoopmind:
       base-url: ${LLM_BASE_URL:}
       api-key: ${LLM_API_KEY:}
       model: ${LLM_MODEL:}
-      timeout: ${LLM_TIMEOUT:20s}
+      timeout: ${LLM_TIMEOUT:10s}
+      # Plafond commun à tous les utilisateurs : il protège le quota gratuit du fournisseur (ou la facture).
+      max-calls-per-day: ${LLM_MAX_CALLS_PER_DAY:200}
   # Journal d'audit : durée de conservation (purge chaque nuit).
   audit:
     retention: ${AUDIT_RETENTION:365d}

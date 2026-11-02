@@ -28,14 +28,18 @@ public final class LlmHttp {
     }
 
     /**
-     * Réseau, délai dépassé, quota (429) ou erreur du service (5xx) : indisponibilité passagère, à retenter.
+     * Réseau, délai dépassé ou erreur du service (5xx) : indisponibilité passagère, à retenter.
+     * Quota atteint (429) : pas retenté, chaque essai le consommerait encore.
      * Toute autre erreur (clé refusée, modèle inconnu, requête invalide) : refus, inutile de retenter.
      */
     public static LlmException translate(String provider, RestClientException error) {
         if (error instanceof RestClientResponseException response) {
             int status = response.getStatusCode().value();
             String message = provider + " a répondu HTTP " + status;
-            return status == 408 || status == 429 || status >= 500
+            if (status == 429) {
+                return new LlmQuotaExceededException(message, error);
+            }
+            return status == 408 || status >= 500
                     ? new LlmUnavailableException(message, error)
                     : new LlmRejectedException(message, error);
         }

@@ -13,11 +13,13 @@ import java.time.Duration;
  * @param baseUrl            adresse de l'API (celle d'Anthropic par défaut pour {@code anthropic})
  * @param apiKey             clé d'API (vide pour Ollama en local)
  * @param model              modèle de langage, par exemple {@code gemini-2.5-flash} ou {@code claude-haiku-5-5}
- * @param timeout            délai maximal d'un appel
+ * @param timeout            délai maximal d'un appel ; avec les deux nouveaux essais et leurs pauses, l'explication
+ *                           doit rester sous le délai du proxy (60 s pour nginx), d'où 10 s par défaut
  * @param maxTokens          longueur maximale de la réponse, raisonnement du modèle compris
  * @param cacheSize          nombre d'explications gardées en mémoire (une par match, date et version du modèle)
  * @param maxConcurrentCalls appels simultanés au LLM au plus (les suivants attendent leur tour)
  * @param maxCallsPerUserPerHour appels au LLM permis à chaque utilisateur par heure ; au-delà, explication sans LLM
+ * @param maxCallsPerDay     appels au LLM permis par jour, tous utilisateurs confondus ; au-delà, explication sans LLM
  */
 @ConfigurationProperties("hoopmind.ml.explanation")
 public record ExplanationProperties(
@@ -25,11 +27,12 @@ public record ExplanationProperties(
         String baseUrl,
         String apiKey,
         String model,
-        @DefaultValue("20s") Duration timeout,
+        @DefaultValue("10s") Duration timeout,
         @DefaultValue("2048") int maxTokens,
         @DefaultValue("500") int cacheSize,
         @DefaultValue("4") int maxConcurrentCalls,
-        @DefaultValue("20") int maxCallsPerUserPerHour
+        @DefaultValue("20") int maxCallsPerUserPerHour,
+        @DefaultValue("200") int maxCallsPerDay
 ) {
 
     public boolean hasApiKey() {

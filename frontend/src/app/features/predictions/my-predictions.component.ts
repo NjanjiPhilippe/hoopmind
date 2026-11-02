@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { RouterLink } from '@angular/router';
 
 import { Api } from '../../core/api/generated/api';
+import { AuthService } from '../../core/auth/auth.service';
 import { deleteMyPrediction } from '../../core/api/generated/fn/mes-predictions/delete-my-prediction';
 import { listMyPredictions } from '../../core/api/generated/fn/mes-predictions/list-my-predictions';
 import { PredictionHistoryEntry } from '../../core/api/generated/models/prediction-history-entry';
@@ -28,6 +29,7 @@ const PAGE_SIZE = 20;
 })
 export class MyPredictionsComponent {
   private readonly api = inject(Api);
+  protected readonly auth = inject(AuthService);
   protected readonly catalog = inject(NbaCatalog);
   protected readonly summarize = summarize;
   protected readonly predictParams = predictParams;

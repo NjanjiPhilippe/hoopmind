@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, resource, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -27,6 +27,8 @@ export class LoginComponent {
   });
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Le bouton « Essayer sans compte » n'apparaît que si le serveur a ouvert la démonstration. */
+  protected readonly demo = resource({ loader: () => this.auth.demoAvailable() });
 
   /** Secondes restantes avant de pouvoir réessayer après un 429 (trop de tentatives) ; 0 si la connexion est libre. */
   protected readonly remainingSeconds = signal(0);
@@ -57,6 +59,19 @@ export class LoginComponent {
       } else {
         this.error.set(toProblem(e).detail ?? 'Connexion impossible');
       }
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  async tryDemo(): Promise<void> {
+    this.submitting.set(true);
+    this.error.set(null);
+    try {
+      await this.auth.demoLogin();
+      await this.router.navigateByUrl(this.safeReturnUrl());
+    } catch (e) {
+      this.error.set(toProblem(e).detail ?? 'Démonstration indisponible');
     } finally {
       this.submitting.set(false);
     }

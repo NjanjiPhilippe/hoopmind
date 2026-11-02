@@ -40,10 +40,12 @@ describe('authInterceptor', () => {
     expect(http.expectOne('/api/v1/users/me').request.headers.get('Authorization')).toBe('Bearer old-token');
   });
 
-  it('n\'envoie pas le jeton à un autre domaine', () => {
+  it('n\'envoie pas le jeton à un autre domaine, même sur un chemin /api/v1/', () => {
     client.get('https://example.com/data').subscribe();
+    client.get('https://stats.example.com/api/v1/teams').subscribe();
 
     expect(http.expectOne('https://example.com/data').request.headers.has('Authorization')).toBe(false);
+    expect(http.expectOne('https://stats.example.com/api/v1/teams').request.headers.has('Authorization')).toBe(false);
   });
 
   it('renouvelle la session sur un 401 puis rejoue la requête', async () => {

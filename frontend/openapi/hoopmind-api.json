@@ -56,7 +56,7 @@
           "Mon compte"
         ],
         "summary": "Changer mon mot de passe",
-        "description": "Déconnecte toutes les autres sessions.",
+        "description": "Déconnecte toutes les autres sessions. 403 pour le compte de démonstration.",
         "operationId": "changeMyPassword",
         "requestBody": {
           "content": {
@@ -1156,6 +1156,48 @@
         }
       }
     },
+    "/api/v1/auth/demo": {
+      "get": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Savoir si la démonstration est ouverte",
+        "description": "Le frontend n'affiche le bouton « Essayer sans compte » que si elle l'est.",
+        "operationId": "getDemoStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authentification"
+        ],
+        "summary": "Ouvrir une session de démonstration, sans compte",
+        "description": "Session sur un compte partagé en lecture seule : tout se consulte et se prédit, mais le profil, le mot de passe et les prédictions enregistrées ne se modifient pas. 404 si la démonstration n'est pas activée (DEMO_ENABLED), 429 après trop de sessions ouvertes depuis la même adresse.",
+        "operationId": "demoLogin",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/imports/nba-database/jobs": {
       "post": {
         "tags": [
@@ -1335,6 +1377,7 @@
           "Mon compte"
         ],
         "summary": "Modifier mon profil",
+        "description": "403 pour le compte de démonstration.",
         "operationId": "updateMyProfile",
         "requestBody": {
           "content": {
@@ -2156,7 +2199,7 @@
           "Mes prédictions"
         ],
         "summary": "Retirer une de mes prédictions",
-        "description": "404 si elle n'existe pas ou appartient à un autre utilisateur.",
+        "description": "404 si elle n'existe pas ou appartient à un autre utilisateur, 403 pour le compte de démonstration.",
         "operationId": "deleteMyPrediction",
         "parameters": [
           {
@@ -2847,7 +2890,8 @@
               "type": "string",
               "enum": [
                 "ROLE_USER",
-                "ROLE_ADMIN"
+                "ROLE_ADMIN",
+                "ROLE_DEMO"
               ]
             },
             "uniqueItems": true
@@ -2882,7 +2926,8 @@
               "type": "string",
               "enum": [
                 "ROLE_USER",
-                "ROLE_ADMIN"
+                "ROLE_ADMIN",
+                "ROLE_DEMO"
               ]
             },
             "uniqueItems": true
@@ -3893,6 +3938,17 @@
             "$ref": "#/components/schemas/PageMetadata"
           }
         }
+      },
+      "DemoStatus": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
       },
       "PagedModelUserProfile": {
         "type": "object",

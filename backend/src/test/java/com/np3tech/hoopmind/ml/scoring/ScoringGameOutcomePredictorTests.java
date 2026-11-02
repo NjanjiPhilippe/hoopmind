@@ -96,6 +96,25 @@ class ScoringGameOutcomePredictorTests {
         assertThat(registry.find("hoopmind.ml.home.win.probability").summary()).isNull();
     }
 
+    @Test
+    void refusesATeamAgainstItselfAndADateOutsideTheSeason() {
+        ScoringCardStore cards = store();
+        cards.save(new ScoringCard("logistic-regression", "v7", GameOutcomeFeatures.NAMES,
+                new double[]{0, 0, 0, 0, 0.1}, new double[]{0.2, 0.25, 8, 1.5, 0},
+                new double[]{0.9, 0.3, 0.6, 0.1, 0.4}, 0.15));
+        ScoringGameOutcomePredictor predictor = new ScoringGameOutcomePredictor(new Season(), cards, registry);
+
+        assertThatThrownBy(() -> predictor.predict(10, CELTICS, CELTICS, DAY, false))
+                .isInstanceOfSatisfying(AppException.class, e -> assertThat(e.getErrorCode()).isEqualTo("INVALID_MATCHUP"));
+        for (LocalDate outside : List.of(LocalDate.of(2024, 6, 30), LocalDate.of(2025, 11, 1), LocalDate.of(2099, 1, 1))) {
+            assertThatThrownBy(() -> predictor.predict(10, CELTICS, LAKERS, outside, false))
+                    .isInstanceOfSatisfying(AppException.class,
+                            e -> assertThat(e.getErrorCode()).isEqualTo("DATE_OUTSIDE_SEASON"));
+        }
+        assertThat(predictor.predict(10, CELTICS, LAKERS, LocalDate.of(2025, 6, 15), true).homeWinProbability())
+                .as("finale en juin").isBetween(0.0, 1.0);
+    }
+
     private ScoringCardStore store() {
         return new ScoringCardStore(new MlProperties(5, modelDir.toString()), JsonMapper.builder().build());
     }

@@ -35,6 +35,15 @@
     </button>
   </form>
 
+  @if (demo.hasValue() && demo.value()) {
+    <div class="mt-6 border-t border-gray-200 pt-6 text-center">
+      <button type="button" class="btn-secondary w-full py-3" [disabled]="submitting()" (click)="tryDemo()">
+        Essayer sans compte
+      </button>
+      <p class="mt-2 text-xs text-gray-500">Compte de démonstration partagé, en lecture seule.</p>
+    </div>
+  }
+
   <p class="mt-6 text-center text-sm text-gray-600">
     Pas encore de compte ?
     <a routerLink="/auth/register" class="font-medium text-primary-700 hover:text-primary-800">S'inscrire</a>

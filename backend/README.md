@@ -17,7 +17,19 @@ set -a && . ./.env && set +a
 - Au premier démarrage, un administrateur est créé à partir de `HOOPMIND_ADMIN_*` s'il n'en existe aucun.
 - Spark démarre en mode `local[*]` dans la JVM. `SPARK_ENABLED=false` démarre l'API sans Spark ;
   `docker compose --profile spark-cluster up -d` lance un cluster Spark 4.2 (avec `SPARK_MASTER=spark://spark-master:7077`).
-- Tout en conteneurs : `docker compose --profile app up -d --build` (base, API en profil `prod` et frontend nginx sur http://localhost:8081 ; l'API et PostgreSQL ne sont ouverts que sur la machine locale).
+- Tout en conteneurs : `mkdir -p data/eoinamoore` puis `docker compose --profile app up -d --build` (base, API en profil `prod` et frontend nginx sur http://localhost:8081 ; l'API et PostgreSQL ne sont ouverts que sur la machine locale).
+- `DEMO_ENABLED=true` ouvre la démonstration sans compte : un bouton « Essayer sans compte » connecte le visiteur à un
+  compte partagé en lecture seule ([ADR 0027](docs/adr/0027-compte-de-demonstration.md)).
+
+### Mettre en ligne
+
+- HTTPS obligatoire : `REFRESH_COOKIE_SECURE=true` (valeur par défaut), le cookie de session n'est envoyé qu'en HTTPS.
+- Derrière un proxy qui termine le HTTPS (Cloudflare…), déclarer ses plages d'adresses dans `frontend/nginx.conf`
+  (`set_real_ip_from`, `real_ip_header`) : sans cela, tous les visiteurs ont l'adresse du proxy et partagent la même
+  limite de connexions.
+- Mot de passe administrateur de 12 caractères au moins, et un autre nom que `admin` (`HOOPMIND_ADMIN_USERNAME`).
+- Ne pas lancer le profil `spark-cluster` sur un serveur public : la prédiction n'a pas besoin de Spark
+  (`SPARK_ENABLED=false`), il suffit d'entraîner le modèle ailleurs et de copier `ML_MODEL_DIR`.
 
 ### Charger les données NBA
 
@@ -118,6 +130,7 @@ et toutes les actions des administrateurs sur les comptes (activation, désactiv
 | Méthode | Route | Accès |
 |---|---|---|
 | POST | `/api/v1/auth/register`, `/login`, `/refresh`, `/logout` | public |
+| GET, POST | `/api/v1/auth/demo` (démonstration ouverte ou non ; session sur le compte de démonstration) | public |
 | GET, PATCH | `/api/v1/users/me` | connecté |
 | PUT | `/api/v1/users/me/password` | connecté |
 | GET | `/api/v1/admin/users?search=&page=&size=` | ADMIN |
@@ -210,9 +223,12 @@ New York arrive plus reposé. »
 
   La clé (`LLM_API_KEY`) vient uniquement de l'environnement. Les modèles disponibles et les quotas gratuits
   changent souvent : vérifiez-les chez le fournisseur.
-- **Toujours une réponse.** Nouvelles tentatives sur les erreurs passagères (429, 5xx, réseau), 4 appels simultanés
-  au plus, cache des explications déjà générées, et, si le LLM ne répond pas, une explication rédigée sans lui
+- **Toujours une réponse.** Nouvelles tentatives sur les erreurs passagères (5xx, réseau, délai de 10 s dépassé),
+  jamais sur un quota atteint (429), 4 appels simultanés au plus, une seule requête pour une même explication demandée
+  en même temps, cache des explications déjà générées, et, si le LLM ne répond pas, une explication rédigée sans lui
   (`fallback: true`).
+- **Quota protégé.** 20 appels par utilisateur et par heure, et 200 par jour pour toute l'application
+  (`LLM_MAX_CALLS_PER_DAY`) : au-delà, l'explication est rédigée sans LLM. Voir l'[ADR 0028](docs/adr/0028-limites-du-llm-et-des-predictions.md).
 
 ### Pourquoi nos propres adaptateurs plutôt que Spring AI ?
 

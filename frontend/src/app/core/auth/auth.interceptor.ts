@@ -35,8 +35,12 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   );
 };
 
+/**
+ * Seules les URL relatives de l'API reçoivent le jeton (rootUrl est vide : même origine). Une URL absolue, même si son
+ * chemin contient /api/v1/, part vers un autre site, qui recevrait sinon le jeton d'accès.
+ */
 function isApiRequest(request: HttpRequest<unknown>): boolean {
-  return request.url.startsWith('/api/') || request.url.includes('/api/v1/');
+  return request.url.startsWith('/api/');
 }
 
 function withToken(request: HttpRequest<unknown>, token: string | null): HttpRequest<unknown> {

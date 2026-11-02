@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 
 /** Prédiction d'un match expliquée en français, par un LLM s'il est configuré. */
 @RestController
@@ -54,9 +56,11 @@ class PredictionExplanationController {
             @Parameter(description = "ID de l'équipe à l'extérieur") @RequestParam long awayTeamId,
             @Parameter(description = "Jour du match (aujourd'hui par défaut)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @Parameter(description = "Match de playoffs") @RequestParam(defaultValue = "false") boolean playoff) {
+            @Parameter(description = "Match de playoffs") @RequestParam(defaultValue = "false") boolean playoff,
+            HttpServletRequest request) {
         LocalDate day = date != null ? date : LocalDate.now(clock);
-        ExplainedPrediction explained = explanations.explain(jwt.getSubject(), seasonId, homeTeamId, awayTeamId, day, playoff);
+        ExplainedPrediction explained = explanations.explain(requester(jwt, request), seasonId, homeTeamId, awayTeamId,
+                day, playoff);
         try {
             history.record(Long.parseLong(jwt.getSubject()), new PredictedMatch(seasonId, homeTeamId, awayTeamId, day, playoff),
                     explained.prediction());
@@ -65,5 +69,16 @@ class PredictionExplanationController {
             log.warn("Prédiction non enregistrée dans l'historique de l'utilisateur {} : {}", jwt.getSubject(), e.getMessage());
         }
         return explained;
+    }
+
+    /**
+     * Qui consomme le quota d'appels au LLM : l'utilisateur, ou pour le compte de démonstration partagé, chaque
+     * visiteur (son adresse IP), sinon le premier visiteur de l'heure priverait tous les autres du LLM.
+     */
+    private static String requester(Jwt jwt, HttpServletRequest request) {
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        return roles != null && roles.contains("ROLE_DEMO")
+                ? jwt.getSubject() + "@" + request.getRemoteAddr()
+                : jwt.getSubject();
     }
 }

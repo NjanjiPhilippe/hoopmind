@@ -34,7 +34,9 @@ services:
       NBA_DATABASE_PATH: /app/data/nba.sqlite
       ML_MODEL_DIR: /app/models
     volumes:
-      # Base NBA (téléchargée depuis la page « Données » ou par scripts/download-nba-database.sh) et modèle entraîné
+      # Base NBA (téléchargée depuis la page « Données » ou par scripts/download-nba-database.sh) et modèle entraîné.
+      # Créer ./data avant le premier lancement (mkdir -p data/eoinamoore) : sinon Docker le crée au nom de root, et
+      # l'API, qui ne tourne pas en root, ne peut pas y écrire la base téléchargée.
       - ./data:/app/data
       - spark_models:/app/models
     # Les clients passent par nginx (service frontend). Le port n'est ouvert que sur la machine locale, pour
@@ -62,9 +64,11 @@ services:
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       SPARK_MASTER_HOST: spark-master
+    # Le maître Spark n'a pas d'authentification : publié sur le réseau, il exécuterait le code de n'importe qui.
+    # Ouvert sur la machine locale seulement (interface sur 8080) ; l'API le joint par le réseau de compose.
     ports:
-      - "8080:8080"
-      - "7077:7077"
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:7077:7077"
 
   spark-worker:
     profiles: [spark-cluster]

@@ -30,3 +30,6 @@ les avantages et les inconvénients assumés. Les numéros suivent l'ordre de la
 | [0023](0023-prediction-du-score.md) | Prédire le score : deux régressions linéaires sur les moyennes de points | Proposée |
 | [0024](0024-allegement-du-backend.md) | Allègement du backend : routes inutilisées, stats.nba.com, module ML fermé | Proposée |
 | [0025](0025-predictions-par-utilisateur.md) | Chaque utilisateur garde ses prédictions, et ne voit que les siennes | Proposée |
+| [0027](0027-compte-de-demonstration.md) | Compte de démonstration en lecture seule, limites par adresse IP | Proposée |
+| [0028](0028-limites-du-llm-et-des-predictions.md) | Plafond quotidien du LLM, quota sans nouvel essai, prédictions bornées | Proposée |
+| [0029](0029-revocation-des-jetons-d-acces.md) | Les jetons d'accès d'un compte désactivé ou modifié sont refusés tout de suite | Proposée |
